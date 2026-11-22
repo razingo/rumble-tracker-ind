@@ -1,0 +1,165 @@
+# Builds the Windows release on GitHub's runners.
+#
+#   Push a tag v<version> (matching package.json): builds, attests and creates a draft release with the zip and
+#   SHA256SUMS.txt; the release notes start with the version's section of CHANGELOG.md. Review the draft, edit the
+#   notes, publish.
+#   Run manually (Actions > Release > Run workflow): builds and attests only; the files are a workflow artifact.
+#
+# Verify a downloaded file:  gh attestation verify RumbleTracker.exe --repo razingo/rumble-tracker-ind
+#
+# Hardening: no permissions by default; the build job can't write to the repository (and keeps no git credentials);
+# only the release job, which runs no repository code, can create releases. Actions are pinned to commit SHAs.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+      actions: read         # the Test workflow's result for this commit
+      id-token: write       # build attestation
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # must match desktop/node-LICENSE.txt, which ships in the zip
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '26.13.1'
+
+      - name: Check the tag matches package.json
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ("v$version" -ne $env:GITHUB_REF_NAME) { throw "Tag $env:GITHUB_REF_NAME does not match package.json version $version" }
+
+      # The Test workflow ran for this commit when it was pushed. The release waits for that run and needs it to pass.
+      - name: Tests passed for this commit
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          Write-Host "Looking for the Test workflow's run of $env:GITHUB_SHA"
+          for ($i = 0; $i -lt 60; $i++) {
+            $run = gh run list --repo $env:GITHUB_REPOSITORY --workflow test.yml --commit $env:GITHUB_SHA --limit 1 `
+              --json status,conclusion,url | ConvertFrom-Json
+            if ($run -and $run[0].status -eq 'completed') {
+              if ($run[0].conclusion -eq 'success') {
+                Write-Host "The tests passed for this commit: $($run[0].url)"
+                exit 0
+              }
+              throw "The Test workflow ended with '$($run[0].conclusion)' for this commit, so it is not released: $($run[0].url)"
+            }
+            if (!$run -and $i -ge 10) { throw 'The Test workflow has not run for this commit. Push it to a branch before tagging it.' }
+            if ($run) { $state = "The tests are still running ($($run[0].status))" } else { $state = 'No Test run yet' }
+            Write-Host "$state; checking again in 20 seconds."
+            Start-Sleep -Seconds 20
+          }
+          throw 'The Test workflow did not finish within 20 minutes.'
+
+      # the window's WebView2 libraries, pinned and checked against Microsoft's signature
+      - name: WebView2 libraries
+        run: npm run fetch-webview2
+
+      # the private Python the exe carries, in pinned versions (the runner's own Python only runs pip)
+      - name: Python for the exe
+        run: npm run fetch-python
+
+      - name: Build
+        run: npm run build-selfbuilt
+
+      # the version's section of CHANGELOG.md becomes the top of the release notes; a tag needs one
+      - name: Changes in this version
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $lines = Get-Content CHANGELOG.md
+          $start = [array]::IndexOf($lines, "## $version")
+          if ($start -lt 0) {
+            if ($env:GITHUB_REF_TYPE -eq 'tag') { throw "CHANGELOG.md has no section '## $version'" }
+            $section = @()
+          } else {
+            $end = $start + 1
+            while ($end -lt $lines.Count -and -not $lines[$end].StartsWith('## ')) { $end++ }
+            $section = if ($end -gt $start + 1) { $lines[($start + 1)..($end - 1)] } else { @() }
+          }
+          New-Item -ItemType Directory -Force dist/release | Out-Null
+          # ends with LF: Set-Content's own line ending is CRLF, which would show up in the notes
+          Set-Content -Path dist/release/CHANGES.md -Value (($section -join [char]10).Trim() + [char]10) -Encoding utf8NoBOM -NoNewline
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            dist/release/RumbleTracker.exe
+            dist/release/RumbleTracker-*-win-x64.zip
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release
+          path: |
+            dist/release/RumbleTracker-*-win-x64.zip
+            dist/release/SHA256SUMS.txt
+            dist/release/CHANGES.md
+
+  release:
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write       # create the draft release
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release
+          path: dist
+
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          {
+            if [ -s dist/CHANGES.md ]; then
+              echo "## What's new"
+              echo
+              # The changelog wraps its bullets; release notes would show each wrap as a line break.
+              sed -e ':a' -e 'N' -e '$!ba' -e 's/\n  \([^ ]\)/ \1/g' dist/CHANGES.md
+              echo
+              echo "## Download"
+              echo
+            fi
+            echo "Already have the tracker with its own window? It offers the update itself. Otherwise:"
+            echo
+            # one paragraph: release notes show a line break for each newline
+            printf '%s' "Download **RumbleTracker-${version}-win-x64.zip**, extract it anywhere and run **RumbleTracker.exe** "
+            printf '%s' "(Windows 10/11, 64-bit). Windows may show \"Windows protected your PC\" the first time: click **More info**, "
+            echo "then **Run anyway**. The first start downloads the game data (about 5 MB)."
+            echo
+            echo "See the [player guide](https://github.com/razingo/rumble-tracker-ind/blob/main/docs/INSTRUCTIONS.md)."
+            echo
+            echo "SHA-256 checksums:"
+            echo
+            echo '```'
+            cat dist/SHA256SUMS.txt
+            echo '```'
+            echo
+            echo "Built by GitHub Actions from this repository. Verify a download with:"
+            echo '`gh attestation verify RumbleTracker.exe --repo razingo/rumble-tracker-ind`'
+            echo
+            echo "Not affiliated with or endorsed by Blizzard Entertainment."
+          } > release-notes.md
+          gh release create "$GITHUB_REF_NAME" "dist/RumbleTracker-${version}-win-x64.zip" dist/SHA256SUMS.txt \
+            --draft --title "Rumble Collection Tracker ${version}" --notes-file release-notes.md

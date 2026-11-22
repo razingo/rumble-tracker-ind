@@ -1,0 +1,501 @@
+{
+ "minis": [
+  {
+   "slug": "abomination",
+   "family": "Undead"
+  },
+  {
+   "slug": "ancient-of-war",
+   "family": "Cenarion"
+  },
+  {
+   "slug": "angry-chickens",
+   "family": "Beast"
+  },
+  {
+   "slug": "anub-arak",
+   "family": "Undead",
+   "fixedArmySlots": [
+    "Undead",
+    "Beast",
+    "Cycle"
+   ]
+  },
+  {
+   "slug": "arcane-blast",
+   "family": "Alliance"
+  },
+  {
+   "slug": "arthas-menethil",
+   "family": "Alliance",
+   "fixedArmySlots": [
+    "Undead",
+    "Alliance",
+    "Elemental"
+   ]
+  },
+  {
+   "slug": "banshee",
+   "family": "Undead"
+  },
+  {
+   "slug": "baron-rivendare",
+   "family": "Undead",
+   "fixedArmySlots": [
+    "Undead",
+    "Undead",
+    "Unbound"
+   ]
+  },
+  {
+   "slug": "bat-rider",
+   "family": "Horde"
+  },
+  {
+   "slug": "blizzard",
+   "family": "Alliance"
+  },
+  {
+   "slug": "bloodmage-thalnos",
+   "family": "Undead",
+   "fixedArmySlots": [
+    "Undead",
+    "Undead",
+    "Spell"
+   ]
+  },
+  {
+   "slug": "bog-beast",
+   "family": "Cenarion"
+  },
+  {
+   "slug": "cairne-bloodhoof",
+   "family": "Horde",
+   "fixedArmySlots": [
+    "Horde",
+    "Horde",
+    "Ranged"
+   ]
+  },
+  {
+   "slug": "cenarius",
+   "family": "Cenarion",
+   "fixedArmySlots": [
+    "Cenarion",
+    "Cenarion",
+    "Tank"
+   ]
+  },
+  {
+   "slug": "chain-lightning",
+   "family": "Horde"
+  },
+  {
+   "slug": "charlga-razorflank",
+   "family": "Beast",
+   "fixedArmySlots": [
+    "Beast",
+    "Beast",
+    "Fast"
+   ]
+  },
+  {
+   "slug": "cheat-death",
+   "family": "Undead"
+  },
+  {
+   "slug": "chimaera",
+   "family": "Beast"
+  },
+  {
+   "slug": "core-hounds",
+   "family": "Blackrock"
+  },
+  {
+   "slug": "dark-iron-miner",
+   "family": "Blackrock"
+  },
+  {
+   "slug": "darkspear-troll",
+   "family": "Horde"
+  },
+  {
+   "slug": "deep-breath",
+   "family": "Blackrock"
+  },
+  {
+   "slug": "defias-bandits",
+   "family": "Alliance"
+  },
+  {
+   "slug": "dire-batlings",
+   "family": "Undead"
+  },
+  {
+   "slug": "drake",
+   "family": "Blackrock"
+  },
+  {
+   "slug": "druid-of-the-claw",
+   "family": "Cenarion"
+  },
+  {
+   "slug": "dryad",
+   "family": "Cenarion"
+  },
+  {
+   "slug": "earth-and-moon",
+   "family": "Cenarion"
+  },
+  {
+   "slug": "earth-elemental",
+   "family": "Blackrock"
+  },
+  {
+   "slug": "eclipse",
+   "family": "Cenarion"
+  },
+  {
+   "slug": "emperor-thaurissan",
+   "family": "Blackrock",
+   "fixedArmySlots": [
+    "Blackrock",
+    "Blackrock",
+    "Melee"
+   ]
+  },
+  {
+   "slug": "execute",
+   "family": "Horde"
+  },
+  {
+   "slug": "faerie-dragon",
+   "family": "Cenarion"
+  },
+  {
+   "slug": "fire-elemental",
+   "family": "Blackrock"
+  },
+  {
+   "slug": "flamehammer",
+   "family": "Blackrock"
+  },
+  {
+   "slug": "flamewaker",
+   "family": "Blackrock"
+  },
+  {
+   "slug": "footmen",
+   "family": "Alliance"
+  },
+  {
+   "slug": "frostwolf-shaman",
+   "family": "Horde"
+  },
+  {
+   "slug": "gargoyle",
+   "family": "Undead"
+  },
+  {
+   "slug": "general-drakkisath",
+   "family": "Blackrock",
+   "fixedArmySlots": [
+    "Blackrock",
+    "Blackrock",
+    "Elemental"
+   ]
+  },
+  {
+   "slug": "ghoul",
+   "family": "Undead"
+  },
+  {
+   "slug": "gnoll-brute",
+   "family": "Beast"
+  },
+  {
+   "slug": "goblin-sapper",
+   "family": "Horde"
+  },
+  {
+   "slug": "grommash-hellscream",
+   "family": "Horde",
+   "fixedArmySlots": [
+    "Horde",
+    "Horde",
+    "Squad"
+   ]
+  },
+  {
+   "slug": "gryphon-rider",
+   "family": "Alliance"
+  },
+  {
+   "slug": "harpies",
+   "family": "Beast"
+  },
+  {
+   "slug": "harvest-golem",
+   "family": "Alliance"
+  },
+  {
+   "slug": "headless-horseman",
+   "family": "Undead"
+  },
+  {
+   "slug": "hogger",
+   "family": "Beast",
+   "fixedArmySlots": [
+    "Beast",
+    "Beast",
+    "Cycle"
+   ]
+  },
+  {
+   "slug": "holy-nova",
+   "family": "Alliance"
+  },
+  {
+   "slug": "huntress",
+   "family": "Alliance"
+  },
+  {
+   "slug": "jaina-proudmoore",
+   "family": "Alliance",
+   "fixedArmySlots": [
+    "Alliance",
+    "Alliance",
+    "Spell"
+   ]
+  },
+  {
+   "slug": "kobold-miner",
+   "family": "Neutral",
+   "alwaysOwned": true
+  },
+  {
+   "slug": "living-bomb",
+   "family": "Blackrock"
+  },
+  {
+   "slug": "maiev-shadowsong",
+   "family": "Alliance",
+   "fixedArmySlots": [
+    "Alliance",
+    "Alliance",
+    "Unbound"
+   ]
+  },
+  {
+   "slug": "malfurion",
+   "family": "Alliance",
+   "fixedArmySlots": [
+    "Cenarion",
+    "Alliance",
+    "Tank"
+   ]
+  },
+  {
+   "slug": "meat-wagon",
+   "family": "Undead"
+  },
+  {
+   "slug": "molten-giant",
+   "family": "Blackrock"
+  },
+  {
+   "slug": "moonkin",
+   "family": "Cenarion"
+  },
+  {
+   "slug": "mountaineer",
+   "family": "Alliance"
+  },
+  {
+   "slug": "murloc-tidehunters",
+   "family": "Beast"
+  },
+  {
+   "slug": "necromancer",
+   "family": "Undead"
+  },
+  {
+   "slug": "ogre-mage",
+   "family": "Horde"
+  },
+  {
+   "slug": "old-murk-eye",
+   "family": "Beast",
+   "fixedArmySlots": [
+    "Beast",
+    "Beast",
+    "Tank"
+   ]
+  },
+  {
+   "slug": "onu",
+   "family": "Cenarion",
+   "fixedArmySlots": [
+    "Cenarion",
+    "Cenarion",
+    "Ranged"
+   ]
+  },
+  {
+   "slug": "orgrim-doomhammer",
+   "family": "Horde",
+   "fixedArmySlots": [
+    "Horde",
+    "Blackrock",
+    "Squad"
+   ]
+  },
+  {
+   "slug": "plague-farmer",
+   "family": "Undead"
+  },
+  {
+   "slug": "polymorph",
+   "family": "Beast"
+  },
+  {
+   "slug": "priestess",
+   "family": "Alliance"
+  },
+  {
+   "slug": "prowler",
+   "family": "Beast"
+  },
+  {
+   "slug": "blackrock-pyromancer",
+   "family": "Blackrock"
+  },
+  {
+   "slug": "quilboar",
+   "family": "Beast"
+  },
+  {
+   "slug": "ragnaros",
+   "family": "Blackrock",
+   "fixedArmySlots": [
+    "Blackrock",
+    "Blackrock",
+    "Armored"
+   ]
+  },
+  {
+   "slug": "raptors",
+   "family": "Beast"
+  },
+  {
+   "slug": "rend-blackhand",
+   "family": "Blackrock",
+   "fixedArmySlots": [
+    "Blackrock",
+    "Blackrock",
+    "Flying"
+   ]
+  },
+  {
+   "slug": "safe-pilot",
+   "family": "Alliance"
+  },
+  {
+   "slug": "skeleton-party",
+   "family": "Undead"
+  },
+  {
+   "slug": "skeletons",
+   "family": "Undead"
+  },
+  {
+   "slug": "smoke-bomb",
+   "family": "Blackrock"
+  },
+  {
+   "slug": "sneed",
+   "family": "Horde",
+   "fixedArmySlots": [
+    "Horde",
+    "Horde",
+    "Siege"
+   ]
+  },
+  {
+   "slug": "spiderlings",
+   "family": "Beast"
+  },
+  {
+   "slug": "stonehoof-tauren",
+   "family": "Horde"
+  },
+  {
+   "slug": "swole-troll",
+   "family": "Horde"
+  },
+  {
+   "slug": "sylvanas-windrunner",
+   "family": "Undead",
+   "fixedArmySlots": [
+    "Undead",
+    "Undead",
+    "Horde"
+   ]
+  },
+  {
+   "slug": "thrall",
+   "family": "Horde",
+   "fixedArmySlots": [
+    "Horde",
+    "Horde",
+    "Squad"
+   ]
+  },
+  {
+   "slug": "tirion-fordring",
+   "family": "Alliance",
+   "fixedArmySlots": [
+    "Alliance",
+    "Alliance",
+    "Tank"
+   ]
+  },
+  {
+   "slug": "treant",
+   "family": "Cenarion"
+  },
+  {
+   "slug": "vultures",
+   "family": "Beast"
+  },
+  {
+   "slug": "warsong-grunts",
+   "family": "Horde"
+  },
+  {
+   "slug": "warsong-raider",
+   "family": "Horde"
+  },
+  {
+   "slug": "whelp-eggs",
+   "family": "Blackrock"
+  },
+  {
+   "slug": "witch-doctor",
+   "family": "Horde"
+  },
+  {
+   "slug": "worgen",
+   "family": "Alliance"
+  },
+  {
+   "slug": "ysera",
+   "family": "Cenarion",
+   "fixedArmySlots": [
+    "Cenarion",
+    "Cenarion",
+    "Cycle"
+   ]
+  }
+ ]
+}

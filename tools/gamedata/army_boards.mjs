@@ -1,0 +1,84 @@
+// Read every leader's army board (Player_*_ArmyBoard) from the game files: fixed family slots, fixed trait slot,
+// and the slot types the player can pick. Compares with gamedata/minis.json and, with --write, updates its
+// fixedArmySlots / armySlotUpgrades.  usage: node army_boards.mjs <guid_index.json> [--write]
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { readBundle } from './unityfs.mjs';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const DATA = process.env.RUMBLE_GAMEDATA || join(HERE, '..', '..', 'gamedata'); // the game data being built
+const WORK = process.env.RUMBLE_WORK || HERE; // working files passed between the steps
+const IDX = JSON.parse(readFileSync(process.argv[2], 'utf8'));
+const WRITE = process.argv.includes('--write');
+const MINIS = join(DATA, 'minis.json');
+const DIR = process.env.RUMBLE_BUNDLES;
+const files = [];
+const walk = (d) => { for (const e of readdirSync(d, { withFileTypes: true })) { const p = join(d, e.name);
+  if (e.isDirectory()) walk(p); else if (/^unitdata_unit_.*\.bundle$/.test(e.name)) files.push(p); } };
+walk(DIR);
+
+function balanced(t, i) { let d = 0, s = false; for (let j = i; j < t.length && j < i + 1e6; j++) { const c = t[j];
+  if (s) { if (c === '\\') j++; else if (c === '"') s = false; continue; } if (c === '"') s = true;
+  else if (c === '{') d++; else if (c === '}' && --d === 0) return t.slice(i, j + 1); } return null; }
+
+// game-internal names -> the tracker's slot type names
+const FAMILY = { Alliance: 'Alliance', Horde: 'Horde', Undead: 'Undead', Scourge: 'Undead', Beast: 'Beast',
+  Beasts: 'Beast', Blackrock: 'Blackrock', Cenarion: 'Cenarion' };
+const RENAME = { AOE: 'AoE' };
+function label(guid) {
+  const n = IDX[guid]?.name || `?${guid.slice(0, 8)}`;
+  const base = n.replace(/_(Trait|BalanceRole|BalanceType|Family|MiniFamily|AspectTrait)$/i, '').replace(/^(Trait|Family)[_ ]/, '');
+  const pretty = base.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^Family /, '');
+  return FAMILY[pretty] || RENAME[pretty] || pretty;
+}
+
+const boards = {};
+for (const p of files) {
+  let b; try { b = readBundle(p); } catch { continue; }
+  for (const f of b.files) {
+    const t = f.data.toString('utf8');
+    for (const m of t.matchAll(/\{\s*"\$type": "Gryphon\.Data\.ArmyBoard,/g)) {
+      const js = balanced(t, m.index);
+      let o; try { o = JSON.parse(js); } catch { continue; }
+      if (!/^Player_/.test(o.name)) continue;
+      boards[o.m_leaderMini] = {
+        board: o.name,
+        leader: IDX[o.m_leaderMini]?.name,
+        families: (o.m_autoAcquiredFamilySlots || []).map((s) => label(s.m_family)),
+        fixedTraits: (o.m_autoAcquiredTraitSlots || []).map((s) => label(s.m_trait)),
+        options: [...(o.m_possibleSlotTraits || []), ...(o.m_possibleSlotBalanceRoles || []),
+          ...(o.m_possibleSlotBalanceTypes || [])].map(label),
+      };
+    }
+  }
+}
+const list = Object.values(boards).sort((a, b) => a.board.localeCompare(b.board));
+for (const x of list) console.log(x.board.padEnd(30), '| fixed', [...x.families, ...x.fixedTraits].join(','),
+  '| options', x.options.join(', '));
+writeFileSync(join(WORK, 'army_boards.json'), JSON.stringify(list, null, 1) + '\n');
+
+// compare with minis.json (leaders matched by internal mini name -> slug through unit_ids? use name match on board)
+const minis = JSON.parse(readFileSync(MINIS, 'utf8'));
+const norm = (s) => String(s).toLowerCase().replace(/[^a-z]/g, '');
+let changed = 0;
+for (const m of minis.minis.filter((x) => x.category === 'Leader')) {
+  const key = norm(m.slug || m.name);
+  const x = list.find((b) => { const k = norm(b.board.replace(/^Player_|_ArmyBoard$/g, ''));
+    return key.includes(k) || k.includes(key.slice(0, 5)); });
+  if (!x) { console.log('no board for', m.name); continue; }
+  // some boards only fix the two family slots; keep the third top slot we already had for those
+  const fixed = [...x.families, ...x.fixedTraits];
+  if (fixed.length === 2 && m.fixedArmySlots?.[2]) fixed.push(m.fixedArmySlots[2]);
+  // bottom slots can also take the leader's own factions: every family slot on the board (Sylvanas: Undead + Horde)
+  x.options = [...new Set([...x.families, ...x.options])];
+  const diffFixed = JSON.stringify(fixed) !== JSON.stringify(m.fixedArmySlots || []);
+  const diffOpts = JSON.stringify([...x.options].sort()) !== JSON.stringify([...(m.armySlotUpgrades || [])].sort());
+  if (diffFixed || diffOpts) {
+    console.log(`DIFF ${m.name}: fixed ${JSON.stringify(m.fixedArmySlots)} -> ${JSON.stringify(fixed)}; `
+      + `options ${JSON.stringify(m.armySlotUpgrades)} -> ${JSON.stringify(x.options)}`);
+    if (WRITE) { m.fixedArmySlots = fixed; m.armySlotUpgrades = x.options; changed++; }
+  }
+}
+if (WRITE && changed) { writeFileSync(MINIS, JSON.stringify(minis, null, 2) + '\n');
+  console.log(`updated ${changed} leaders in minis.json`); }

@@ -1,0 +1,41 @@
+# Runs the tests and the style check on every push and pull request. Windows, as the tracker runs there, so the tray
+# icon and Windows integration scripts are tested too. Read-only: no permissions beyond reading the repository and no
+# stored git credentials.
+name: Test
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+permissions: {}
+
+jobs:
+  test:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        # The oldest Node.js that package.json allows, and the one release builds use.
+        node: ['22', '26.13.1']
+    name: test (Node.js ${{ matrix.node }})
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+
+      # the window's WebView2 libraries, pinned and checked against Microsoft's signature
+      - name: WebView2 libraries
+        run: npm run fetch-webview2
+
+      - name: Test
+        run: npm test
+
+      - name: Check style
+        run: npm run check-style

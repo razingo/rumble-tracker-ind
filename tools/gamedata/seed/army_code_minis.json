@@ -1,0 +1,567 @@
+{
+  "source": "support_progression.bundle m_shortIds (army code mini numbers) + m_loadoutCodePrefix",
+  "prefix": "rumblo:",
+  "shortIds": {
+    "1": "angry-chickens",
+    "2": "arcane-blast",
+    "3": "blizzard",
+    "4": "chain-lightning",
+    "5": "cheat-death",
+    "6": "deep-breath",
+    "7": "earth-and-moon",
+    "8": "eclipse",
+    "9": "execute",
+    "10": "holy-nova",
+    "11": "living-bomb",
+    "12": "polymorph",
+    "13": "smoke-bomb",
+    "14": "abomination",
+    "15": "ancient-of-war",
+    "16": "anub-arak",
+    "17": "banshee",
+    "18": "baron-rivendare",
+    "19": "bat-rider",
+    "20": "bloodmage-thalnos",
+    "21": "bog-beast",
+    "22": "cairne-bloodhoof",
+    "23": "cenarius",
+    "24": "charlga-razorflank",
+    "25": "chimaera",
+    "26": "core-hounds",
+    "27": "dark-iron-miner",
+    "28": "darkspear-troll",
+    "29": "defias-bandits",
+    "30": "dire-batlings",
+    "31": "orgrim-doomhammer",
+    "32": "drake",
+    "33": "general-drakkisath",
+    "34": "druid-of-the-claw",
+    "35": "dryad",
+    "36": "earth-elemental",
+    "37": "emperor-thaurissan",
+    "38": "faerie-dragon",
+    "39": "fire-elemental",
+    "40": "flamehammer",
+    "41": "flamewaker",
+    "42": "footmen",
+    "43": "gargoyle",
+    "44": "ghoul",
+    "45": "gnoll-brute",
+    "46": "safe-pilot",
+    "47": "goblin-sapper",
+    "48": "grommash-hellscream",
+    "49": "gryphon-rider",
+    "50": "harpies",
+    "51": "harvest-golem",
+    "52": "headless-horseman",
+    "53": "hogger",
+    "54": "huntress",
+    "55": "jaina-proudmoore",
+    "56": "maiev-shadowsong",
+    "57": "malfurion",
+    "58": "meat-wagon",
+    "59": "molten-giant",
+    "60": "moonkin",
+    "61": "mountaineer",
+    "63": "murloc-tidehunters",
+    "64": "necromancer",
+    "65": "ogre-mage",
+    "66": "old-murk-eye",
+    "67": "onu",
+    "68": "plague-farmer",
+    "69": "prowler",
+    "70": "blackrock-pyromancer",
+    "71": "quilboar",
+    "72": "ragnaros",
+    "73": "raptors",
+    "74": "rend-blackhand",
+    "75": "frostwolf-shaman",
+    "76": "skeleton-party",
+    "77": "skeletons",
+    "78": "sneed",
+    "79": "spiderlings",
+    "80": "stonehoof-tauren",
+    "81": "swole-troll",
+    "82": "sylvanas-windrunner",
+    "83": "tirion-fordring",
+    "84": "treant",
+    "85": "vultures",
+    "86": "warsong-grunts",
+    "87": "warsong-raider",
+    "88": "whelp-eggs",
+    "89": "witch-doctor",
+    "90": "worgen",
+    "91": "ysera",
+    "93": "priestess",
+    "94": "arthas-menethil",
+    "95": "thrall"
+  },
+  "talentOrder": {
+    "arcane-blast": [
+      0,
+      1,
+      2
+    ],
+    "blizzard": [
+      1,
+      2,
+      0
+    ],
+    "chain-lightning": [
+      0,
+      1,
+      2
+    ],
+    "cheat-death": [
+      0,
+      1,
+      2
+    ],
+    "deep-breath": [
+      0,
+      1,
+      2
+    ],
+    "earth-and-moon": [
+      0,
+      1,
+      2
+    ],
+    "eclipse": [
+      0,
+      1,
+      2
+    ],
+    "execute": [
+      0,
+      1,
+      2
+    ],
+    "holy-nova": [
+      0,
+      1,
+      2
+    ],
+    "living-bomb": [
+      0,
+      1,
+      2
+    ],
+    "polymorph": [
+      0,
+      1,
+      2
+    ],
+    "smoke-bomb": [
+      0,
+      1,
+      2
+    ],
+    "abomination": [
+      0,
+      1,
+      2
+    ],
+    "ancient-of-war": [
+      0,
+      1,
+      2
+    ],
+    "angry-chickens": [
+      0,
+      1,
+      2
+    ],
+    "anub-arak": [
+      0,
+      1,
+      2
+    ],
+    "arthas-menethil": [
+      0,
+      1,
+      2
+    ],
+    "banshee": [
+      0,
+      1,
+      2
+    ],
+    "baron-rivendare": [
+      0,
+      1,
+      2
+    ],
+    "bat-rider": [
+      0,
+      1,
+      2
+    ],
+    "bloodmage-thalnos": [
+      0,
+      1,
+      2
+    ],
+    "bog-beast": [
+      0,
+      1,
+      2
+    ],
+    "cairne-bloodhoof": [
+      0,
+      1,
+      2
+    ],
+    "cenarius": [
+      0,
+      1,
+      2
+    ],
+    "charlga-razorflank": [
+      0,
+      1,
+      2
+    ],
+    "chimaera": [
+      1,
+      2,
+      0
+    ],
+    "core-hounds": [
+      0,
+      1,
+      2
+    ],
+    "dark-iron-miner": [
+      0,
+      1,
+      2
+    ],
+    "darkspear-troll": [
+      0,
+      1,
+      2
+    ],
+    "defias-bandits": [
+      0,
+      1,
+      2
+    ],
+    "dire-batlings": [
+      0,
+      1,
+      2
+    ],
+    "orgrim-doomhammer": [
+      0,
+      1,
+      2
+    ],
+    "drake": [
+      0,
+      1,
+      2
+    ],
+    "general-drakkisath": [
+      0,
+      1,
+      2
+    ],
+    "druid-of-the-claw": [
+      0,
+      1,
+      2
+    ],
+    "dryad": [
+      1,
+      0,
+      2
+    ],
+    "earth-elemental": [
+      0,
+      1,
+      2
+    ],
+    "emperor-thaurissan": [
+      2,
+      1,
+      0
+    ],
+    "faerie-dragon": [
+      1,
+      2,
+      0
+    ],
+    "fire-elemental": [
+      0,
+      1,
+      2
+    ],
+    "flamehammer": [
+      0,
+      1,
+      2
+    ],
+    "flamewaker": [
+      0,
+      1,
+      2
+    ],
+    "footmen": [
+      1,
+      0,
+      2
+    ],
+    "gargoyle": [
+      0,
+      1,
+      2
+    ],
+    "ghoul": [
+      0,
+      1,
+      2
+    ],
+    "gnoll-brute": [
+      0,
+      1,
+      2
+    ],
+    "safe-pilot": [
+      1,
+      0,
+      2
+    ],
+    "goblin-sapper": [
+      0,
+      1,
+      2
+    ],
+    "grommash-hellscream": [
+      0,
+      1,
+      2
+    ],
+    "gryphon-rider": [
+      0,
+      1,
+      2
+    ],
+    "harpies": [
+      0,
+      1,
+      2
+    ],
+    "harvest-golem": [
+      0,
+      1,
+      2
+    ],
+    "headless-horseman": [
+      0,
+      1,
+      2
+    ],
+    "hogger": [
+      0,
+      1,
+      2
+    ],
+    "huntress": [
+      0,
+      1,
+      2
+    ],
+    "jaina-proudmoore": [
+      0,
+      1,
+      2
+    ],
+    "maiev-shadowsong": [
+      0,
+      1,
+      2
+    ],
+    "malfurion": [
+      0,
+      1,
+      2
+    ],
+    "meat-wagon": [
+      0,
+      1,
+      2
+    ],
+    "molten-giant": [
+      0,
+      1,
+      2
+    ],
+    "moonkin": [
+      0,
+      1,
+      2
+    ],
+    "mountaineer": [
+      0,
+      1,
+      2
+    ],
+    "murloc-tidehunters": [
+      1,
+      2,
+      0
+    ],
+    "necromancer": [
+      1,
+      2,
+      0
+    ],
+    "ogre-mage": [
+      0,
+      1,
+      2
+    ],
+    "old-murk-eye": [
+      0,
+      1,
+      2
+    ],
+    "onu": [
+      1,
+      2,
+      0
+    ],
+    "plague-farmer": [
+      0,
+      1,
+      2
+    ],
+    "priestess": [
+      0,
+      1,
+      2
+    ],
+    "prowler": [
+      0,
+      1,
+      2
+    ],
+    "blackrock-pyromancer": [
+      0,
+      1,
+      2
+    ],
+    "quilboar": [
+      0,
+      1,
+      2
+    ],
+    "ragnaros": [
+      0,
+      1,
+      2
+    ],
+    "raptors": [
+      0,
+      1,
+      2
+    ],
+    "rend-blackhand": [
+      0,
+      1,
+      2
+    ],
+    "frostwolf-shaman": [
+      0,
+      1,
+      2
+    ],
+    "skeleton-party": [
+      0,
+      1,
+      2
+    ],
+    "skeletons": [
+      0,
+      1,
+      2
+    ],
+    "sneed": [
+      0,
+      1,
+      2
+    ],
+    "spiderlings": [
+      0,
+      1,
+      2
+    ],
+    "stonehoof-tauren": [
+      0,
+      1,
+      2
+    ],
+    "swole-troll": [
+      0,
+      1,
+      2
+    ],
+    "sylvanas-windrunner": [
+      0,
+      1,
+      2
+    ],
+    "thrall": [
+      0,
+      1,
+      2
+    ],
+    "tirion-fordring": [
+      1,
+      2,
+      0
+    ],
+    "treant": [
+      0,
+      1,
+      2
+    ],
+    "vultures": [
+      0,
+      1,
+      2
+    ],
+    "warsong-grunts": [
+      1,
+      0,
+      2
+    ],
+    "warsong-raider": [
+      0,
+      1,
+      2
+    ],
+    "whelp-eggs": [
+      0,
+      1,
+      2
+    ],
+    "witch-doctor": [
+      1,
+      0,
+      2
+    ],
+    "worgen": [
+      0,
+      1,
+      2
+    ],
+    "ysera": [
+      0,
+      1,
+      2
+    ]
+  },
+  "talentOrderNote": "game talent index (army codes) -> the tracker's talent index (fixed, so saved picks stay valid; minis not listed use the game order)"
+}

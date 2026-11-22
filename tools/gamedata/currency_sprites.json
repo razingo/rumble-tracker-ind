@@ -1,0 +1,15 @@
+{
+ "ankh": "Global_DungeonLife_HighRes",
+ "coins.png": "Iconography_1",
+ "valor.png": "Iconography_5",
+ "arcEnergy.png": "Iconography_21",
+ "rareCore.png": "Iconography_22",
+ "gridResets.png": "Iconography_23",
+ "epicCore.png": "Iconography_24",
+ "legendaryCore.png": "Iconography_25",
+ "gemModest.png": "Statue_Small_XPBoost_Arclight_Pose",
+ "gemMajor.png": "Statue_Medium_XPBoost_Arclight_Pose",
+ "gemMega.png": "Statue_Large_XPBoost_Arclight_Pose",
+ "rareOMatic.png": "Shared_Tex_RareoMatic",
+ "eventTokens.png": "SeasonalEvents_Tex_CurrencyIcon_Solo"
+}

@@ -1,0 +1,171 @@
+/* Textures and frames from the game files (static/ui/). */
+
+/* Backdrop, the loading screen's key art dimmed */
+body {
+  background:
+    linear-gradient(90deg, rgb(13 15 32 / 92%) 0%, rgb(13 15 32 / 80%) 50%, rgb(13 15 32 / 92%) 100%),
+    linear-gradient(180deg, rgb(13 15 32 / 55%), rgb(13 15 32 / 88%) 70%),
+    url("/static/ui/keyart.webp") center 20% / cover no-repeat fixed,
+    #0f1226;
+}
+
+/* Top bar, as the game's wooden taskbar */
+.topbar {
+  background:
+    linear-gradient(180deg, rgb(255 220 160 / 10%), rgb(0 0 0 / 30%)),
+    url("/static/ui/topbar-wood.webp") center / cover,
+    #5a3a22;
+  border-bottom: 4px solid #2b1a0e;
+  box-shadow: inset 0 -3px 0 var(--trim), 0 4px 0 rgb(0 0 0 / 45%), 0 12px 30px rgb(0 0 0 / 45%);
+}
+.topbar .tag { background: rgb(30 18 8 / 55%); border-color: rgb(0 0 0 / 40%); color: #e9d6b4; }
+.topbar .status, .topbar label { color: #f3e3c4; text-shadow: 0 1px 0 rgb(0 0 0 / 60%); }
+
+/* Panels, a wooden board in a steel frame like the game's info panels */
+.panel, .stat-card {
+  background:
+    linear-gradient(180deg, rgb(24 18 14 / 62%), rgb(18 14 12 / 74%)),
+    url("/static/ui/wood.webp") center / 520px auto repeat,
+    #3b2a1d;
+  border: 3px solid #56608a;
+  border-top-color: #7782ad;
+  border-bottom-color: #353c5c;
+  box-shadow:
+    inset 0 0 0 2px #1d2036,
+    inset 0 3px 10px rgb(0 0 0 / 45%),
+    0 3px 0 rgb(0 0 0 / 50%),
+    0 12px 26px rgb(0 0 0 / 40%);
+}
+.stat-card { border-top: 3px solid #7782ad; }
+/* Section divider: an engraved line fading at both ends, under section headings or their header rows.
+   Not used on toolbars or the army title banner. */
+:root {
+  --section-line:
+    linear-gradient(90deg, transparent, rgb(0 0 0 / 60%) 3%, rgb(0 0 0 / 60%) 97%, transparent) left calc(100% - 1px) / 100% 1px no-repeat,
+    linear-gradient(90deg, transparent, rgb(255 214 150 / 30%) 3%, rgb(255 214 150 / 30%) 97%,
+      transparent) left bottom / 100% 1px no-repeat;
+}
+.panel > h2:not(:only-child), .section-head, .planner-head { padding-bottom: 9px; background: var(--section-line); }
+.panel.grid-head > h2, .panel.armory-toolbar > h2 { padding-bottom: 0; background: none; }
+.planner h3 { color: #ffe3a8; }
+.plan-row:hover { background: rgb(255 220 160 / 8%); }
+.events li { border-top-color: rgb(255 220 160 / 12%); }
+.note { background: rgb(14 12 22 / 60%); border-color: rgb(255 220 160 / 15%); }
+
+/* currency pills, dark glass on wood */
+.currency { background: linear-gradient(180deg, rgb(30 34 60 / 92%), rgb(16 18 36 / 92%)); border-color: #56608a; }
+
+/* Collection cards, in the game's faction card frames */
+.card {
+  --frame: url("/static/ui/frame-neutral.webp");
+  border: 0;
+  border-style: solid;
+  border-width: 26px;
+  border-color: transparent;   /* reserves space; ::after draws the frame */
+  border-radius: 0;
+  padding: 0 0 2px;
+  margin-top: 0;
+  background: none;
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  box-shadow: none;
+  filter: drop-shadow(0 3px 0 rgb(0 0 0 / 45%)) drop-shadow(0 8px 12px rgb(0 0 0 / 35%));
+  transition: transform .12s ease, filter .12s ease;
+}
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: none;
+  outline: none;
+  filter: drop-shadow(0 0 6px rgb(255 214 120 / 70%)) drop-shadow(0 8px 12px rgb(0 0 0 / 35%));
+}
+/* The layers are the fill (::before, masked to the frame's inner shape), the content, then the frame (::after). */
+.card::before, .card::after {
+  content: "";
+  position: absolute;
+  inset: -26px;   /* the border width, so it covers the whole card box */
+  pointer-events: none;
+}
+.card::before {
+  z-index: -1;
+  background:
+    radial-gradient(130% 55% at 50% 0%, color-mix(in srgb, var(--rarity-color, #555) 80%, transparent), transparent 78%),
+    linear-gradient(180deg, color-mix(in srgb, var(--rarity-color, #555) 32%, #1f2442) 0%, #1a1e38 45%, #13162b 100%);
+  /* Frames are a plain rounded window: 48 px slices in the source art are 26 px on screen. */
+  -webkit-mask-box-image: url("/static/ui/fill-mask.png") 48 / 26px stretch;
+  mask-border: url("/static/ui/fill-mask.png") 48 / 26px stretch;
+}
+.card::after {
+  z-index: 2;
+  border-style: solid;
+  border-width: 26px;
+  border-image: var(--frame) 48 / 26px stretch;
+}
+.card .art { align-self: flex-start; flex: none; margin-top: -8px; position: relative; z-index: 3;
+  border-color: color-mix(in srgb, var(--rarity-color, #888) 80%, #000); }
+.card .name { text-shadow: 0 2px 0 rgb(0 0 0 / 60%); }
+.card .meta { color: color-mix(in srgb, var(--rarity-color, #aaa) 55%, #fff); }
+
+/* Cards are as tall as the tallest in the grid, with the badges on one line at the bottom. */
+.grid { grid-auto-rows: 1fr; }
+.card .army-strip { margin-top: 6px; }
+.card .flags { flex-wrap: nowrap; gap: 4px; margin-top: auto; padding-top: 6px; min-width: 0; }
+.card .flags:empty { display: none; }
+.card .flag { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-size: 10.5px; padding: 1px 6px; }
+.card .flag.wild { padding: 1px 6px 1px 2px; gap: 3px; }
+.card .flag.wild .icon { width: 13px; height: 13px; flex: none; }
+.card .flag.boost { padding: 1px 6px 1px 4px; gap: 2px; }
+.card .flag.boost .boost-bolt { width: 10px; height: 10px; flex: none; }
+.card .level { top: -6px; right: 0; z-index: 3; }
+.card.missing { filter: grayscale(.85) drop-shadow(0 3px 0 rgb(0 0 0 / 45%)); opacity: .55; }
+
+.frame-alliance  { --frame: url("/static/ui/frame-alliance.webp"); }
+.frame-horde     { --frame: url("/static/ui/frame-horde.webp"); }
+.frame-undead    { --frame: url("/static/ui/frame-undead.webp"); }
+.frame-beast     { --frame: url("/static/ui/frame-beast.webp"); }
+.frame-blackrock { --frame: url("/static/ui/frame-blackrock.webp"); }
+.frame-cenarion  { --frame: url("/static/ui/frame-cenarion.webp"); }
+.frame-neutral   { --frame: url("/static/ui/frame-neutral.webp"); }
+
+/* Leaders get a soft gold halo, as in the game's leader list. */
+.card.leader { filter: drop-shadow(0 0 5px rgb(255 205 90 / 45%)) drop-shadow(0 3px 0 rgb(0 0 0 / 45%)); }
+
+/* Army board, as the leader's faction "lunchbox" */
+.army-wrap {
+  --board: url("/static/ui/board-neutral.webp");
+  border: 0;
+  border-style: solid;
+  border-width: 30px 26px 26px;
+  border-image: var(--board) 125 110 110 fill / 30px 26px 26px stretch;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  filter: drop-shadow(0 4px 0 rgb(0 0 0 / 45%)) drop-shadow(0 14px 24px rgb(0 0 0 / 45%));
+  padding: 6px 8px 8px;
+}
+.army-wrap .army-notes, .army-wrap > .small { color: #f6e6c8; text-shadow: 0 1px 0 rgb(0 0 0 / 70%); }
+.army-wrap .army-notes li { background: rgb(20 14 10 / 55%); }
+.board-alliance  { --board: url("/static/ui/board-alliance.webp"); }
+.board-horde     { --board: url("/static/ui/board-horde.webp"); }
+.board-undead    { --board: url("/static/ui/board-undead.webp"); }
+.board-beast     { --board: url("/static/ui/board-beast.webp"); }
+.board-blackrock { --board: url("/static/ui/board-blackrock.webp"); }
+
+/* title plate for the army name */
+.panel h2.army-title {
+  padding: 4px 28px 6px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgb(10 10 24 / 55%), rgb(10 10 24 / 75%));
+  box-shadow: inset 0 0 0 2px rgb(255 220 160 / 18%), inset 0 2px 6px rgb(0 0 0 / 50%);
+  color: #fff3d0;
+}
+
+/* Armory, with a tome on each saved army */
+.armory-card { position: relative; }
+
+@media (max-width: 700px) {
+  body { background-attachment: scroll; }
+}

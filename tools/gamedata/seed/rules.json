@@ -1,0 +1,87 @@
+{
+  "sources": {
+    "xpToNext": "method.gg advanced rulebook (Sep 2025); levels 2-5 confirmed in the save data",
+    "rarityUpgrade": "method.gg talents page; Uncommon (no core) and Legendary costs confirmed by observed upgrades",
+    "talentCostCoins": "method.gg talents page; the first talent on the fresh account was free",
+    "currencyIds": "currency IDs are the same for every player; display names live in data/names.json"
+  },
+  "maxXpLevel": 20,
+  "maxLevel": 31,
+  "xpToNext": {
+    "1": 2, "2": 5, "3": 10, "4": 20, "5": 32, "6": 50, "7": 100, "8": 150, "9": 240, "10": 350,
+    "11": 600, "12": 1200, "13": 1800, "14": 3000, "15": 12000, "16": 16250, "17": 37500, "18": 90000, "19": 200000
+  },
+  "rarities": [
+    { "name": "Common", "color": "#9aa0a6" },
+    { "name": "Uncommon", "color": "#43a95a" },
+    { "name": "Rare", "color": "#3b7fd9" },
+    { "name": "Epic", "color": "#9a5bd6" },
+    { "name": "Legendary", "color": "#e2a531" }
+  ],
+  "armySlots": {
+    "source": "in-game Army screen (user screenshots, 2026-11-17); Blizzard Season 6 news: Valor upgrades Gold to Diamond",
+    "count": 7,
+    "leaderSlot": 0,
+    "tiers": [
+      { "name": "None", "bonus": 0, "color": "#4a443b" },
+      { "name": "Bronze", "bonus": 1, "color": "#c07a45" },
+      { "name": "Silver", "bonus": 2, "color": "#b9c0c8" },
+      { "name": "Gold", "bonus": 3, "color": "#e2a531" },
+      { "name": "Diamond", "bonus": 4, "color": "#d58cf0" }
+    ],
+    "diamondValorCost": 200,
+    "boostSlot": 6,
+    "boostNote": "Boost slot: one per leader, always the bottom-right slot; the mini in it gets full XP level (20). Earned in Molten Core wing 1 (method.gg, May 2025)."
+  },
+  "currencyIds": {
+    "valor": "9bc48c339b00c337561a0dfddd42d47b",
+    "coins": "79345c33e9c43301d3f33fe1b40e89c9",
+    "arcEnergy": "24539c7985f8dc57d5b90e909c2fccab",
+    "rareCore": "2464c6623949594eaba745a37444f908",
+    "epicCore": "d4c2be6ba93da5dc2f185c484aca18aa",
+    "legendaryCore": "74a7d9e0deb049297b2e20b6b87514a9"
+  },
+  "currencyIcons": {
+    "source": "game files: iconsglobal.bundle sprites Iconography_N (referenced by each currency's m_icon), 2026-11-17",
+    "9bc48c339b00c337561a0dfddd42d47b": "currency/valor.png",
+    "94c293ba0152633a5a74a8dae8dab0ba": "currency/eventTokens.png",
+    "e1f4dd57cf836abed7875b0b33bb87e8": "currency/rareOMatic.png",
+    "38547868a0830bd6fa60ffc4440983a8": "currency/gemModest.png",
+    "74c4595e80588d652ab5bc38691b79c9": "currency/gemMajor.png",
+    "97b4103c5c0740da8488d67801c30c2b": "currency/gemMega.png",
+    "79345c33e9c43301d3f33fe1b40e89c9": "currency/coins.png",
+    "24539c7985f8dc57d5b90e909c2fccab": "currency/arcEnergy.png",
+    "2464c6623949594eaba745a37444f908": "currency/rareCore.png",
+    "d4c2be6ba93da5dc2f185c484aca18aa": "currency/epicCore.png",
+    "74a7d9e0deb049297b2e20b6b87514a9": "currency/legendaryCore.png",
+    "44b7dad7dfaa4aae8eb69b8dbf6968b8": "currency/gridResets.png",
+    "32141a9ef28487c729b80616d70185ba": "currency/ankh.webp"
+  },
+  "currencyDefaultNames": {
+    "valor": "Valor",
+    "coins": "Coins",
+    "arcEnergy": "Arc Energy",
+    "rareCore": "Rare Upgrade Cores",
+    "epicCore": "Epic Upgrade Cores",
+    "legendaryCore": "Legendary Upgrade Cores"
+  },
+  "rarityUpgrade": [
+    { "to": 1, "stars": 3, "arcEnergy": 500, "core": null },
+    { "to": 2, "stars": 10, "arcEnergy": 2000, "core": "rareCore" },
+    { "to": 3, "stars": 25, "arcEnergy": 8000, "core": "epicCore" },
+    { "to": 4, "stars": 25, "arcEnergy": 20000, "core": "legendaryCore" }
+  ],
+  "shop": {
+    "source": "in-game shop screenshot from the user, 2026-11-17",
+    "arcEnergy": [
+      { "amount": 1000, "price": { "coins": 200 } },
+      { "amount": 5000, "price": { "coins": 1000 } },
+      { "amount": 10000, "price": { "coins": 2000 } }
+    ],
+    "rareCore": { "amount": 1, "price": { "coins": 300 } },
+    "epicCore": { "amount": 1, "price": { "rareCore": 5 } },
+    "legendaryCore": { "amount": 1, "price": { "epicCore": 5 } }
+  },
+  "talentSlotsByRarity": [0, 1, 2, 3, 3],
+  "talentCostCoins": 250
+}

@@ -1,0 +1,15 @@
+# npm run check-style checks these rules in CI (Markdown is left out), and keeps comments within 120 characters.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+max_line_length = 140
+
+[*.md]
+max_line_length = off
+trim_trailing_whitespace = false

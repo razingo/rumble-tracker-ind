@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rumble Collection Tracker</title>
+  <link rel="icon" href="/favicon.ico">
+  <link rel="stylesheet" href="/styles/style.css">
+  <link rel="stylesheet" href="/fonts/fonts.css">
+  <link rel="stylesheet" href="/styles/art.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-row topbar-main">
+      <div class="brand">Rumble Collection Tracker <span class="tag" id="appVersion" hidden></span></div>
+      <nav class="tabs" role="tablist" aria-label="Sections">
+        <button class="tab" role="tab" data-tab="collection">Collection</button>
+        <button class="tab" role="tab" data-tab="army">Army</button>
+        <button class="tab" role="tab" data-tab="armory">Armory</button>
+        <button class="tab" role="tab" data-tab="grid">G.R.I.D.</button>
+        <button class="tab" role="tab" data-tab="calendar">Calendar</button>
+        <button class="tab" role="tab" data-tab="pvp">PvP</button>
+        <button class="tab" role="tab" data-tab="progress">Progress</button>
+      </nav>
+      <div class="account">
+        <label for="account">Account</label>
+        <select id="account"></select>
+        <input id="accountLabel" placeholder="Name this account">
+      </div>
+    </div>
+    <div class="topbar-row topbar-actions">
+      <a class="coffee-button" href="https://buymeacoffee.com/razingo" target="_blank" rel="noopener noreferrer"
+        title="The tracker is free. This is a voluntary way to support it.">☕ Buy me a coffee</a>
+      <div id="status" class="status">Connecting…</div>
+      <span class="topbar-spacer"></span>
+      <button class="chip report-button" id="reportButton" aria-haspopup="dialog">🐞 Report a problem</button>
+      <button class="chip" id="settingsButton" aria-haspopup="dialog"
+        title="Start with Windows, closing the window, notifications and uninstalling">⚙ Settings</button>
+      <div class="backup">
+        <button class="chip" id="backupButton" aria-haspopup="menu" aria-expanded="false">Backup ▾</button>
+        <div class="backup-menu" id="backupMenu" role="menu" hidden>
+          <a role="menuitem" href="/api/backup" download>Export backup</a>
+          <button role="menuitem" id="backupImport">Import backup…</button>
+          <p class="small muted">What you entered, plus G.R.I.D., PvP and progress history.</p>
+          <div class="backup-head">Automatic backups</div>
+          <div id="backupList"></div>
+        </div>
+        <input type="file" id="backupFile" accept="application/json,.json" hidden>
+      </div>
+      <button class="chip quit-button" id="quitButton" title="Stop the tracker" hidden>⏻ Quit</button>
+    </div>
+  </header>
+
+  <div id="dataBanner" class="data-banner" role="status" hidden></div>
+
+  <main id="tab-army" class="army-page" hidden></main>
+  <main id="tab-armory" class="armory-page" hidden></main>
+  <main id="tab-calendar" class="calendar-page" hidden></main>
+  <main id="tab-pvp" class="pvp-page" hidden></main>
+  <main id="tab-grid" class="grid-page" hidden></main>
+  <main id="tab-progress" class="progress-page" hidden></main>
+
+  <main id="tab-collection" class="layout">
+    <section class="content">
+      <section class="panel recent" aria-label="Recent changes">
+        <h2>Recent changes <span class="muted small" id="eventsCount"></span></h2>
+        <ol id="events" class="events"></ol>
+      </section>
+      <div id="currencies" class="currencies"></div>
+      <div id="summary" class="summary"></div>
+      <section id="needs" class="panel needs"></section>
+      <section id="filters" class="panel filters" aria-label="Filters for the planner and the collection"></section>
+      <section id="planner" class="panel planner"></section>
+      <div class="toolbar">
+        <div id="gridCount" class="muted"></div>
+        <div class="toolbar-right">
+          <label>Show
+            <select id="show">
+              <option value="owned">Owned</option>
+              <option value="all">Owned + not owned</option>
+            </select>
+          </label>
+          <label>Sort
+            <select id="sort">
+              <option value="level">Level</option>
+              <option value="name">Name</option>
+              <option value="rarity">Rarity</option>
+              <option value="ready">Upgrade ready first</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div id="grid" class="grid"></div>
+    </section>
+  </main>
+
+  <div id="drawer" class="drawer" hidden>
+    <div class="drawer-backdrop" data-close></div>
+    <article class="drawer-body" role="dialog" aria-modal="true" aria-labelledby="drawerTitle"></article>
+  </div>
+
+  <dialog id="settingsDialog" class="dialog" aria-label="Settings"></dialog>
+  <dialog id="messageDialog" class="dialog message-dialog" aria-label="Message"></dialog>
+  <dialog id="updateDialog" class="dialog update-dialog" aria-label="Tracker update"></dialog>
+  <dialog id="reportDialog" class="dialog report-dialog" aria-label="Report a problem"></dialog>
+
+  <footer class="site-foot">
+    Unofficial fan tool, not affiliated with or endorsed by Blizzard Entertainment. Warcraft Rumble and its game art
+    and data © Blizzard Entertainment, Inc.
+  </footer>
+
+  <!-- report.js first: it reports script errors from the start -->
+  <script type="module" src="/scripts/report.js"></script>
+  <script type="module" src="/scripts/app.js"></script>
+</body>
+</html>
