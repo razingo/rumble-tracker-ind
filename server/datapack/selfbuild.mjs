@@ -14,7 +14,7 @@ import { APP_NAME, SECOND } from '../../web/scripts/lib/constants.js';
 const RETRY_MS = 15 * SECOND;
 const builderFile = (root) => path.join(root, 'tools', 'gamedata', 'build.mjs');
 
-/** Whether this tracker reads its own game data: the self-built exe does, and from source RUMBLE_SELF_BUILD asks for it. */
+/** Whether this tracker reads its own game data: the self-built exe, or from source with RUMBLE_SELF_BUILD set. */
 export async function selfBuilding(ctx) {
   if (!ctx.standalone && !process.env.RUMBLE_SELF_BUILD) return false;
   return !!(await stat(builderFile(ctx.paths.ROOT)).catch(() => null));
