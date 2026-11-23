@@ -95,10 +95,11 @@ function offerTome(o) {
   const m = /Tome(Modest|Major|Mega|Mythic)(?:_(\w+?))?_StoreOffer/.exec(STORE?.offers?.[o.offer]?.name || '');
   return m ? `${m[1]} ${m[2] && !/Generic/.test(m[2]) ? `${m[2]} ` : ''}Tome` : null;
 }
-// a tome's icon (static/rewards)
+// a tome's icon (static/rewards). A tome of no faction is the game's "Generic" one, but for the Modest size, whose
+// picture the game calls "Star".
 function tomeIcon(name) {
   const m = /^(Modest|Major|Mega|Mythic)(?: (\w+))? Tome$/.exec(name || '');
-  return m ? `/static/rewards/Shared_Tex_Tome${m[1]}_${m[2] || 'Generic'}.webp` : null;
+  return m ? `/static/rewards/Shared_Tex_Tome${m[1]}_${m[2] || (m[1] === 'Modest' ? 'Star' : 'Generic')}.webp` : null;
 }
 function offerTitle(o) {
   const info = STORE?.offers?.[o.offer];

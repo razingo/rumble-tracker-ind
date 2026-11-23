@@ -4,7 +4,7 @@
 import { writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readBundle, bundleFiles, jsonObjectAt, saveIdOf, englishStrings } from './unityfs.mjs';
+import { readBundle, bundleFiles, jsonObjectAt, saveIdOf, englishStrings, CURRENCY_NAMES } from './unityfs.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DATA = process.env.RUMBLE_GAMEDATA || join(HERE, '..', '..', 'gamedata'); // the game data being built
@@ -41,12 +41,6 @@ const clean = (s) => s?.replace(/<[^>]+>/g, '').replace(/\{\d+\}/g, '').replace(
 
 const int = (g) => objs[g]?.m_value ?? null;
 const COINS = 'e9c433015c337934c9890eb4e13ff3d3';
-// currency GUIDs (data_currencytype.bundle) -> in-game names
-const CURRENCY = {
-  e9c433015c337934c9890eb4e13ff3d3: 'Coins', '85f8dc579c792453abcc2f9c900eb9d5': 'Arc Energy', '9b00c3378c339bc47bd442ddfd0d1a56': 'Valor',
-  '3949594ec662246408f94474a345a7ab': 'Rare Upgrade Core', a93da5dcbe6bd4c2aa18ca4a485c182f: 'Epic Upgrade Core',
-  deb04929d9e074a7a91475b8b6202e7b: 'Legendary Upgrade Core', dfaa4aaedad744b7b86869bf8d9bb68e: 'Big Red Button',
-};
 
 // readable fallback for offers without an English title: Daily_TomeMega_Generic_StoreOffer -> "Tome Mega Generic"
 const pretty = (n) => n.replace(/_StoreOffer.*$/, '').replace(/^(Daily|Special|Persistent|FreeGift)_/,
@@ -65,7 +59,7 @@ for (const o of Object.values(objs)) {
     // art: the offer's own banner; the free gift (unit XP) has none, so it gets the XP gem pile
     icon: banner || (/^FreeGift_Dynamic/.test(o.name) ? 'Store_Tex_XP_Gem_Pile' : undefined),
     title: clean(str[o.m_offerTitle]) || clean(str[product?.m_name]) || pretty(o.name),
-    cost: vc ? { coins: vc.m_currencyType === COINS, currency: CURRENCY[vc.m_currencyType] || vc.m_currencyType,
+    cost: vc ? { coins: vc.m_currencyType === COINS, currency: CURRENCY_NAMES[vc.m_currencyType] || vc.m_currencyType,
       amount: int(vc.m_priceAmount) } : null,
     realMoney: o.m_costType === 'RealMoney' || undefined,
     free: (!o.m_costType && !vc) || undefined,

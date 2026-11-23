@@ -3,7 +3,7 @@ import { poll } from './app.js';
 import { encodeArmyCode, decodeArmyCode } from './army-code.js';
 import { pools, savePools, matchingSlots, renderPool, renderPoolGrid, updatePool, poolClick } from './army-pools.js';
 import { toggleIn } from './collection.js';
-import { $, post, copyText, RULES, BY_SLUG, TAG_ICONS, state } from './core.js';
+import { $, post, copyText, RULES, BY_SLUG, TAG_ICONS, FAMILY_PAIRS, state } from './core.js';
 import { confirmDialog, alertDialog } from './dialogs.js';
 import { iconImage, openDrawer } from './drawer.js';
 import { SECOND } from './lib/constants.js';
@@ -17,17 +17,14 @@ export const builder = { draft: null, draftAccount: null, nameText: '', codeMsg:
   poolTraitOpen: null, poolTraitQ: {}, pools: null };
 
 // Faction pennant
-// Faction pairs with a combined icon (static/icons/fam).
-const FAMILY_COMBOS = ['AllianceHorde', 'AllianceUndead', 'BeastAlliance', 'BeastBlackrock', 'BlackrockAlliance',
-  'BlackrockUndead', 'HordeBeast', 'HordeBlackrock', 'UndeadBeast', 'UndeadHorde'];
-
 function familyFlag(m) {
   const fams = familiesOf(m);
   if (fams.length === 1) {
     return `<span class="family-flag family-${fams[0].toLowerCase()}"
       title="${esc(fams[0])}">${iconImage(TAG_ICONS[fams[0]], fams[0])}</span>`;
   }
-  const combo = FAMILY_COMBOS.find((c) => c === fams[0] + fams[1] || c === fams[1] + fams[0]);
+  // (a pair with a combined icon, in static/icons/fam)
+  const combo = FAMILY_PAIRS.find((c) => c === fams[0] + fams[1] || c === fams[1] + fams[0]);
   const icon = combo ? `<img class="icon" src="/static/icons/fam/${combo}.png" alt="">` : iconImage(TAG_ICONS[fams[0]], fams[0]);
   return `<span class="family-flag family-split"
     style="--family-a:var(--family-${fams[0].toLowerCase()});--family-b:var(--family-${fams[1].toLowerCase()})"

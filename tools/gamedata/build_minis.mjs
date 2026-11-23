@@ -231,6 +231,8 @@ writeFileSync(OUT, JSON.stringify({
   source: 'Warcraft Rumble game files. Game data © Blizzard Entertainment.',
   stats: { format: 'single value = same at all levels; array = levels 1..31 (index 0 = level 1)',
     scaling: `stats with a growth type: round(level 1 value x ${GROWTH}^(level-1))` },
+  // the faction pairs that have a combined icon (icons/fam/<pair>.png), from the list those icons are read by
+  familyPairs: Object.keys(JSON.parse(readFileSync(join(HERE, 'family_pair_sprites.json'), 'utf8'))).map((f) => f.replace(/\.png$/, '')),
   tagIcons: { Wildcard: 'icons/Wildcard.png', Leader: 'icons/Leader.png',
     ...Object.fromEntries(Object.entries(tagIcons).filter(([, v]) => v)),
     'Siege Damage': tagIcons.Siege || tagIcons['Siege Damage'], 'Siege Specialist': tagIcons.Siege || tagIcons['Siege Specialist'] },

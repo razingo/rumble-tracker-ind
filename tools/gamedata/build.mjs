@@ -40,7 +40,7 @@ const TABLES = ['unityfs.mjs'], IMAGES = ['extract_reward_icons.py'];
 const SOURCES = {
   'Starting tables': readdirSync(SEED).map((f) => `seed/${f}`),
   'Index of the game files': ['build_guid_index.mjs', ...TABLES],
-  Minis: ['build_minis.mjs', ...TABLES],
+  Minis: ['build_minis.mjs', 'family_pair_sprites.json', ...TABLES],
   'Army boards': ['army_boards.mjs', ...TABLES],
   Events: ['build_events.mjs', ...TABLES],
   Store: ['build_store.mjs', ...TABLES],

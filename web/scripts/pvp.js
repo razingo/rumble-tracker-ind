@@ -167,7 +167,7 @@ function modifiersPanel({ now }) {
     class="muted small">${esc(dayOnly(set.start))}</span>${set.mods.map((id) => modifier(id, false)).join('')}</div>`);
   return `<section class="panel">
     <div class="section-head"><h2>Modifiers</h2><span class="muted small">They change every
-      ${PVP.seasons[0]?.rotation?.periodDays || 3} days, next in ${span(cur.end - now)}</span></div>
+      ${pvpSeasonAt(now)?.rotation?.periodDays || 3} days, next in ${span(cur.end - now)}</span></div>
     <div class="pvp-mods">${cur.mods.map((id) => modifier(id, true)).join('')}</div>
     ${rows.length ? `<div class="pvp-next">${rows.join('')}</div>` : ''}
   </section>`;
@@ -274,9 +274,7 @@ export async function renderPvp() {
     await loadPvp();
     await loadEvents();
   } catch (err) {
-    // Game data from before PvP was added has no pvp.json.
-    page.innerHTML = `<div class="panel muted">${err.status === 404
-      ? 'This game data has no PvP information yet. It comes with the next game-data update.' : esc(err.message)}</div>`;
+    page.innerHTML = `<div class="panel muted">${esc(err.message)}</div>`;
     return;
   }
   if (ui.tab !== 'pvp') return;

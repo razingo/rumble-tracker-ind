@@ -90,6 +90,7 @@ export function openExternal(url) {
 
 // Only this module assigns these (setTables, setState, setDirty); the other modules see the current values.
 export let RULES, MINIS, BY_SLUG, TAG_ICONS;
+export let FAMILY_PAIRS = []; // faction pairs with a combined icon (icons/fam), such as 'AllianceHorde'
 export let ALWAYS_OWNED = []; // minis every player owns, which the save doesn't list
 export let state = null; // the server's state for the selected account (/api/state)
 export let dirty = false; // a redraw waits until the user leaves a field
@@ -100,6 +101,7 @@ export function setTables(rules, minisFile) {
   MINIS = minisFile.minis;
   // Wildcard and Leader icons are not in minis.json.
   TAG_ICONS = { Wildcard: 'icons/Wildcard.png', Leader: 'icons/Leader.png', ...(minisFile.tagIcons || {}) };
+  FAMILY_PAIRS = minisFile.familyPairs || [];
   ALWAYS_OWNED = MINIS.filter((m) => m.alwaysOwned);
   BY_SLUG = new Map(MINIS.map((m) => [m.slug, m]));
 }

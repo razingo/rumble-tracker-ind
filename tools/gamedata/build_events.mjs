@@ -9,7 +9,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readBundle, bundleFiles, jsonObjectAt, saveIdOf, englishStrings } from './unityfs.mjs';
+import { readBundle, bundleFiles, jsonObjectAt, saveIdOf, englishStrings, CURRENCY_NAMES } from './unityfs.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DATA = process.env.RUMBLE_GAMEDATA || join(HERE, '..', '..', 'gamedata'); // the game data being built
@@ -124,15 +124,6 @@ events.sort((a, b) => a.id.localeCompare(b.id));
 // Each SeasonalEventReward is named <Event>_Row<A..>_Col<n>: rows top to bottom, columns staggered (odd/even per row)
 // like the in-game prize tree. Cost = SharedInt (event tickets), reward = Reward object. Only for recurring events.
 const sprites = new Set();
-// currency GUIDs (data_currencytype.bundle) -> in-game names
-const CURRENCY_LABEL = {
-  e9c433015c337934c9890eb4e13ff3d3: 'Coins', '85f8dc579c792453abcc2f9c900eb9d5': 'Arc Energy',
-  '3949594ec662246408f94474a345a7ab': 'Rare Upgrade Core', a93da5dcbe6bd4c2aa18ca4a485c182f: 'Epic Upgrade Core',
-  deb04929d9e074a7a91475b8b6202e7b: 'Legendary Upgrade Core', cf836abedd57e1f4e887bb330b5b87d7: 'Rare-O-Matic',
-  dfaa4aaedad744b7b86869bf8d9bb68e: 'Big Red Button', a0830bd678683854a8830944c4ff60fa: "Modest Tinker's Gem",
-  '80588d65595e74c4c9791b6938bcb52a': "Major Tinker's Gem", '5c0740da103c97b42b0cc30178d68884': "Mega Tinker's Gem",
-  '9b00c3378c339bc47bd442ddfd0d1a56': 'Valor',
-};
 const UNIT_SLUGS = JSON.parse(readFileSync(join(DATA, 'unit_ids.json'), 'utf8')).units || {};
 const spriteOf = (ref) => (ref ? String(ref).split(',')[1] || null : null);
 function rewardOf(r) {
@@ -174,7 +165,7 @@ function rewardOf(r) {
   if (!tome && !out.unit && g.m_currencyType && g.m_currencyAmount && g.m_grantType !== 'ItemChoice') {
     out.amount = g.m_currencyAmount;
     // the reward's own text is sometimes a generic string (a Rare Core read "Arc Energy"): name it by its currency
-    if (CURRENCY_LABEL[g.m_currencyType]) out.label = CURRENCY_LABEL[g.m_currencyType];
+    if (CURRENCY_NAMES[g.m_currencyType]) out.label = CURRENCY_NAMES[g.m_currencyType];
     if (g.m_currencyType === 'e9c433015c337934c9890eb4e13ff3d3') out.coins = true; // raised by coin income bonuses
   }
   delete out.unit;
@@ -276,7 +267,7 @@ for (const ev of events) {
     if (fb) {
       const icon = spriteOf(fb.m_sprite);
       if (icon) sprites.add(icon);
-      x.r.fallback = { label: CURRENCY_LABEL[fb.m_currencyType] || clean(str[fb.m_rewardName]) || fb.name,
+      x.r.fallback = { label: CURRENCY_NAMES[fb.m_currencyType] || clean(str[fb.m_rewardName]) || fb.name,
         amount: fb.m_currencyAmount || null, coins: fb.m_currencyType === 'e9c433015c337934c9890eb4e13ff3d3'
         || undefined, icon: icon || undefined };
     }

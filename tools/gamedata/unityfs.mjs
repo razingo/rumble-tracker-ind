@@ -123,3 +123,13 @@ export function englishStrings(objs) {
   }
   return strings;
 }
+
+// The currencies' names by their GUID (data_currencytype.bundle), as the game shows them.
+export const CURRENCY_NAMES = {
+  e9c433015c337934c9890eb4e13ff3d3: 'Coins', '85f8dc579c792453abcc2f9c900eb9d5': 'Arc Energy',
+  '9b00c3378c339bc47bd442ddfd0d1a56': 'Valor', '3949594ec662246408f94474a345a7ab': 'Rare Upgrade Core',
+  a93da5dcbe6bd4c2aa18ca4a485c182f: 'Epic Upgrade Core', deb04929d9e074a7a91475b8b6202e7b: 'Legendary Upgrade Core',
+  dfaa4aaedad744b7b86869bf8d9bb68e: 'Big Red Button', cf836abedd57e1f4e887bb330b5b87d7: 'Rare-O-Matic',
+  a0830bd678683854a8830944c4ff60fa: "Modest Tinker's Gem", '80588d65595e74c4c9791b6938bcb52a': "Major Tinker's Gem",
+  '5c0740da103c97b42b0cc30178d68884': "Mega Tinker's Gem",
+};
