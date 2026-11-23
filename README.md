@@ -66,7 +66,8 @@ to one JSON file, which *Import backup…* restores, also on another PC.
 
 ### Updating
 
-Once a day the tracker asks GitHub whether a newer version is out, and offers it in a pop-up. *Download now* fetches
+When its window opens, and once a day, the tracker asks GitHub whether a newer version is out, and offers it in a
+pop-up. *Download now* fetches
 the release, checks it against the checksums published with it, replaces `RumbleTracker.exe` and restarts; if the new
 version fails to start, the previous one is put back. An exe you built yourself is only told about the new version,
 and is left as it is. You can also download the release and replace the exe by hand. Either way your data stays where
@@ -93,7 +94,7 @@ A mini that a patch adds shows as *Needs your input* until a newer version of th
 - The tracker only **reads** the game's saved data (from the Windows registry). It never changes it, and it ignores
   the login tokens stored next to it.
 - It sends nothing about you anywhere. Its only request to the internet asks GitHub for the tracker's latest version,
-  once a day, and can be turned off in **⚙ Settings**; a new version is downloaded only when you click *Download now*.
+  when its window opens and once a day, and can be turned off in **⚙ Settings**; a new version is downloaded only when you click *Download now*.
   *Report a problem* and the other links open in your own browser.
 - The local page is only reachable from this PC, and only by the tracker's own page.
 

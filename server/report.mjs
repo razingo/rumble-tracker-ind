@@ -11,8 +11,8 @@ export const ISSUES_REPO = process.env.RUMBLE_ISSUES_REPO || REPO;
 const MAX_ERRORS = 30;
 const MAX_MESSAGE = 500;
 
-const home = os.homedir();
-const userName = (() => {
+const HOME = os.homedir();
+const USER = (() => {
   try {
     return os.userInfo().username;
   } catch {
@@ -21,11 +21,13 @@ const userName = (() => {
 })();
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-/** Removes personal details from text. */
-export function clean(text) {
+/** Removes personal details from text. `home` and `userName` are this PC's (given by tests). */
+export function clean(text, { home = HOME, userName = USER } = {}) {
   let s = String(text ?? '');
-  if (home) s = s.replace(new RegExp(escapeRe(home), 'gi'), '~').replace(new RegExp(escapeRe(home.replace(/\\/g, '/')), 'gi'), '~');
-  if (userName && userName.length >= 3) s = s.replace(new RegExp(`\\b${escapeRe(userName)}\\b`, 'gi'), '<user>');
+  // (only whole folder names: a word that happens to be the name, or a folder that only starts with it, stays)
+  const end = '(?=[\\\\/]|$|["\'\\s:;,)])';
+  for (const h of home ? [home, home.replace(/\\/g, '/')] : []) s = s.replace(new RegExp(escapeRe(h) + end, 'gi'), '~');
+  if (userName) s = s.replace(new RegExp(`(?<=[\\\\/])${escapeRe(userName)}${end}`, 'gi'), '<user>');
   return s
     .replace(/eyJ[\w-]{8,}\.[\w-]{8,}\.[\w-]*/g, '<token>')                 // JWTs (login / state tokens)
     .replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, '<email>')

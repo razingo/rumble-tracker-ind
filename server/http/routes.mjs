@@ -11,6 +11,8 @@ import { givenGameFolder, setGameFolder } from '../game/folder.mjs';
 import { MINUTE, MB, CLOSE_CHOICES } from '../../web/scripts/lib/constants.js';
 import { localDay } from '../../web/scripts/lib/format.js';
 
+const CHECK_AGAIN_MS = 5 * MINUTE; // a check for a new version asked for by the page, at the soonest
+
 async function readBody(req, limit = 64 * 1024) {
   let size = 0;
   const chunks = [];
@@ -55,6 +57,8 @@ export function createRoutes(ctx, deps) {
     startWithWindows: deps.autostart ? await deps.autostart.get() : null,
     closeWindow: ctx.standalone ? ctx.user.appSettings.closeWindow : null,
     checkUpdates: ctx.user.appSettings.checkUpdates,
+    // when a newer version was last looked for, and why that failed if it did
+    lastUpdateCheck: ctx.appUpdate.lastCheck, updateCheckError: ctx.appUpdate.checkError,
     // the game's folder given by hand ('' when none), and the one in use ('' when the game is not found)
     gameFolder: await givenGameFolder(ctx),
     gameFolderUsed: await deps.gameData?.gameFolder() || '',
@@ -160,6 +164,13 @@ export function createRoutes(ctx, deps) {
     'POST /api/report/clear': async () => {
       ctx.errorLog.clear();
       ctx.bump();
+      return [200, { ok: true }];
+    },
+    // The page asks for this when its window comes into view, so a tracker that sat in the tray for hours learns of
+    // a new version when someone looks at it. Not more often than every few minutes.
+    'POST /api/update/check': async () => {
+      const last = Date.parse(ctx.appUpdate.lastCheck || '') || 0;
+      if (Date.now() - last > CHECK_AGAIN_MS) await deps.checkForUpdate?.();
       return [200, { ok: true }];
     },
     // Later in the update pop-up hides it until the tracker restarts.

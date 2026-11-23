@@ -198,6 +198,24 @@ test('turns the check for new versions off and on', async () => {
   assert.equal((await api('POST', '/api/settings', { checkUpdates: true })).body.checkUpdates, true);
 });
 
+test('the page asks for a check when its window comes into view, at most every few minutes', async () => {
+  const before = calls.checks;
+  ctx.appUpdate.lastCheck = null;
+  assert.equal((await api('POST', '/api/update/check', {})).status, 200);
+  assert.equal(calls.checks, before + 1);
+  ctx.appUpdate.lastCheck = new Date().toISOString(); // (the real check writes this down)
+  await api('POST', '/api/update/check', {});
+  assert.equal(calls.checks, before + 1, 'not again so soon');
+  ctx.appUpdate.lastCheck = new Date(Date.now() - 10 * 60000).toISOString();
+  ctx.appUpdate.checkError = 'GitHub answered 503.';
+  await api('POST', '/api/update/check', {});
+  assert.equal(calls.checks, before + 2);
+  const s = (await api('GET', '/api/settings')).body;
+  assert.equal(s.lastUpdateCheck, ctx.appUpdate.lastCheck);
+  assert.equal(s.updateCheckError, 'GitHub answered 503.');
+  ctx.appUpdate.checkError = null;
+});
+
 test('running from source, there are no routes that act on the exe', async () => {
   const source = await testContext();
   try {

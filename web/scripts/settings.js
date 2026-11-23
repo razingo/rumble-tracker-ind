@@ -4,10 +4,12 @@
 import { $, getJson, post, showMessage, state } from './core.js';
 import { showDialog, confirmDialog, alertDialog } from './dialogs.js';
 import { CLOSE_CHOICES } from './lib/constants.js';
-import { esc, dateTime } from './lib/format.js';
+import { esc, dateTime, ago } from './lib/format.js';
 
 let notify = null; // { settings, types, log, pending, playing }
-let general = null; // { startWithWindows, closeWindow (both null from source), checkUpdates, gameFolder, gameFolderUsed }
+// { startWithWindows, closeWindow (both null from source), checkUpdates, lastUpdateCheck, updateCheckError, gameFolder,
+// gameFolderUsed }
+let general = null;
 let extra = null; // the additional data: { available, state, done, total, label, error } (server/rdmodule.mjs)
 let extraTimer = null;
 
@@ -32,6 +34,12 @@ function gameFolderSection() {
       WarcraftRumble.exe. Leave it empty to have the tracker look for the game.</p>`;
 }
 
+/** When a newer version was last looked for, or why that did not work. */
+function lastCheck() {
+  if (general.updateCheckError) return ` The last check did not work (${esc(general.updateCheckError)}).`;
+  return general.lastUpdateCheck ? ` Last checked ${esc(ago(general.lastUpdateCheck))}.` : '';
+}
+
 /** Start with Windows and what closing the window does, which only the exe has, and the check for new versions. */
 function generalSection() {
   const autostart = general?.startWithWindows == null
@@ -46,7 +54,8 @@ function generalSection() {
       <p class="muted small">In the tray, notifications still arrive. "Ask me" asks once, and your answer is kept here.</p>`;
   const updates = general?.checkUpdates == null ? '' : `<label class="dialog-toggle"><input type="checkbox"
       data-setting="checkUpdates" ${general.checkUpdates ? 'checked' : ''}> Check for new versions</label>
-      <p class="muted small">Asks GitHub once a day for the tracker's latest version. Nothing about you is sent.</p>`;
+      <p class="muted small">Asks GitHub for the tracker's latest version when this window opens and once a day. Nothing
+        about you is sent.${general.checkUpdates ? lastCheck() : ''}</p>`;
   return `<h3>General</h3>${autostart}${close}${updates}<span class="dialog-message small" data-setting-message></span>`;
 }
 

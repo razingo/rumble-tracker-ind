@@ -28,3 +28,11 @@ test('a failed program\'s error is told with its reason, in one line', () => {
   assert.equal(briefError(new Error('The game is being updated.')), 'The game is being updated.');
   assert.equal(briefError(new Error('')), 'unknown error');
 });
+
+test('reports name no Windows user, and leave words that only look like one', () => {
+  const me = { home: 'C:\\Users\\Data', userName: 'Data' };
+  assert.equal(clean('Data folder: C:\\Users\\Data\\AppData\\Roaming, game data read', me),
+    'Data folder: ~\\AppData\\Roaming, game data read');
+  assert.equal(clean('reading D:/Games/data/Warcraft Rumble', me), 'reading D:/Games/<user>/Warcraft Rumble');
+  assert.equal(clean('C:\\Users\\Data2\\x', me), 'C:\\Users\\Data2\\x');
+});

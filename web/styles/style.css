@@ -98,6 +98,7 @@ button { cursor: pointer; }
 .status-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .topbar-spacer { flex: 1; }
 .brand {
+  margin: 0;
   font-family: var(--display);
   font-weight: 400;
   font-size: 22px;
@@ -254,7 +255,9 @@ button { cursor: pointer; }
   min-height: 38px;
 }
 .tag-editor input { flex: 1; min-width: 140px; padding: 3px; box-shadow: none; border: 0; background: transparent; }
+/* the box shows the focus of the field inside it */
 .tag-editor input:focus { outline: none; }
+.tag-editor:focus-within { outline: 2px solid var(--gold-2); outline-offset: 1px; }
 .tag-chip {
   display: inline-flex;
   align-items: center;

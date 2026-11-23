@@ -178,7 +178,8 @@ notifications arrive without starting it yourself.
 tracker*, or *Ask me*. With *Ask me*, the first close asks (*Cancel* keeps the window open), and your answer becomes
 the setting. Both settings are only in `RumbleTracker.exe`.
 
-**Check for new versions** has the tracker ask GitHub once a day whether a newer version is out.
+**Check for new versions** has the tracker ask GitHub whether a newer version is out, when its window opens and once
+a day. The line under it says when it last looked.
 
 **Warcraft Rumble's folder** shows where the tracker reads its game data from. Leave it empty unless that is wrong,
 for example after moving the game by hand: then give the folder that holds `WarcraftRumble.exe`. The tracker uses

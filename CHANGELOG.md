@@ -3,6 +3,14 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.1.3
+
+- The tracker now looks for a new version whenever its window opens, not only once a day, so the update pop-up shows
+  up sooner.
+- Settings says when the tracker last looked for a new version, or why that did not work.
+- Keyboard: the Left and Right arrow keys move between the tabs, and the tag box shows when it has the focus.
+- The problem report no longer replaces ordinary words that happen to match your Windows user name.
+
 ## 0.1.2
 
 - Fixed: when reading the game data failed, the banner repeated itself. It now gives the reason once.

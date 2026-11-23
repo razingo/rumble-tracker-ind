@@ -72,7 +72,8 @@ nothing is downloaded.
 
 ## App updates
 
-At start and once a day the tracker asks GitHub for the latest release of its repository. The request carries nothing
+At start, when its window comes into view and once a day the tracker asks GitHub for the latest release of its
+repository. The request carries nothing
 about you, and the check can be turned off in **⚙ Settings**. When there's a newer version, a pop-up offers:
 
 - **Download now**: the tracker downloads the release from GitHub, checks the zip and the exe against the checksums

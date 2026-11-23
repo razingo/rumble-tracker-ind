@@ -71,14 +71,28 @@ async function boot() {
   bindSettings();
   bindReport();
   for (const b of document.querySelectorAll('[data-tab]')) b.addEventListener('click', () => setTab(b.dataset.tab));
+  // Left and Right move between the tabs, Home and End go to the first and the last, as a tab list is expected to
+  document.querySelector('[role="tablist"]').addEventListener('keydown', (e) => {
+    const all = [...e.currentTarget.querySelectorAll('[data-tab]')], at = all.indexOf(document.activeElement);
+    const to = { ArrowRight: at + 1, ArrowLeft: at - 1, Home: 0, End: all.length - 1 }[e.key];
+    if (at < 0 || to === undefined) return;
+    e.preventDefault();
+    const next = all[(to + all.length) % all.length];
+    setTab(next.dataset.tab);
+    next.focus();
+  });
   setTab(ui.tab);
   await poll();
   schedulePoll();
+  // In view: the tracker looks for a newer version now (it may have sat in the tray since its last daily look).
+  const lookForUpdate = () => post('/api/update/check', {}).then(poll, () => {});
+  lookForUpdate();
   // Back in view, so refresh at once instead of waiting for the slow poll.
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) return;
     poll();
     schedulePoll();
+    lookForUpdate();
   });
   setInterval(renderStatus, SECOND);
 }
@@ -177,7 +191,10 @@ export function setTab(tab) {
   ui.tab = tab;
   store.set('tab', tab);
   if (location.hash.slice(1) !== tab) history.replaceState(null, '', `#${tab}`);
-  for (const b of document.querySelectorAll('[data-tab]')) b.setAttribute('aria-selected', String(b.dataset.tab === tab));
+  for (const b of document.querySelectorAll('[data-tab]')) {
+    b.setAttribute('aria-selected', String(b.dataset.tab === tab));
+    b.tabIndex = b.dataset.tab === tab ? 0 : -1; // (Tab reaches the open one; the arrows reach the others)
+  }
   for (const page of document.querySelectorAll('main[id^="tab-"]')) page.hidden = page.id !== `tab-${tab}`;
   TAB_PAGES[tab]?.();
 }
