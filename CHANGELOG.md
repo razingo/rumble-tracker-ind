@@ -3,6 +3,20 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.3.1
+
+- Calendar: shop offers for cores, the Modest Star Tome and Arc Energy show their names instead of "{cores}" and
+  "{energy}", and Arc Energy and discounted mini offers show their price.
+- Calendar: events show their own ticket icons, also Anniversary, Cenarion Festival, the PC launch and Winds of Change.
+- Collection and Army have a Neutral faction filter, for minis of no faction (the Kobold Miner) and of a faction the
+  tracker doesn't know yet.
+- Army: a mini you don't own, from an imported code or armory, can be taken off the board.
+- A mini's details show both factions of a two-faction mini.
+- Fixed: on a new install, the first notification could be lost.
+- Fixed: the rdmodule did not open when its last data update had failed.
+- Fixed: an Armory edit that could not be saved still changed the army on the Army tab.
+- After this update the tracker reads its game data again once, in the background; it takes about a minute.
+
 ## 0.3.0
 
 - The rdmodule's effects are drawn with their own random numbers, so each effect comes out the same whichever
