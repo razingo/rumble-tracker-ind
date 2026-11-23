@@ -13,7 +13,7 @@ Out (<out_dir>):
                      clips (Timeline AnimationTracks, Animators) sampled per animated property
   textures/<name>.png, meshes/<name>.obj  what the particles draw
 Particles are simulated in game: the JSON has the settings, not baked frames."""
-import os, re, sys, json, glob, math, zlib, UnityPy
+import os, re, sys, json, math, zlib
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.environ["RUMBLE_WORK"]  # the working folder: exports, indexes, the tables read
@@ -24,25 +24,9 @@ import export_models as em
 import export_animations as ea  # clip decoding
 sys.argv = _argv
 B = em.B
-ASSET_FILE = os.path.join(ROOT, "asset_index.json")
 SKIP = {"Mini", "Talent", "Statue", "Family"}  # records that lead to other cards, not to this unit's effects
 MODULES = ("InitialModule", "ShapeModule", "EmissionModule", "SizeModule", "RotationModule", "ColorModule", "UVModule",
            "VelocityModule", "LimitVelocityModule", "ClampVelocityModule", "ForceModule", "NoiseModule", "TrailModule", "SubModule")
-
-def asset_index():
-    """asset GUID -> [bundle, type, name], for every bundle's m_Container."""
-    if os.path.exists(ASSET_FILE): return json.load(open(ASSET_FILE))
-    out = {}
-    for p in sorted(glob.glob(B + "/*.bundle")):
-        try: env = UnityPy.load(p)
-        except Exception: continue
-        ab = next((o.read() for o in env.objects if o.type.name == "AssetBundle"), None)
-        for k, v in (ab.m_Container if ab else []):
-            if len(k) != 32 or k in out: continue
-            try: a = v.asset.read(); out[k] = [os.path.basename(p), a.type.name if hasattr(a, "type") else type(a).__name__, getattr(a, "m_Name", "")]
-            except Exception: out[k] = [os.path.basename(p), "?", ""]
-    json.dump(out, open(ASSET_FILE, "w"))
-    return out
 
 def prefab_refs(r):
     """(field, guid) for every prefab a record shows."""
@@ -108,7 +92,7 @@ def place(tmp, p):
         if os.path.exists(p): os.remove(tmp)
         else: raise
 
-def safe(s): return re.sub(r"[^A-Za-z0-9_.-]+", "_", s).strip("_") or "unnamed"
+safe = em.safe
 
 def named(o):
     """A file name for a texture or mesh: its name and a number for which object it is. The game has different ones
@@ -359,7 +343,7 @@ def unit_effects(key, own, recs, owner):
     return [(recs[g], ability(recs[g]["name"]) or ability(origin)) for g, origin in found.items()]
 
 def main():
-    assets = asset_index()
+    assets = json.load(open(os.path.join(ROOT, "asset_index.json")))  # asset GUID -> [bundle, type, name]
     recs, by_key = em.unit_records()
     owner = {r["guid"]: k for k, rs in by_key.items() for r in rs}
     users = {}

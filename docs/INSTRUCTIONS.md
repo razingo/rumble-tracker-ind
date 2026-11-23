@@ -79,7 +79,7 @@ Each slot shows the mini's level, its talent and the slot's type, from the leade
 [Collection](#collection)); click the talent to choose another. The **Boost** slot gives the mini there full XP level.
 The average gold cost and average level sit at the top of the board.
 
-Save the army with *Save* or *Save as copy*, start over with *New*, empty the board with *Clear army* and remove a
+Save the army with *Save as new* (*Save* once it has been saved) or *Save as copy*, start over with *New*, empty the board with *Clear army* and remove a
 saved army with *Delete*. Give it a description and tags such as "pvp" or "event". *Copy code* gives the game's army
 code to paste into Warcraft Rumble, and *Import code* loads one, for example from a friend or a guide. The army you're
 editing is kept automatically, even if you close the window.

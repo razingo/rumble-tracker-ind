@@ -4,34 +4,21 @@
 // usage: node build_pvp.mjs [out.json]
 // Seasons: PvpSettingsData.m_seasons = RotatingSchedule (one season per period, 6 weeks) over m_list in order; each
 // PvpSeason's m_compositions = its own RotatingSchedule (3 days) over sets of modifiers, starting with the season.
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readBundle } from './unityfs.mjs';
+import { readBundle, bundleFiles, jsonObjectAt, saveIdOf, englishStrings } from './unityfs.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DATA = process.env.RUMBLE_GAMEDATA || join(HERE, '..', '..', 'gamedata'); // the game data being built
 const WORK = process.env.RUMBLE_WORK || HERE; // working files passed between the steps
 const OUT = process.argv[2] || join(DATA, 'pvp.json');
 const DIR = process.env.RUMBLE_BUNDLES;
-const all = [];
-const walk = (d) => { for (const e of readdirSync(d, { withFileTypes: true })) { const p = join(d, e.name);
-  if (e.isDirectory()) walk(p); else if (p.endsWith('.bundle')) all.push(p); } };
-walk(DIR);
+const all = bundleFiles(DIR);
 const base = (p) => p.split(/[\\/]/).pop();
 
 /** The JSON object starting at text[i] ('{'), up to its matching brace (string-aware), or null. */
-function balanced(text, i) {
-  let depth = 0, inStr = false;
-  for (let j = i; j < text.length && j < i + 2e6; j++) {
-    const c = text[j];
-    if (inStr) { if (c === '\\') j++; else if (c === '"') inStr = false; continue; }
-    if (c === '"') inStr = true;
-    else if (c === '{') depth++;
-    else if (c === '}' && --depth === 0) return text.slice(i, j + 1);
-  }
-  return null;
-}
+function balanced(text, i) { return jsonObjectAt(text, i, 2e6); } // (no object here is longer)
 
 const objs = {};
 const loaded = new Set();
@@ -66,15 +53,8 @@ const extra = new Set([...rewardRefs].filter((g) => !objs[g] && index[g]).map((g
 load((b) => extra.has(b));
 
 // English strings: tables say which container holds each locale
-const enUS = new Set();
-for (const o of Object.values(objs)) if (o.type === 'L10N.UserFacingStringTable') for (const l of o.Locales
-  || []) if (l.LocaleId === 'enUS') enUS.add(l.LocalizedTable);
-const str = {};
-for (const o of Object.values(objs)) if (o.type === 'L10N.UserFacingStringContainer'
-  && (enUS.has(o.guid) || /enUS$/.test(o.name))) for (const d of o.Data || []) str[d.Id] ??= d.Value;
+const str = englishStrings(objs);
 const clean = (s) => s?.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim() || null;
-const PERM = [8, 9, 10, 11, 12, 13, 14, 15, 4, 5, 6, 7, 0, 1, 2, 3, 30, 31, 28, 29, 26, 27, 24, 25, 22, 23, 20, 21, 18, 19, 16, 17];
-const saveIdOf = (guid) => { const id = []; PERM.forEach((p, i) => { id[p] = guid[i]; }); return id.join(''); };
 const spriteOf = (ref) => (ref ? String(ref).split(',')[1] || null : null);
 const pretty = (n) => String(n || '').replace(/^(PVP_Ranked_|PVP_|PvpModifier_|PvpMap_)/, '').replace(/_Reward$/,
   '').replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').trim();
@@ -182,7 +162,6 @@ settings.m_seasons.m_list.forEach((g, i) => {
 
 const num = (v) => (v == null ? undefined : Number(v));
 const out = {
-  generated: new Date().toISOString().slice(0, 10),
   note: 'Built from the game files. Times in UTC.',
   seasonDays,
   ranks,

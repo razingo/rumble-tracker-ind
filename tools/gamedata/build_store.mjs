@@ -1,10 +1,10 @@
 // Build gamedata/store.json from the game's bundles: store offers (English title, coin price, refresh rule),
 // G.R.I.D. prices per rarity and XP-boost items, and the G.R.I.D. rules from StoreSettings.
 // usage: node build_store.mjs [out.json]
-import { readdirSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readBundle } from './unityfs.mjs';
+import { readBundle, bundleFiles, jsonObjectAt, saveIdOf, englishStrings } from './unityfs.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DATA = process.env.RUMBLE_GAMEDATA || join(HERE, '..', '..', 'gamedata'); // the game data being built
@@ -20,13 +20,8 @@ const WANT = new RegExp('^(' + [
   'StoreSettings', 'TomeProgression', 'L10N\\.UserFacingString\\w*',
 ].join('|') + ')$');
 
-const files = [];
-const walk = (d) => { for (const e of readdirSync(d, { withFileTypes: true })) { const p = join(d, e.name);
-  if (e.isDirectory()) walk(p); else if (BUNDLES.test(e.name)) files.push(p); } };
-walk(DIR);
-function balanced(t, i) { let d = 0, s = false; for (let j = i; j < t.length && j < i + 3e6; j++) { const c = t[j];
-  if (s) { if (c === '\\') j++; else if (c === '"') s = false; continue; } if (c === '"') s = true;
-  else if (c === '{') d++; else if (c === '}' && --d === 0) return t.slice(i, j + 1); } return null; }
+const files = bundleFiles(DIR, (n) => BUNDLES.test(n));
+function balanced(text, i) { return jsonObjectAt(text, i, 3e6); } // (no object here is longer)
 const objs = {};
 for (const p of files) {
   let b; try { b = readBundle(p); } catch { continue; }
@@ -41,16 +36,9 @@ for (const p of files) {
   }
 }
 // English strings (same scheme as build_events.mjs)
-const enUS = new Set();
-for (const o of Object.values(objs)) if (o.type === 'L10N.UserFacingStringTable') for (const l of o.Locales
-  || []) if (l.LocaleId === 'enUS') enUS.add(l.LocalizedTable);
-const str = {};
-for (const o of Object.values(objs)) if (o.type === 'L10N.UserFacingStringContainer'
-  && (enUS.has(o.guid) || /enUS$/.test(o.name))) for (const d of o.Data || []) str[d.Id] ??= d.Value;
+const str = englishStrings(objs);
 const clean = (s) => s?.replace(/<[^>]+>/g, '').replace(/\{\d+\}/g, '').replace(/\s+/g, ' ').trim() || null;
 
-const PERM = [8, 9, 10, 11, 12, 13, 14, 15, 4, 5, 6, 7, 0, 1, 2, 3, 30, 31, 28, 29, 26, 27, 24, 25, 22, 23, 20, 21, 18, 19, 16, 17];
-const saveIdOf = (guid) => { const id = []; PERM.forEach((p, i) => { id[p] = guid[i]; }); return id.join(''); };
 const int = (g) => objs[g]?.m_value ?? null;
 const COINS = 'e9c433015c337934c9890eb4e13ff3d3';
 // currency GUIDs (data_currencytype.bundle) -> in-game names
@@ -121,13 +109,6 @@ const sprites = new Set([
 ]);
 writeFileSync(join(WORK, 'store_sprites.json'), JSON.stringify([...sprites].sort(), null, 1) + '\n');
 console.log(sprites.size, 'store sprites');
-writeFileSync(OUT, JSON.stringify({ generated: new Date().toISOString().slice(0, 10),
-  note: 'Built from the game files.', offers, gridRarity, xpBoosts, tomes, rules }, null, 1) + '\n');
+writeFileSync(OUT, JSON.stringify({ note: 'Built from the game files.', offers, gridRarity, xpBoosts, tomes, rules }, null, 1) + '\n');
 console.log(Object.keys(offers).length, 'offers,', Object.keys(gridRarity).length, 'rarities,',
   Object.keys(xpBoosts).length, 'xp boosts ->', OUT);
-for (const n of ['Daily_LeaderMajor_StoreOffer', 'Daily_Dungeon_TomeMega_StoreOffer',
-  'Daily_GRIDXP_Modest_StoreOffer', 'FreeGift_DynamicStoreOffer', 'Special_Hunters_Jewels_Inactive_StoreOffer',
-  'Daily_Mini_RandomMegaInactive_StoreOffer', 'MonthlyCard_StoreOffer', 'New_Siege_ChainA_StoreOffer', 'Persistent_Coins1_StoreOffer']) {
-  const x = Object.values(offers).find((o) => o.name === n); console.log(' ', n, '->', JSON.stringify(x));
-}
-console.log(' rarities', JSON.stringify(Object.values(gridRarity)), '\n xp', JSON.stringify(Object.values(xpBoosts)));

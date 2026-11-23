@@ -1,5 +1,7 @@
-// Minimal read-only UnityFS bundle reader (LZ4/LZ4HC or uncompressed blocks).
-import { readFileSync } from 'node:fs';
+// Minimal read-only UnityFS bundle reader (LZ4/LZ4HC or uncompressed blocks), and what the table builders share for
+// reading the game's data out of the bundles.
+import { readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 
 export function lz4(src, outSize) {
   const dst = Buffer.alloc(outSize);
@@ -59,4 +61,65 @@ export function readBundle(file) {
   for (const bl of blocks) { parts.push(decompress(b.subarray(p, p + bl.c), bl.f & 0x3f, bl.u)); p += bl.c; }
   const stream = Buffer.concat(parts);
   return { files: nodes.map((n) => ({ path: n.path, data: stream.subarray(n.off, n.off + n.size) })) };
+}
+
+/** Every .bundle file under `dir` whose name passes `wanted` (all of them without one), folder by folder. */
+export function bundleFiles(dir, wanted = () => true) {
+  const out = [];
+  const walk = (d) => {
+    for (const e of readdirSync(d, { withFileTypes: true })) {
+      const p = join(d, e.name);
+      if (e.isDirectory()) walk(p);
+      else if (e.name.endsWith('.bundle') && wanted(e.name)) out.push(p);
+    }
+  };
+  walk(dir);
+  return out;
+}
+
+/**
+ * The JSON object that starts at text[i], as text, or null when it does not close within `limit` characters: the
+ * game's data objects sit as JSON inside its files, one after another.
+ */
+export function jsonObjectAt(text, i, limit) {
+  let depth = 0, inString = false;
+  for (let j = i; j < text.length && j < i + limit; j++) {
+    const c = text[j];
+    if (inString) {
+      if (c === '\\') j++;
+      else if (c === '"') inString = false;
+    } else if (c === '"') inString = true;
+    else if (c === '{') depth++;
+    else if (c === '}' && --depth === 0) return text.slice(i, j + 1);
+  }
+  return null;
+}
+
+// The save stores an ID as the GUID's 32 hex digits in another order: guid[i] = saveId[PERM[i]].
+const PERM = [8, 9, 10, 11, 12, 13, 14, 15, 4, 5, 6, 7, 0, 1, 2, 3, 30, 31, 28, 29, 26, 27, 24, 25, 22, 23, 20, 21, 18, 19, 16, 17];
+/** The ID the save uses for a game object's GUID. */
+export const saveIdOf = (guid) => {
+  const id = [];
+  PERM.forEach((p, i) => { id[p] = guid[i]; });
+  return id.join('');
+};
+/** The GUID of the game object the save calls `id`. */
+export const guidOfSaveId = (id) => PERM.map((p) => id[p]).join('');
+
+/**
+ * The English strings among the data objects `objs` ({ guid: object }), as { string ID: text }. The string tables
+ * say which container holds each language.
+ */
+export function englishStrings(objs) {
+  const english = new Set();
+  for (const o of Object.values(objs)) {
+    if (o.type === 'L10N.UserFacingStringTable') for (const l of o.Locales || []) if (l.LocaleId === 'enUS') english.add(l.LocalizedTable);
+  }
+  const strings = {};
+  for (const o of Object.values(objs)) {
+    if (o.type === 'L10N.UserFacingStringContainer' && (english.has(o.guid) || /enUS$/.test(o.name))) {
+      for (const d of o.Data || []) strings[d.Id] ??= d.Value;
+    }
+  }
+  return strings;
 }

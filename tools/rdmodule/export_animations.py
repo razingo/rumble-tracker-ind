@@ -1,7 +1,8 @@
-# Export every unit as a rigged, animated glTF (.glb): skeleton, skinned body, colour texture and all its animation
-# clips (walk, attack, death, deploy, celebration...), playable in Blender or three.js.
+# Exports units as rigged, animated glTF (.glb): skeleton, skinned body, colour texture and all the animation clips
+# (walk, attack, death, deploy, celebration...), playable in three.js. Only the units whose names match the filter
+# (extract.mjs gives the ones the sprite list names).
 # usage: python -I export_animations.py [out_dir] [unit filter regex]
-#   out_dir defaults to animations (gitignored: Blizzard's assets, for local use only)
+#   out_dir defaults to animations in the working folder
 #
 # Clips are Unity "Mecanim" generic clips: keyframes split into a streamed block (Hermite cubic keys), a dense block
 # (sampled frames) and a constant block, in that curve order. m_ClipBindingConstant.genericBindings says which bone

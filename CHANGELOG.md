@@ -3,6 +3,13 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.1.4
+
+- After this update the tracker reads its game data again once, in the background; it takes about a minute.
+- Settings shows the folder in use and the last check for a new version right after you change a setting, without
+  reopening it.
+- Housekeeping in the scripts that read the game data; what they read is unchanged.
+
 ## 0.1.3
 
 - The tracker now looks for a new version whenever its window opens, not only once a day, so the update pop-up shows

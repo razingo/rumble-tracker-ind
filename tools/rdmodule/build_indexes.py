@@ -1,7 +1,7 @@
 """The indexes of the game's files that the exports read, built by several processes side by side:
-  cab_index.json    CAB name -> bundle file (what export_models.cab_index builds on its own)
-  asset_index.json  asset GUID -> [bundle, type, name] (what export_effects.asset_index builds on its own)
-  ext_index.json    bundle -> the bundles its files refer to (what export_models.externals finds by opening it)
+  cab_index.json    CAB name -> bundle file
+  asset_index.json  asset GUID -> [bundle, type, name]
+  ext_index.json    bundle -> the bundles its files refer to
 Run: python -I build_indexes.py <i>/<n>   every n-th bundle, its part left in index_parts/<i>.json
      python -I build_indexes.py merge     after them: the two files, in the working folder (RUMBLE_WORK)
 Each bundle is opened once for all three."""
@@ -43,7 +43,7 @@ def merge():
     for guid, row in sorted((a for p in parts for a in p["assets"]), key=lambda x: x[1][0]): assets.setdefault(guid, row)
     json.dump(cab, open(os.path.join(ROOT, "cab_index.json"), "w"))
     json.dump(assets, open(os.path.join(ROOT, "asset_index.json"), "w"))
-    # a bundle's references, as bundle names (a CAB no bundle has is left out, as export_models.externals does)
+    # a bundle's references, as bundle names (a CAB no bundle has is left out)
     ext = {b: sorted({cab[c] for c in refs if c in cab}) for p in parts for b, refs in p["ext"].items()}
     json.dump(ext, open(os.path.join(ROOT, "ext_index.json"), "w"))
     print(len(cab), "CABs,", len(assets), "assets,", len(ext), "bundles' references")

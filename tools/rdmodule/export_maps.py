@@ -1,8 +1,8 @@
-# Export every battle map from the game's bundles: the painted ground texture, the whole scene as glTF (.glb, with
-# its baked lightmap) and an index tying each map/version to its files. Top-down images are rendered afterwards from
-# the .glb files (render_maps.mjs).
+# Exports battle maps from the game's bundles: the painted ground texture, the whole scene as glTF (.glb, with its
+# baked lightmap) and an index tying each map/version to its files. Only the maps whose names match the filter
+# (extract.mjs gives the ones the backdrops are drawn from).
 # usage: python -I export_maps.py [out_dir] [map filter regex]
-#   out_dir defaults to maps (gitignored: Blizzard's assets, for local use only)
+#   out_dir defaults to maps in the working folder
 #
 # How a map is stored:
 #   mission_<map>.bundle                  the map's own art library (terrain prefab, props, ground textures)

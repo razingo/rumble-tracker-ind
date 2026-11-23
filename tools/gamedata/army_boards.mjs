@@ -1,10 +1,10 @@
 // Read every leader's army board (Player_*_ArmyBoard) from the game files: fixed family slots, fixed trait slot,
 // and the slot types the player can pick. Compares with gamedata/minis.json and, with --write, updates its
 // fixedArmySlots / armySlotUpgrades.  usage: node army_boards.mjs <guid_index.json> [--write]
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readBundle } from './unityfs.mjs';
+import { readBundle, bundleFiles, jsonObjectAt } from './unityfs.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DATA = process.env.RUMBLE_GAMEDATA || join(HERE, '..', '..', 'gamedata'); // the game data being built
@@ -12,14 +12,9 @@ const IDX = JSON.parse(readFileSync(process.argv[2], 'utf8'));
 const WRITE = process.argv.includes('--write');
 const MINIS = join(DATA, 'minis.json');
 const DIR = process.env.RUMBLE_BUNDLES;
-const files = [];
-const walk = (d) => { for (const e of readdirSync(d, { withFileTypes: true })) { const p = join(d, e.name);
-  if (e.isDirectory()) walk(p); else if (/^unitdata_unit_.*\.bundle$/.test(e.name)) files.push(p); } };
-walk(DIR);
+const files = bundleFiles(DIR, (n) => /^unitdata_unit_/.test(n));
 
-function balanced(t, i) { let d = 0, s = false; for (let j = i; j < t.length && j < i + 1e6; j++) { const c = t[j];
-  if (s) { if (c === '\\') j++; else if (c === '"') s = false; continue; } if (c === '"') s = true;
-  else if (c === '{') d++; else if (c === '}' && --d === 0) return t.slice(i, j + 1); } return null; }
+function balanced(text, i) { return jsonObjectAt(text, i, 1e6); } // (no object here is longer)
 
 // game-internal names -> the tracker's slot type names
 const FAMILY = { Alliance: 'Alliance', Horde: 'Horde', Undead: 'Undead', Scourge: 'Undead', Beast: 'Beast',

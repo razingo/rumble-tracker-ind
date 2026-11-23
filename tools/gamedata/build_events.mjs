@@ -6,20 +6,17 @@
 //                  - otherwise: m_dayOfMonth of the month
 //                  lasts m_duration days; time of day from m_referenceDateTime (18:00 UTC)
 //   RotatingSchedule  one window from m_referenceDateTime to m_expirationDateTime (all of these are past one-offs)
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readBundle } from './unityfs.mjs';
+import { readBundle, bundleFiles, jsonObjectAt, saveIdOf, englishStrings } from './unityfs.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DATA = process.env.RUMBLE_GAMEDATA || join(HERE, '..', '..', 'gamedata'); // the game data being built
 const WORK = process.env.RUMBLE_WORK || HERE; // working files passed between the steps
 const OUT = process.argv[2] || join(DATA, 'events.json');
 const DIR = process.env.RUMBLE_BUNDLES;
-const all = [];
-const walk = (d) => { for (const e of readdirSync(d, { withFileTypes: true })) { const p = join(d, e.name);
-  if (e.isDirectory()) walk(p); else if (p.endsWith('.bundle')) all.push(p); } };
-walk(DIR);
+const all = bundleFiles(DIR);
 
 // every JSON data object from the event bundles, plus schedules/strings that live elsewhere
 const objs = {};
@@ -50,32 +47,13 @@ for (const p of all) {
 }
 
 /** The JSON object starting at text[i] ('{'), up to its matching brace (string-aware), or null. */
-function balanced(text, i) {
-  let depth = 0, inStr = false;
-  for (let j = i; j < text.length && j < i + 2e6; j++) {
-    const c = text[j];
-    if (inStr) { if (c === '\\') j++; else if (c === '"') inStr = false; continue; }
-    if (c === '"') inStr = true;
-    else if (c === '{') depth++;
-    else if (c === '}' && --depth === 0) return text.slice(i, j + 1);
-  }
-  return null;
-}
+function balanced(text, i) { return jsonObjectAt(text, i, 2e6); } // (no object here is longer)
 
-// English strings: tables say which container holds each locale
-const enUS = new Set();
-for (const o of Object.values(objs)) if (o.type === 'L10N.UserFacingStringTable') for (const l of o.Locales
-  || []) if (l.LocaleId === 'enUS') enUS.add(l.LocalizedTable);
-const str = {};
-for (const o of Object.values(objs)) if (o.type === 'L10N.UserFacingStringContainer'
-  && (enUS.has(o.guid) || /enUS$/.test(o.name))) for (const d of o.Data || []) str[d.Id] ??= d.Value;
+const str = englishStrings(objs);
 const clean = (s) => s?.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim() || null;
 
 // event currencies (data_currencytype.bundle): A, B, C share one balance each across events
 const CUR = { '0c6d981755f2d43f28921e60e9555871': 'A', '0d9e33ea4c36c4bb79ef30d6d82203d3': 'B', '0152633a93ba94c2bab0dae8daa8745a': 'C' };
-// save data stores IDs with the GUID's hex digits shuffled (FIELDS.md): guid[i] = saveId[PERM[i]]
-const PERM = [8, 9, 10, 11, 12, 13, 14, 15, 4, 5, 6, 7, 0, 1, 2, 3, 30, 31, 28, 29, 26, 27, 24, 25, 22, 23, 20, 21, 18, 19, 16, 17];
-const saveIdOf = (guid) => { const id = []; PERM.forEach((p, i) => { id[p] = guid[i]; }); return id.join(''); };
 const WEEKDAYS =['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -345,7 +323,7 @@ const currencyNames = Object.fromEntries(Object.values(objs)
   .filter((o) => /CurrencyType$/.test(o.type) && !CUR[o.guid] && clean(str[o.m_displayName]))
   .map((o) => [saveIdOf(o.guid), clean(str[o.m_displayName])])
   .sort(([a], [b]) => a.localeCompare(b)));
-writeFileSync(OUT, JSON.stringify({ generated: new Date().toISOString().slice(0, 10),
+writeFileSync(OUT, JSON.stringify({
   note: 'Built from the game files. Times in UTC.', currencies, currencyNames, incomeBonuses, rotations, events }, null, 2) + '\n');
 console.log(events.length, 'events ->', OUT);
 for (const e of events) console.log(e.schedule.kind.padEnd(10), e.id.padEnd(42), '|', e.name, '|', e.currency,

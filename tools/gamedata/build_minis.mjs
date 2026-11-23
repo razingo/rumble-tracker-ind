@@ -7,10 +7,10 @@
 // Talent order: the order the tracker has always stored picks in (army_code_minis.json talentOrder maps the game's
 // order onto it), so saved talent picks and armies stay valid.
 // Stats: each StatData with a growth type grows x1.1001 per level, rounded (the game's displayed values); level 1..31.
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readBundle } from './unityfs.mjs';
+import { readBundle, bundleFiles, jsonObjectAt, guidOfSaveId, englishStrings } from './unityfs.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DATA = process.env.RUMBLE_GAMEDATA || join(HERE, '..', '..', 'gamedata'); // the game data being built
@@ -24,13 +24,8 @@ const GROWTH = 1.1001, LEVELS = 31;
 // contact sheet of all 24; a new leader may need an entry.
 const LEADER_FACE = { Onu: 0.20, Ysera: 0.21, Anubarak: 0.17, OldMurkEye: 0.23, Hogger: 0.14, Charlga: 0.15, Drakkisath: 0.13 };
 
-const files = [];
-const walk = (d) => { for (const e of readdirSync(d, { withFileTypes: true })) { const p = join(d, e.name);
-  if (e.isDirectory()) walk(p); else if (e.name.endsWith('.bundle') && BUNDLES.test(e.name)) files.push(p); } };
-walk(DIR);
-function balanced(t, i) { let d = 0, s = false; for (let j = i; j < t.length && j < i + 3e6; j++) { const c = t[j];
-  if (s) { if (c === '\\') j++; else if (c === '"') s = false; continue; } if (c === '"') s = true;
-  else if (c === '{') d++; else if (c === '}' && --d === 0) return t.slice(i, j + 1); } return null; }
+const files = bundleFiles(DIR, (n) => BUNDLES.test(n));
+function balanced(text, i) { return jsonObjectAt(text, i, 3e6); } // (no object here is longer)
 const objs = {};
 for (const p of files) {
   let b; try { b = readBundle(p); } catch { continue; }
@@ -44,17 +39,10 @@ for (const p of files) {
     }
   }
 }
-const enUS = new Set();
-for (const o of Object.values(objs)) if (o.type === 'L10N.UserFacingStringTable') for (const l of o.Locales
-  || []) if (l.LocaleId === 'enUS') enUS.add(l.LocalizedTable);
-const str = {};
-for (const o of Object.values(objs)) if (o.type === 'L10N.UserFacingStringContainer'
-  && (enUS.has(o.guid) || /enUS$/.test(o.name))) for (const d of o.Data || []) str[d.Id] ??= d.Value;
+const str = englishStrings(objs);
 log(`${files.length} bundles, ${Object.keys(objs).length} objects, ${Object.keys(str).length} English strings`);
 
 function log(...a) { console.log(...a); }
-const PERM = [8, 9, 10, 11, 12, 13, 14, 15, 4, 5, 6, 7, 0, 1, 2, 3, 30, 31, 28, 29, 26, 27, 24, 25, 22, 23, 20, 21, 18, 19, 16, 17];
-const guidOfSaveId = (id) => PERM.map((p) => id[p]).join('');
 const sprite = (ref) => (ref ? String(ref).split(',')[1] || null : null);
 // game rich text -> plain text: <sprite ... name="Stun"> becomes nothing (the word follows), tags dropped
 const text = (id) => {
@@ -240,8 +228,7 @@ for (const m of minis) {
 const missing = old.minis.filter((o) => !minis.some((m) => m.slug === o.slug)).map((o) => o.slug);
 
 writeFileSync(OUT, JSON.stringify({
-  source: 'Warcraft Rumble game files. Game data Â© Blizzard Entertainment.',
-  generated: new Date().toISOString().slice(0, 10),
+  source: 'Warcraft Rumble game files. Game data © Blizzard Entertainment.',
   stats: { format: 'single value = same at all levels; array = levels 1..31 (index 0 = level 1)',
     scaling: `stats with a growth type: round(level 1 value x ${GROWTH}^(level-1))` },
   tagIcons: { Wildcard: 'icons/Wildcard.png', Leader: 'icons/Leader.png',

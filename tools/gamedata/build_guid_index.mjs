@@ -1,18 +1,15 @@
 // Index every GUID -> { name, type, bundle } found in the game's JSON data objects (used by army_boards.mjs and
 // build_pvp.mjs). usage: node build_guid_index.mjs [out.json]   (default: guid_index.json in the working folder)
-import { readdirSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import { join, basename, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readBundle } from './unityfs.mjs';
+import { readBundle, bundleFiles } from './unityfs.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const WORK = process.env.RUMBLE_WORK || HERE; // working files passed between the steps
 const OUT = process.argv[2] || join(WORK, 'guid_index.json');
 const DIR = process.env.RUMBLE_BUNDLES;
-const all = [];
-const walk = (d) => { for (const e of readdirSync(d, { withFileTypes: true })) { const p = join(d, e.name);
-  if (e.isDirectory()) walk(p); else if (p.endsWith('.bundle')) all.push(p); } };
-walk(DIR);
+const all = bundleFiles(DIR);
 const idx = {};
 for (const p of all) {
   let b; try { b = readBundle(p); } catch { continue; }

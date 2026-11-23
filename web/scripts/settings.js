@@ -208,12 +208,14 @@ async function openSettings(dlg) {
   }
 }
 
-/** Saves Start with Windows or the close choice; on failure the field goes back to what is saved. */
+/** Saves one of the general settings or the game's folder; on failure the field goes back to what is saved. */
 async function saveGeneral(dlg, el) {
   const msg = dlg.querySelector('[data-setting-message]');
   try {
     general = await post('/api/settings', { [el.dataset.setting]: el.type === 'checkbox' ? el.checked : el.value });
-    showMessage(msg, 'Saved.', 'good');
+    // redraw first, so the lines under the fields say what holds now (the folder in use, the last check)
+    renderSettings();
+    showMessage(dlg.querySelector('[data-setting-message]'), 'Saved.', 'good');
   } catch (err) {
     if (el.type === 'checkbox') el.checked = !el.checked;
     else el.value = general[el.dataset.setting];

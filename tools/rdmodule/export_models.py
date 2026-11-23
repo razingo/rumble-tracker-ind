@@ -1,7 +1,7 @@
-# Export every unit's 3D models (OBJ, rest pose) and textures (PNG) from the game's bundles, plus an index that ties
-# each unit to its files.
+# Exports 3D models (OBJ, rest pose) and their textures (PNG) from the game's bundles, plus an index that ties each
+# to its files: the ones whose names match the filter (extract.mjs gives the towers the sprite list names).
 # usage: python -I export_models.py [out_dir] [name filter regex]
-#   out_dir defaults to models (gitignored: these are Blizzard's assets, for local use only)
+#   out_dir defaults to models in the working folder
 #
 # Where the models are:
 #   unitassets_unit_<x>.bundle   the unit as it appears in battle; its renderers usually point at a mesh and textures
@@ -18,40 +18,18 @@ OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "models")
 ONLY = re.compile(sys.argv[2]) if len(sys.argv) > 2 else None
 FX = re.compile(r"(^|_)FX(_|$)|_Fx_|Swoosh|Terrain", re.I)
 
-# ---- CAB name -> bundle file (renderers reference meshes/materials in other bundles by CAB name) -------------------
-CAB_FILE = os.path.join(ROOT, "cab_index.json")
-def cab_index():
-    if os.path.exists(CAB_FILE): return json.load(open(CAB_FILE))
-    out = {}
-    for p in sorted(glob.glob(B + "/*.bundle")):
-        for f in UnityPy.load(p).files.values():
-            for n in getattr(f, "files", {}):
-                if not n.endswith((".resS", ".resource")): out[n.lower()] = os.path.basename(p)
-    json.dump(out, open(CAB_FILE, "w"))
-    return out
-CABS = cab_index()
-
-def externals(path):
-    env = UnityPy.load(path)
-    names = set()
-    for f in env.files.values():
-        for sf in getattr(f, "files", {}).values():
-            for e in getattr(sf, "externals", []):
-                cab = e.path.rsplit("/", 1)[-1].lower()
-                if cab in CABS: names.add(CABS[cab])
-    return names
-
-# bundle -> the bundles it refers to: from the index when build_indexes.py made one, else found by opening the bundle
-EXT_FILE = os.path.join(ROOT, "ext_index.json")
-EXT_CACHE = {b: set(v) for b, v in json.load(open(EXT_FILE)).items()} if os.path.exists(EXT_FILE) else {}
+# ---- the indexes build_indexes.py made --------------------------------------------------------------------------------
+# CAB name -> bundle file (renderers reference meshes and materials in other bundles by CAB name)
+CABS = json.load(open(os.path.join(ROOT, "cab_index.json")))
+# bundle -> the bundles it refers to
+EXT = {b: set(v) for b, v in json.load(open(os.path.join(ROOT, "ext_index.json"))).items()}
 def closure(bundle, depth=3):
     """The bundle plus the bundles it refers to (a few levels: renderer -> material -> texture)."""
     seen, todo = {bundle}, [bundle]
     for _ in range(depth):
         nxt = []
         for b in todo:
-            if b not in EXT_CACHE: EXT_CACHE[b] = externals(os.path.join(B, b))
-            for e in EXT_CACHE[b]:
+            for e in EXT.get(b, ()):
                 # shared shader/default bundles are big and hold no unit models
                 if e not in seen and not e.startswith(("shared_shaders", "shaders")): seen.add(e); nxt.append(e)
         todo = nxt
