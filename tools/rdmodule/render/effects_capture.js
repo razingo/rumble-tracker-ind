@@ -1,6 +1,7 @@
 // Capture for the rdmodule's effect sprites. The render server (extract.mjs) adds this to the end of the effects viewer's own
 // script (effects.html, served as /fx/effects.html with a black background and no grid), so it uses that
-// page's simulation as it is: loadEffect, step, restart, fitCamera, camera, controls, renderer, scene, effect, ui.
+// page's simulation as it is: loadEffect, step, restart, fitCamera, camera, controls, renderer, scene, effect, ui,
+// random.
 // /fx/effects.html?capture renders every effect in sprites.json ("effects": key -> { unit, prefab, and optionally
 // seconds, from, frames, yaw, pitch, zoom, tint }), ?capture=a,b only those; each is saved as sprites/fx-<key>.png, a sheet
 // of frames on black (the rdmodule adds them onto its scene), and sprites/fx.json says how to cut them:
@@ -8,12 +9,12 @@
 const FX_OUT = 256; // the longer side of a frame
 const FX_RATE = 24; // frames a second
 
-// The particles' random numbers come from the effect's name, so an effect is drawn the same on every run, whichever
-// effects are drawn before it.
+// The particles' random numbers (the page's `random`) come from the effect's name, so an effect is drawn the same
+// on every run, whichever effects are drawn before it.
 function seedRandom(text) {
   let a = 2166136261;
   for (let i = 0; i < text.length; i++) a = Math.imul(a ^ text.charCodeAt(i), 16777619);
-  Math.random = () => { // (mulberry32)
+  random = () => { // (mulberry32)
     a = (a + 0x6D2B79F5) | 0;
     let t = Math.imul(a ^ (a >>> 15), 1 | a);
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;

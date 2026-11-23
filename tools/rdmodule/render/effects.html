@@ -50,6 +50,15 @@ const ui = (id) => document.getElementById(id);
 const index = await (await fetch('index.json')).json();
 for (const k of Object.keys(index.units)) ui('unit').add(new Option(k, k));
 
+// ---- random numbers ---------------------------------------------------------------------------------------------
+// The simulation has its own, apart from Math.random: three.js takes the IDs of what it creates from that one, and
+// how many it takes depends on what is already loaded. (The capture puts numbers that repeat here.)
+let random = Math.random;
+function randomDirection(v) { // (a point on the unit sphere, as three's Vector3.randomDirection)
+  const theta = random() * Math.PI * 2, u = random() * 2 - 1, c = Math.sqrt(1 - u * u);
+  return v.set(c * Math.cos(theta), u, c * Math.sin(theta));
+}
+
 // ---- curves ----------------------------------------------------------------------------------------------------
 function curveAt(keys, t) {
   if (!keys || !keys.length) return 1;
@@ -61,7 +70,7 @@ function curveAt(keys, t) {
   return keys[keys.length - 1][1];
 }
 // MinMaxCurve: {const} | {curve, mul} | {minCurve, maxCurve, mul} | {min, max}; t = normalized time, r = random 0..1
-function mm(v, t = 0, r = Math.random()) {
+function mm(v, t = 0, r = random()) {
   if (!v) return 0;
   if ('const' in v) return v.const;
   if ('curve' in v) return curveAt(v.curve, t) * v.mul;
@@ -75,7 +84,7 @@ function gradAt(g, t) {
   return [...c, a];
 }
 // MinMaxGradient: {color} | {gradient} | {min, max} | {minGradient, maxGradient} | {randomColor}
-function mmColor(v, t, r = Math.random()) {
+function mmColor(v, t, r = random()) {
   if (!v) return [1, 1, 1, 1];
   if (v.color) return v.color;
   if (v.gradient) return gradAt(v.gradient, t);
@@ -217,9 +226,9 @@ class Emitter {
       const local = !ps.space;  // 0 = local simulation space
       const pos = new THREE.Vector3(-p.x, p.y, p.z), v = new THREE.Vector3(-vel.x, vel.y, vel.z);
       if (!local) { pos.applyMatrix4(world); v.transformDirection(world).multiplyScalar(vel.length()); }
-      const size = mm(init.startSize, nt), r = Math.random();
+      const size = mm(init.startSize, nt), r = random();
       this.parts.push({
-        pos, vel: v, local, age: 0, life: Math.max(mm(init.startLifetime, nt), 0.01), r, r2: Math.random(),
+        pos, vel: v, local, age: 0, life: Math.max(mm(init.startLifetime, nt), 0.01), r, r2: random(),
         size: init.size3D ? [mm(init.startSize, nt, r), mm(init.startSizeY, nt, r), mm(init.startSizeZ, nt, r)] : [size, size, size],
         rot: [init.rotation3D ? mm(init.startRotationX, nt) : 0, init.rotation3D ? mm(init.startRotationY, nt) : 0, -mm(init.startRotation, nt)],
         color: mmColor(init.startColor, nt),
@@ -240,7 +249,7 @@ class Emitter {
           const reps = b.cycleCount || 1;
           for (let k = 0; k < reps; k++) {
             const bt = b.time + k * (b.repeatInterval || 0), key = `${cycle}:${bi}:${k}`;
-            if (cycleT >= bt && !this.burstsDone.has(key) && Math.random() <= (b.probability ?? 1)) {
+            if (cycleT >= bt && !this.burstsDone.has(key) && random() <= (b.probability ?? 1)) {
               this.burstsDone.add(key); this.spawn(Math.round(mm(b.countCurve, 0)), sysT);
             }
           }
@@ -292,30 +301,30 @@ const xyz = (v, def) => (v == null ? def : Array.isArray(v) ? v : [v.x, v.y, v.z
 // emit position and direction in the shape's own space (Unity: +Z forward), shape transform applied after
 function shapePoint(s, p, d) {
   const R = s.radius?.value ?? 1, thick = s.radiusThickness ?? 1, arc = THREE.MathUtils.degToRad(s.arc?.value ?? 360);
-  const rr = () => R * (1 - thick * Math.random()), ang = () => Math.random() * arc;
+  const rr = () => R * (1 - thick * random()), ang = () => random() * arc;
   switch (s.type) {
-    case 0: case 1: { d.randomDirection(); p.copy(d).multiplyScalar(s.type === 1 ? R : rr()); break; }
-    case 2: case 3: { d.randomDirection(); d.z = Math.abs(d.z); p.copy(d).multiplyScalar(s.type === 3 ? R : rr()); break; }
+    case 0: case 1: { randomDirection(d); p.copy(d).multiplyScalar(s.type === 1 ? R : rr()); break; }
+    case 2: case 3: { randomDirection(d); d.z = Math.abs(d.z); p.copy(d).multiplyScalar(s.type === 3 ? R : rr()); break; }
     case 4: case 7: case 8: case 9: {  // cone along +Z
       const a = ang(), r = rr(), cone = THREE.MathUtils.degToRad(s.angle ?? 25);
       p.set(Math.cos(a) * r, Math.sin(a) * r, 0);
-      const spread = R > 0 ? r / R : Math.random();
+      const spread = R > 0 ? r / R : random();
       d.set(Math.cos(a) * Math.sin(cone) * spread, Math.sin(a) * Math.sin(cone) * spread, Math.cos(cone * spread)).normalize();
-      if (s.type >= 8) p.addScaledVector(d, Math.random() * (s.length ?? 1));
+      if (s.type >= 8) p.addScaledVector(d, random() * (s.length ?? 1));
       break;
     }
-    case 5: case 15: case 16: { const sc = xyz(s.m_Scale, [1, 1, 1]); p.set((Math.random() - .5) * sc[0], (Math.random() - .5) * sc[1], (Math.random() - .5) * sc[2]); d.set(0, 0, 1); break; }
+    case 5: case 15: case 16: { const sc = xyz(s.m_Scale, [1, 1, 1]); p.set((random() - .5) * sc[0], (random() - .5) * sc[1], (random() - .5) * sc[2]); d.set(0, 0, 1); break; }
     case 10: case 11: { const a = ang(), r = s.type === 11 ? R : rr(); p.set(Math.cos(a) * r, Math.sin(a) * r, 0); d.set(Math.cos(a), Math.sin(a), 0); break; }
-    case 12: { p.set((Math.random() - .5) * 2 * R, 0, 0); d.set(0, 1, 0); break; }
+    case 12: { p.set((random() - .5) * 2 * R, 0, 0); d.set(0, 1, 0); break; }
     case 17: {  // donut
-      const a = ang(), b = Math.random() * Math.PI * 2, dr = (s.donutRadius ?? 0.2) * Math.random();
+      const a = ang(), b = random() * Math.PI * 2, dr = (s.donutRadius ?? 0.2) * random();
       const c = new THREE.Vector3(Math.cos(a) * R, Math.sin(a) * R, 0);
       d.set(Math.cos(a) * Math.cos(b), Math.sin(a) * Math.cos(b), Math.sin(b)); p.copy(c).addScaledVector(d, dr); break;
     }
-    case 18: { const sc = xyz(s.m_Scale, [1, 1, 1]); p.set((Math.random() - .5) * sc[0], (Math.random() - .5) * sc[1], 0); d.set(0, 0, 1); break; }
+    case 18: { const sc = xyz(s.m_Scale, [1, 1, 1]); p.set((random() - .5) * sc[0], (random() - .5) * sc[1], 0); d.set(0, 0, 1); break; }
     default: d.set(0, 0, 1);
   }
-  if (s.randomDirectionAmount) d.lerp(new THREE.Vector3().randomDirection(), s.randomDirectionAmount).normalize();
+  if (s.randomDirectionAmount) d.lerp(randomDirection(new THREE.Vector3()), s.randomDirectionAmount).normalize();
   if (s.sphericalDirectionAmount) d.lerp(p.clone().normalize(), s.sphericalDirectionAmount).normalize();
   const rot = xyz(s.m_Rotation), pos = xyz(s.m_Position);
   if (rot && (rot[0] || rot[1] || rot[2])) {
@@ -497,7 +506,9 @@ renderer.setAnimationLoop(() => {
   controls.update(); renderer.render(scene, camera);
 });
 
-ui('unit').value = params.get('unit') && index.units[params.get('unit')] ? params.get('unit') : 'priestess';
+// (the page opens on the priestess, or on the first unit there is without her)
+const first = index.units.priestess ? 'priestess' : Object.keys(index.units)[0];
+ui('unit').value = params.get('unit') && index.units[params.get('unit')] ? params.get('unit') : first;
 fillEffects();
 if (params.get('prefab') && rowFor(params.get('prefab'))) ui('effect').value = params.get('prefab');
 await loadEffect(rowFor(ui('effect').value));

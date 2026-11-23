@@ -1,6 +1,6 @@
 // The Settings dialog: Start with Windows, what closing the window does, the notifications, uninstalling and, at the
-// bottom, extracting the additional data (for the rdmodule, web/scripts/rdmodule.js). The
-// server keeps the settings and sends the notifications, also while the page is closed.
+// bottom, extracting the additional data (for the rdmodule, web/scripts/rdmodule.js). The server keeps the settings
+// and sends the notifications, also while the page is closed.
 import { $, getJson, post, showMessage, state } from './core.js';
 import { showDialog, confirmDialog, alertDialog } from './dialogs.js';
 import { CLOSE_CHOICES } from './lib/constants.js';
@@ -202,6 +202,7 @@ async function openSettings(dlg) {
   try {
     await loadSettings();
     renderSettings();
+    watchExtra(dlg); // (an extraction started earlier may still run)
   } catch (err) {
     dlg.innerHTML = `<form method="dialog" class="dialog-form">${dialogHead}
       <p class="dialog-message small text-warn">${esc(err.message)}</p></form>`;

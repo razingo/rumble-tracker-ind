@@ -131,9 +131,9 @@ export function gameVersion(game) {
 
 /**
  * The steps that are due for game data with this stamp (its gamedata.json, or null when there is none): 'all' without
- * a stamp, for another version of the game than the one installed in `game`, or when the tables kept by hand
- * changed; else the names of the steps whose version is another now ([] when nothing is due). Without the game here,
- * data that exists stays as it is.
+ * a stamp, for another version of the game than the one installed in `game`, or when the tracker's own tables
+ * (seed/) changed; else the names of the steps whose version is another now ([] when nothing is due). Without the
+ * game here, data that exists stays as it is.
  */
 export function stepsDue(game, stamp) {
   if (!stamp?.steps) return 'all';

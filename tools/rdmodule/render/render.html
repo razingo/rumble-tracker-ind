@@ -108,7 +108,7 @@ async function buildUnit(spec) {
     const clips = pick(anim);
     if (!clips) continue;
     if (anim === 'death' && clips[0].duration > 1.5) continue; // a leader's long last scene, not a fall
-    // an attack is drawn whole: the game lands the hit part-way through it
+    // an attack is drawn whole: the rdmodule lands the hit part-way through it
     const [from, to] = spec[`${anim}Range`] || [0, 1];
     const [fewest, most] = FRAMES[anim];
     const n = clips[0].duration < 0.1 ? 1
@@ -159,7 +159,7 @@ sun.position.set(-2, 4, 5);
 scene.add(sun);
 
 // Renders every frame of a sprite with one camera, so the figure keeps its size and place from frame to frame, and
-// lays the frames out on a sheet. Returns { sheet, info }; info is what the game needs to draw a frame:
+// lays the frames out on a sheet. Returns { sheet, info }; info is what the rdmodule needs to draw a frame:
 // { cell: [w, h], cols, at: [x, y] (the feet, within a cell), body (the standing figure's height), anims }, and for a
 // unit its size in the game (animations/index.json: spec.size names the entry when a unit has several): tall (the
 // height of the figure as drawn in its first frame, at the game's scale, in world units) and radius (its collider).
@@ -181,7 +181,7 @@ async function renderOne(id, spec) {
     return box;
   };
   // A deploy clip carries the figure in from far off, and a death can throw it; their frames are drawn on the first frame's spot instead (the
-  // game moves the unit in), so they stay as sharp and as small on the sheet as the rest.
+  // rdmodule moves the unit in), so they stay as sharp and as small on the sheet as the rest.
   frames[0].set();
   const b0 = bounds(), home = [(b0.min.x + b0.max.x) / 2, b0.min.y, (b0.min.z + b0.max.z) / 2];
   const place = (f) => {
@@ -254,7 +254,7 @@ async function renderOne(id, spec) {
   const k = OUT_H * (spec.scale ?? 1) / (first.y1 - first.y0 + 1);
   const w = Math.round(bw * k), h = Math.round(bh * k);
   const cw = w + pad * 2, ch = h + pad * 2;
-  // as many columns as keep the sheet near square, so no side gets too long for a phone to load
+  // as many columns as keep the sheet near square, so no side gets too long
   const cols = Math.min(shots.length, Math.max(1, Math.ceil(Math.sqrt(shots.length * ch / cw))));
   const sheet = document.createElement('canvas');
   sheet.width = cw * cols; sheet.height = ch * Math.ceil(shots.length / cols);
@@ -427,7 +427,7 @@ if (params.has('backdrops')) {
     try { await renderBackdrop(name, spec); } catch (e) { log(`bg-${name}: FAILED ${e.message}`); }
   }
   // Grounds: a piece of a map's painted terrain (crop: [x, y, w, h] of its texture, the lane running down it), turned so
-  // the lane runs left to right. Saves sprites/bg-<name>.png; the game lays it flat under the units.
+  // the lane runs left to right. Saves sprites/bg-<name>.png; the rdmodule lays it flat under the units.
   for (const [name, g] of Object.entries(config.grounds || {})) {
     if (params.get('backdrops') && !params.get('backdrops').split(',').includes(name)) continue;
     try {
@@ -444,14 +444,11 @@ if (params.has('backdrops')) {
       log(`bg-${name}: ${c.width}x${c.height}`);
     } catch (e) { log(`bg-${name}: FAILED ${e.message}`); }
   }
-  log('DONE');
-  window.__done = true;
-  throw new Error('backdrops only');
-}
+} else {
 
 const only = params.get('only')?.split(',');
 const sheet = params.has('sheet');
-// rendering some of them keeps the others' entries in the game's index
+// rendering some of them keeps the others' entries in the index
 const infos = sheet ? null : only ? await fetch('/sprites/index.json').then((r) => (r.ok ? r.json() : {}), () => ({})) : {};
 for (const [id, spec] of Object.entries(config.sprites)) {
   if (only && !only.includes(id)) continue;
@@ -471,6 +468,8 @@ for (const [id, spec] of Object.entries(config.sprites)) {
   } catch (e) { log(`${id}: FAILED ${e.message}`); }
 }
 if (infos) await fetch('/save/index.json', { method: 'POST', body: JSON.stringify(infos) });
+
+}
 log('DONE');
 window.__done = true;
 </script>

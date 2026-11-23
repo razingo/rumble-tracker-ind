@@ -12,7 +12,7 @@ Out (<out_dir>):
                      meshes, Timeline tracks (bound object, clip start/duration), and the effect's animation
                      clips (Timeline AnimationTracks, Animators) sampled per animated property
   textures/<name>.png, meshes/<name>.obj  what the particles draw
-Particles are simulated in game: the JSON has the settings, not baked frames."""
+Particles are simulated by the page that draws them (render/effects.html): the JSON has the settings, not baked frames."""
 import os, re, sys, json, math, zlib
 
 HERE = os.path.dirname(os.path.abspath(__file__))

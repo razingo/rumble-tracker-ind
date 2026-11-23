@@ -59,7 +59,7 @@ test('the real builder: a step is due when its own script or inputs changed, eve
     assert.deepEqual(stepsDue(game, { gameBuild: '2.0.0.1', steps: { ...steps, Store: 'older', 'Card frames': undefined } }),
       ['Store', 'Card frames']);
     assert.equal(stepsDue(game, { gameBuild: '2.0.0.1', steps: { ...steps, 'Starting tables': 'older' } }), 'all',
-      'the tables kept by hand feed every step');
+      'the tracker\'s own tables feed every step');
   } finally {
     await cleanup();
   }

@@ -63,8 +63,9 @@ Two things need you now and then:
 
 - **Talents.** The save only says *how many* talents a mini has, not which ones. Tick the ones you picked in the mini's
   details; *Talents to tick* counts the minis still waiting for that.
-- **Needs your input** appears when the game has a mini the tracker can't name yet, usually a brand-new one right after
-  a patch. Pick which mini it is; a later version of the tracker will know it.
+- **Needs your input** appears when your save has a mini the tracker can't name yet, usually a brand-new one right
+  after a patch. It gets its name by itself once the tracker has read the new game data; until then you can pick
+  which mini it is.
 
 ## Army
 
@@ -79,8 +80,8 @@ Each slot shows the mini's level, its talent and the slot's type, from the leade
 [Collection](#collection)); click the talent to choose another. The **Boost** slot gives the mini there full XP level.
 The average gold cost and average level sit at the top of the board.
 
-Save the army with *Save as new* (*Save* once it has been saved) or *Save as copy*, start over with *New*, empty the board with *Clear army* and remove a
-saved army with *Delete*. Give it a description and tags such as "pvp" or "event". *Copy code* gives the game's army
+Save the army with *Save as new* (*Save* once it has been saved) or *Save as copy*, start over with *New*, empty the
+board with *Clear army* and remove a saved army with *Delete*. Give it a description and tags such as "pvp" or "event". *Copy code* gives the game's army
 code to paste into Warcraft Rumble, and *Import code* loads one, for example from a friend or a guide. The army you're
 editing is kept automatically, even if you close the window.
 
@@ -121,8 +122,8 @@ using shows as –.
 **Running now** lists the events the game says are on, with how long they last and your tickets. Open an event's
 **reward tree** to see what each step costs and the event's challenges. Click a reward to see the cheapest way to it,
 Ctrl+click to add more (Enter and Space work too), and *Clear* to start over. Set your picks as a **reward goal** and
-the tracker can notify you when you have enough tickets. **Shop offers** has today's daily offers and the
-special offers from your save, with prices and when they reset.
+the tracker can notify you when you have enough tickets. **Shop offers** has today's daily offers and the special
+offers from your save, with prices and when they reset.
 
 Further down:
 
@@ -239,7 +240,7 @@ The tracker also backs up by itself when it starts, every 24 hours and when it s
 
 | You see | What to do |
 |---|---|
-| *The game was updated to …* | Right after a patch, the tracker reads its game data again from your game install, in the background; the banner goes when that is done. A mini the patch added may stay unnamed until a newer version of the tracker. |
+| *The game was updated to …* | Right after a patch, the tracker reads its game data again from your game install, in the background; the banner goes when that is done, and the minis the patch added have their names. |
 | *The tracker was updated* | A new version of the tracker reads its game data again from your game install, in the background; the banner goes when that is done. |
 | *Warcraft Rumble was not found on this PC* (at the start) | The game is installed but Windows has no entry for it, as with a copied folder. Type its folder, the one that holds `WarcraftRumble.exe`, into the field and press *Use this folder*. It can be changed later in **⚙ Settings**. |
 | A pop-up about a new version | *Download now* downloads it with a progress bar, checks it and restarts the tracker with it, keeping your data. If the new version can't start, the previous one is put back. *Later* hides the pop-up until the tracker restarts. |
