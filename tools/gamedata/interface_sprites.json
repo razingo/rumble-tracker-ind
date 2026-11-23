@@ -1,0 +1,42 @@
+{
+ "wood": {
+  "sprite": "Global_WoodTile",
+  "width": 750
+ },
+ "topbar-wood": {
+  "sprite": "Taskbar_Tex_Background",
+  "width": 1800
+ },
+ "divider": {
+  "sprite": "Global_InfoDivider",
+  "width": 700
+ },
+ "keyart": {
+  "sprite": "LoadingScreen_Tex_Background",
+  "width": 1260
+ },
+ "board-alliance": {
+  "sprite": "Global_Tex_Lunchbox_Alliance",
+  "width": 740
+ },
+ "board-beast": {
+  "sprite": "Global_Tex_Lunchbox_Beast",
+  "width": 740
+ },
+ "board-blackrock": {
+  "sprite": "Global_Tex_Lunchbox_Blackrock",
+  "width": 740
+ },
+ "board-undead": {
+  "sprite": "Global_Tex_Lunchbox_Undead",
+  "width": 740
+ },
+ "board-horde": {
+  "sprite": "Global_Tex_Lunchbox_Horde",
+  "width": 740
+ },
+ "board-neutral": {
+  "sprite": "Global_Tex_Lunchbox_Neutral",
+  "width": 740
+ }
+}

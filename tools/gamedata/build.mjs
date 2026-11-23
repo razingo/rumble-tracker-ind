@@ -11,7 +11,8 @@
 //  1. Find the game (the folder given, RUMBLE_GAME_DIR, or where Windows says it is installed).
 //  2. Start from the tables kept by hand (seed/: save IDs and keys of the minis, level rules, army code numbers).
 //  3. Build the tables (minis, army boards, events, store, PvP), then extract the images they name and no others
-//     (portraits, talent and trait icons, reward and store art, currency icons: about 670 small files, 4.5 MB).
+//     (portraits, talent and trait icons, reward and store art, currency icons, the page's frames and boards: about
+//     690 small files, 4.8 MB).
 //  4. Write gamedata.json: the game's version, this builder's, and every file's checksum.
 // It goes easy on the PC: the programs it starts run at low priority, and only a few steps at a time.
 import { readdirSync, readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync, rmSync } from 'node:fs';
@@ -29,7 +30,7 @@ const PACKAGES = ['UnityPy==1.25.4', 'Pillow'];
 const { priority } = osConstants;
 const AT_ONCE = Math.max(2, Math.min(4, availableParallelism() - 1)); // steps running side by side
 // Raised whenever a new version of the tracker reads something more or differently, so data built before is read again.
-export const BUILDER = 1;
+export const BUILDER = 2;
 const PYTHONS = ['3.14', '3.13', '3.12', '3.11']; // the versions the packages are known to install on
 
 /** A problem the player can fix; its message is shown as it is. needsFolder: the game's folder is what is wanted. */
@@ -210,6 +211,15 @@ export async function buildGameData({ game = findGame(), out, work, onStep = () 
     ['Currency icons', ['Python', 'Starting tables'], images('currency', 'currency_sprites.json', '96', '^iconsglobal')],
     ['PvP icons', ['Python', 'PvP'], images('pvp', 'pvp_sprites.json', '128', 'pvp')],
     ['PvP rewards', ['Python', 'PvP'], images('rewards', 'pvp_reward_sprites.json', '96')],
+    // the page's own art: wood, key art and army boards as they are; the card frames are cut out of the game's slot
+    // backgrounds (make_card_frames.py)
+    ['Interface art', ['Python', 'Starting tables'], images('ui', 'interface_sprites.json', '1800')],
+    ['Card frames', ['Python', 'Starting tables'], async () => {
+      const slots = join(work, 'frames');
+      rmSync(slots, { recursive: true, force: true });
+      await runProgram(py, ['-I', join(HERE, 'extract_reward_icons.py'), slots, join(HERE, 'frame_sprites.json'), '1024'], env, QUIET);
+      return runProgram(py, ['-I', join(HERE, 'make_card_frames.py'), slots, join(out, 'ui')], env, QUIET);
+    }],
   ];
   const missing = (await runSteps(steps, { onStep, log })).filter((l) => /NOT FOUND/.test(l)).map((l) => l.trim());
 

@@ -1,7 +1,7 @@
 // Extracts the additional data: what the rdmodule, the page behind the tracker's hidden key sequence, draws and plays,
 // from the Warcraft Rumble installed on this PC: the units' sprites (rendered from their 3D models and animations),
-// effect sprites, backdrops, menu art and sounds. The tracker runs it in the background when asked in Settings
-// (server/rdmodule.mjs). The game's files are only read.
+// effect sprites, backdrops and sounds. (Its menu art is part of the tracker's own game data.) The tracker runs it in
+// the background when asked in Settings (server/rdmodule.mjs). The game's files are only read.
 //
 // The steps, of which those that do not wait for each other run side by side:
 //   exports (Python, as for the game data): the towers' models, the units' rigged models with their animations, the
@@ -145,7 +145,7 @@ function renderPage(url, profile) {
 }
 
 /**
- * Extracts into `out` (sprites/, sounds/, ui/), with the exports in `work`, which is emptied afterwards. `gamedata` is
+ * Extracts into `out` (sprites/, sounds/), with the exports in `work`, which is emptied afterwards. `gamedata` is
  * the tracker's game data folder (its minis table is read), `gameFolder` the game's folder when it was given by hand.
  * onStep(done, total, label) as in runSteps.
  * Rejects with a BuildError for what the player can fix.
@@ -156,10 +156,10 @@ export async function extractRdmodule({ gameFolder = '', gamedata, out, work, on
   if (!canExtract()) throw new BuildError('This tracker was built without the tools the extraction needs.');
   // built beside the last extraction, which it replaces only when it is whole
   const stage = `${out}-new`;
-  const sprites = join(stage, 'sprites'), sounds = join(stage, 'sounds'), ui = join(stage, 'ui');
+  const sprites = join(stage, 'sprites'), sounds = join(stage, 'sounds');
   await rm(stage, { recursive: true, force: true });
   await rm(work, { recursive: true, force: true });
-  for (const d of [sprites, sounds, ui, join(work, 'gamedata')]) await mkdir(d, { recursive: true });
+  for (const d of [sprites, sounds, join(work, 'gamedata')]) await mkdir(d, { recursive: true });
   await copyFile(join(gamedata, 'minis.json'), join(work, 'gamedata', 'minis.json'));
   await copyFile(join(PAGES, 'sprites.json'), join(work, 'sprites.json'));
   const want = wanted(JSON.parse(readFileSync(join(work, 'sprites.json'), 'utf8')));
@@ -177,8 +177,6 @@ export async function extractRdmodule({ gameFolder = '', gamedata, out, work, on
   const soundList = join(work, 'sound_files.json');
   const decode = (files) => () => runProgram(py, ['-I', join(HERE, 'export_sounds.py'), join(work, 'sounds')],
     { ...env, RUMBLE_SOUND_FILES: files }, quiet);
-  const images = (dir, list, size) => () => runProgram(py, ['-I', join(HERE, '..', 'gamedata', 'extract_reward_icons.py'),
-    dir, join(HERE, list), size], env, quiet);
   const server = await renderServer(work, sprites);
   const page = (path, name) => () => renderPage(`http://127.0.0.1:${server.address().port}/${path}`, join(work, `webview2-${name}`));
   try {
@@ -193,11 +191,6 @@ export async function extractRdmodule({ gameFolder = '', gamedata, out, work, on
     const lines = await runSteps([
       ['Python', [], async () => { py = await python(work, log); return []; }],
       ['List of minis', [], script('all_minis.mjs', join(work, 'all_mini_definitions.json'))],
-      ['Menu art', ['Python'], images(ui, 'menu_sprites.json', '1800')],
-      ['Card frames', ['Python'], async () => {
-        await images(join(work, 'frames'), 'frame_sprites.json', '1024')();
-        return runProgram(py, ['-I', join(HERE, 'make_card_frames.py'), join(work, 'frames'), ui], env, quiet);
-      }],
       ['Index of the sounds', ['Python', 'List of minis'], decode('none')],
       // the indexes of the game's files that all the other exports read, built once
       ...split('Index of the game files', ['Python', 'List of minis'], INDEX_SHARDS, 'build_indexes.py'),

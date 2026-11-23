@@ -34,7 +34,7 @@ leaves replacing the exe to you. Only exes built by this repository's release wo
 It needs Warcraft Rumble for PC installed, and nothing else: no Python, and no internet connection for its game data.
 
 - **First start:** the window shows a loading bar while the game data is read from the game install. The bar fills as
-  each of the 19 steps finishes and names the ones running. This takes about a minute.
+  each of the 21 steps finishes and names the ones running. This takes about a minute.
 - **After a game patch:** the tracker sees that the installed game is a newer version than its data and reads the data
   again in the background, while it stays usable. It looks at start, when the game closes and every half hour.
 - **Otherwise:** it starts straight away.
@@ -62,8 +62,8 @@ If the game is not installed at all, installing it is enough: the loading window
 
 ## What is read from the game
 
-About 670 small files, 4.5 MB: the minis' portraits, talent and trait icons, reward and store art, PvP and currency
-icons, and the tables behind them. Only what the tracker shows is extracted, and the image folders are built anew each
+About 690 small files, 5 MB: the minis' portraits, talent and trait icons, reward and store art, PvP and currency
+icons, the page's own card frames, army boards and backgrounds, and the tables behind them. Only what the tracker shows is extracted, and the image folders are built anew each
 time, so nothing unused stays behind.
 
 `tools\gamedata\seed\` holds the few tables kept by hand, which are not in the game files: the minis' save IDs and

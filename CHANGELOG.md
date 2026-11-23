@@ -3,6 +3,12 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.0.2
+
+- Fixed: cards showed a plain pale border instead of their faction frames, and the army boards and wood backgrounds
+  were missing. The tracker now reads this art from your game install with the rest of its game data. After updating,
+  it reads the game data once more in the background, and the frames appear when that is done.
+
 ## 0.0.1
 
 The first version of the tracker that reads its game data from your own game install.

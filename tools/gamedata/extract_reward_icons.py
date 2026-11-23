@@ -4,7 +4,8 @@ usage: python -I extract_reward_icons.py [out_dir] [list.json] [max_size]
   default: event reward icons (event_reward_sprites.json, written by build_events.mjs) -> gamedata/rewards, 96 px
   shop art: python -I extract_reward_icons.py ../../gamedata/store store_sprites.json 160
   mini art: python -I extract_reward_icons.py ../../gamedata/art mini_art_sprites.json 256 (likewise talents, icons)
-The list is either ["Sprite", ...] (saved under the sprite's name) or {"file": "Sprite", ...} (saved as file.webp).
+The list is either ["Sprite", ...] (saved under the sprite's name) or {"file": "Sprite", ...} (saved as file.webp);
+in place of "Sprite", {"sprite": "Sprite", "width": N} makes that one N wide at most, whatever its height.
 A file named with .png is saved as a PNG at the sprite's own size (the icons the tracker asks for by that name).
 """
 import json
@@ -13,7 +14,7 @@ import re
 import sys
 
 import UnityPy
-from PIL import ImageFilter
+from PIL import Image, ImageFilter
 
 BUNDLES = os.environ["RUMBLE_BUNDLES"]
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -82,16 +83,21 @@ def main():
             except Exception as e:
                 print(f"failed {name}: {e}")
                 continue
+            whole = img
             bbox = img.getchannel("A").getbbox()
             if bbox:
                 img = img.crop(bbox)
             for file, crop in files_of[name]:
                 out = square(img, crop) if crop and "squareTop" in crop else img
-                if file.endswith(".png"):
-                    out.save(os.path.join(OUT, file), "PNG")
+                if file.endswith(".png"):  # as the game has it, with its empty margin
+                    whole.save(os.path.join(OUT, file), "PNG")
                     continue
                 out = out.copy()
-                out.thumbnail((SIZE, SIZE))
+                if crop and crop.get("width"):
+                    if out.width > crop["width"]:
+                        out = out.resize((crop["width"], round(out.height * crop["width"] / out.width)), Image.LANCZOS)
+                else:
+                    out.thumbnail((SIZE, SIZE))
                 out.save(os.path.join(OUT, f"{file}.webp"), "WEBP", quality=88)
             todo.discard(name)
             print(f"saved {name} from {os.path.basename(path)}")
