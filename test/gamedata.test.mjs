@@ -9,7 +9,7 @@ import { givenGameFolder, setGameFolder, isGameFolder } from '../server/game/fol
 import { createRdmodule } from '../server/rdmodule.mjs';
 import { createHttpServer } from '../server/http/server.mjs';
 import { createGameData } from '../server/gamedata.mjs';
-import { runSteps, findGame, buildDue, BUILDER } from '../tools/gamedata/build.mjs';
+import { runSteps, findGame, stepsDue, stepVersions } from '../tools/gamedata/build.mjs';
 import { testContext } from './helpers.mjs';
 
 /** A folder that looks like the game's: it has the folder the game's files are in. */
@@ -88,12 +88,12 @@ test('the rdmodule: nothing extracted at first, and its page is served with its 
   try {
     // (the made-up app folder has no extraction tools)
     assert.deepEqual(await rdmodule.status(),
-      { available: false, state: 'none', extracted: null, done: 0, total: 0, label: '', error: null });
+      { available: false, state: 'none', extracted: null, outOfDate: false, done: 0, total: 0, label: '', error: null });
     assert.equal(await rdmodule.start(), false);
     assert.equal((await fetch(`${base}/api/rdmodule/extract`, { method: 'POST', headers: { 'content-type': 'application/json' },
       body: '{}' })).status, 400);
-    await mkdir(rdmodule.folders.game, { recursive: true });
-    await writeFile(path.join(rdmodule.folders.game, 'index.html'), '<!doctype html><title>m</title>');
+    await mkdir(rdmodule.folders.code, { recursive: true });
+    await writeFile(path.join(rdmodule.folders.code, 'index.html'), '<!doctype html><title>m</title>');
     await mkdir(path.join(rdmodule.folders.extracted, 'sprites'), { recursive: true });
     await writeFile(path.join(rdmodule.folders.extracted, 'sprites', 'index.json'), '{}');
     await writeFile(path.join(rdmodule.folders.extracted, 'ready.json'), '{"extracted":"2026-01-02T03:04:05.000Z"}');
@@ -118,23 +118,44 @@ function fakeBuilder(game) {
     BuildError: class extends Error {}, builds: 0, version: '2.0.0.1', fail: null,
     findGame: () => game,
     gameVersion: () => b.version,
-    buildDue: (g, stamp) => !stamp || (!!g && stamp.gameBuild !== b.version),
-    async buildGameData({ out }) {
+    due: [], // what the last build was asked for
+    stepsDue: (g, stamp) => (!stamp || (!!g && stamp.gameBuild !== b.version) ? 'all' : b.changed),
+    changed: [],
+    async buildGameData({ out, due }) {
       b.builds++;
+      b.due = due;
       if (b.fail) throw new b.BuildError(b.fail);
       await mkdir(out, { recursive: true });
       await writeFile(path.join(out, 'rules.json'), JSON.stringify({ rarities: [], marker: b.version }));
       await writeFile(path.join(out, 'minis.json'), JSON.stringify({ minis: [{ slug: 'new-mini', name: 'New' }] }));
       await writeFile(path.join(out, 'gamedata.json'), JSON.stringify({ gameBuild: b.version }));
-      return { gameBuild: b.version, files: {} };
+      return { gameBuild: b.version, steps: ['Minis'] };
     },
   };
   return b;
 }
 
-test('the real builder: data is due for a build without a stamp, and kept when the game is not here', () => {
-  assert.equal(buildDue(null, null), true);
-  assert.equal(buildDue('C:\no\such\game', { gameBuild: '1.0.0.1', builder: BUILDER }), false);
+test('the real builder: everything is due without a stamp; data is kept when the game is not here', () => {
+  assert.equal(stepsDue(null, null), 'all');
+  assert.equal(stepsDue('C:\\game', { gameBuild: '1.0.0.1' }), 'all', 'a stamp from before steps had versions');
+  assert.deepEqual(stepsDue('C:\\no\\such\\game', { gameBuild: '1.0.0.1', steps: stepVersions() }), []);
+});
+
+test('the real builder: a step is due when its own script or inputs changed, everything when the game did', async () => {
+  const { dir, cleanup } = await testContext();
+  try {
+    const game = await fakeGame(dir);
+    await writeFile(path.join(game, '.build.info'), 'Branch!STRING:0|Active!DEC:1|Version!STRING:0\neu|1|2.0.0.1\n');
+    const steps = stepVersions();
+    assert.deepEqual(stepsDue(game, { gameBuild: '2.0.0.1', steps }), []);
+    assert.equal(stepsDue(game, { gameBuild: '1.9.9.9', steps }), 'all');
+    assert.deepEqual(stepsDue(game, { gameBuild: '2.0.0.1', steps: { ...steps, Store: 'older', 'Card frames': undefined } }),
+      ['Store', 'Card frames']);
+    assert.equal(stepsDue(game, { gameBuild: '2.0.0.1', steps: { ...steps, 'Starting tables': 'older' } }), 'all',
+      'the tables kept by hand feed every step');
+  } finally {
+    await cleanup();
+  }
 });
 
 test('game data is read again in the background when the game is another version', async () => {
@@ -153,10 +174,16 @@ test('game data is read again in the background when the game is another version
     assert.equal(ctx.tables.gameData.gameBuild, '2.0.0.1');
     assert.equal(ctx.tables.rules.marker, '2.0.0.1', 'the tables in use are the new ones');
     assert.ok(ctx.tables.slugs.has('new-mini'));
-    assert.deepEqual(ctx.gameData, { canBuild: true, reading: false, error: null });
+    assert.deepEqual(ctx.gameData, { canBuild: true, reading: false, part: false, error: null });
     assert.ok(ctx.rev > rev, 'the page is told');
+    assert.equal(builder.due, 'all');
     await gameData.check(); // the same version: nothing to do
     assert.equal(builder.builds, 1);
+    // a new version of the tracker changed one step: only that is asked for, on the data there is
+    builder.changed = ['Store'];
+    await gameData.check();
+    assert.equal(builder.builds, 2);
+    assert.deepEqual(builder.due, ['Store']);
   } finally {
     await cleanup();
   }

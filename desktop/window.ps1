@@ -303,17 +303,17 @@ function Test-RdmodulePage($uri) {
 
 # shown instead of WebView2's own error page, e.g. when offline
 $RDMODULE_ERROR = @'
-<!doctype html><meta charset="utf-8"><title>Rumble Dash</title>
+<!doctype html><meta charset="utf-8"><title>rdmodule</title>
 <body style="margin:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
 background:#1b1f2e;color:#f3ead6;font:16px 'Segoe UI',sans-serif">
-<p>Couldn't load the game.</p>
+<p>Couldn't load the page.</p>
 <a href="{0}" style="padding:6px 18px;border-radius:6px;background:#f2b33d;color:#3a2208;font-weight:600;
 text-decoration:none">Retry</a></body>
 '@
 
 function New-RdmoduleWindow {
   $f = New-Object System.Windows.Forms.Form
-  $f.Text = 'Rumble Dash'
+  $f.Text = 'rdmodule'
   $f.Icon = $icon
   $f.ClientSize = New-Object System.Drawing.Size(1280, 620)
   $f.MinimumSize = New-Object System.Drawing.Size(640, 400)

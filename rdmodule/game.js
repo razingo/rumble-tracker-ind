@@ -44,8 +44,8 @@
     };
   }
   const store = {
-    get(k, d) { try { const v = localStorage.getItem(`rumbleDash.${k}`); return v == null ? d : JSON.parse(v); } catch { return d; } },
-    set(k, v) { try { localStorage.setItem(`rumbleDash.${k}`, JSON.stringify(v)); } catch { /* storage off */ } },
+    get(k, d) { try { const v = localStorage.getItem(`rdmodule.${k}`); return v == null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(`rdmodule.${k}`, JSON.stringify(v)); } catch { /* storage off */ } },
   };
   // Images from the data site, loaded on first use; null until loaded.
   const images = {};
@@ -702,7 +702,7 @@
 
   function newRun() {
     const l = LEADERS[pick];
-    const seed = hashStr(`${dayKey()}|dash`);
+    const seed = hashStr(`${dayKey()}|rdmodule`);
     const deckRng = seeded(seed ^ 0x9e3779b9);
     let ids = deck.filter((id) => !(MINIS[id].kind === 'spell' && has('PvpModifier_CleanFight')));
     if (ids.length < 3) ids = ids.concat(['ghoul', 'gryphon-rider', 'darkspear-troll'].slice(0, 3 - ids.length));
@@ -721,7 +721,6 @@
       haste: 0, frenzy: 0, veil: 0, totem: 0, banner: 0, march: 0, purgatory: 0,
       // then: things to do after a delay ({ t, fn }), the second repeating timer, times Hogger's card was played, cheap
       // cards played for Maiev, seconds since the Kobold Miner last dug, Arcane Blast's tier (0 to 2), burning enemies fallen for Moira's Wit, and one-off flags
-      tester: false, // a tester's run (tester.js): a still lane, free cards, enemies placed by hand, no end
       later: [], timer2: 0, mine: 0, arcane: 0, plays: 0, cheap: 0, wit: 0, hubris: false, clear: false, guard: false, reborn: false, purged: false,
       p: { x: LEADER_X, y: GROUND, w: 46, h: 64, hp: 3, inv: 0, lunge: 0, deploy: Math.min(DEPLOY_MAX, clip(l.id, 'deploy')) },
       hand: ids.slice(0, 3), queue: ids.slice(3),
@@ -855,7 +854,7 @@
   }
   function cardCost(i) {
     const r = run, id = r.hand[i];
-    if (!id || r.tester) return 0;
+    if (!id) return 0;
     const def = cardDef(id);
     let c = def.cost;
     if (id === 'arcane-blast') c += r.arcane; // each tier costs 1 more
@@ -1214,7 +1213,6 @@
     if (p.hp <= 0 && tal('cairne-bloodhoof', 0) && !r.reborn) { r.reborn = true; p.hp = 1; p.inv = 2; burstOn('resurrect', p); float(p.x + 30, p.y - 100, 'Reincarnation', '#ffe9b0'); }
     if (p.hp <= 0 && tal('arthas-menethil', 2) && !r.purged) { r.purged = true; p.hp = 0; r.purgatory = 3; return true; } // a kill in time saves you
     if (p.hp > 0 && p.hp <= 1 && tal('tirion-fordring', 1)) { r.unhurt = 5; r.unhurtKind = 'shield'; } // Divine Shield
-    if (p.hp <= 0 && r.tester) p.hp = 3; // nothing ends the tester
     if (p.hp <= 0) endRun();
     return true;
   }
@@ -1309,7 +1307,6 @@
       if (gap <= spd * dt) spd = Math.max(0, gap / dt);
     }
     const atTower = tower && tower.x - (p.x + p.w) < 2;
-    if (r.tester) spd = 0; // the tester's lane stands still
     if (p.deploy > 0) { p.deploy -= dt; spd = 0; } // the leader arrives first
     r.stalled = spd < 1;
     r.spd = spd;
@@ -1361,9 +1358,8 @@
 
     if (r.unhurtKind === 'spin' && atTower && Math.floor(r.time * 4) !== Math.floor((r.time - dt) * 4)) damage(tower, 1, {});
 
-    // spawning (in the tester enemies are placed by hand)
-    if (r.tester) r.gold = 10;
-    else if (!tower && r.traveled >= r.nextTower) {
+    // spawning
+    if (!tower && r.traveled >= r.nextTower) {
       addEnemy('tower', W + 60);
       r.nextTower = r.traveled + 600 * M;
     } else if (!tower && r.traveled >= r.nextSpawn) spawnWave();
@@ -1393,7 +1389,7 @@
       // ground minis, fliers by any mini, and those that can strike fight the one holding them
       const blocker = d.tower ? null : r.minis.find((m) => (e.air || !m.air) && m.hp > 0 && e.x < m.x + m.w && e.x + e.w > m.x);
       const foe = d.hit ? blocker : null;
-      scroll(e, blocker ? spd : held2 || d.tower || r.tester ? 0 : -d.walk * (e.daze > 0 ? 0.5 : 1));
+      scroll(e, blocker ? spd : held2 || d.tower ? 0 : -d.walk * (e.daze > 0 ? 0.5 : 1));
       if (e.air) e.y = GROUND - d.alt + Math.sin(e.t * 5) * 3;
       if (held2) continue;
       if (foe) {
@@ -1449,7 +1445,7 @@
         if (gap < -e.w - m.w || gap > range) continue;
         if (gap < near) { near = gap; target = e; }
       }
-      let adv = r.tester ? 220 : ADVANCE; // the tester has no moving lane to carry them up
+      let adv = ADVANCE;
       if (isLeader('sylvanas-windrunner') && (d.family === 'Horde' || d.family === 'Undead')) adv *= 2; // Windrunner Warchief
       if (!m.charged) adv = 160;
       let vx;
@@ -2161,7 +2157,7 @@
     // twist chips
     let x = W - 12;
     ctx.font = font(12, 700);
-    for (const m of r.tester ? [] : [...today.mods].reverse()) { // (the tester keeps the top bar for its own)
+    for (const m of [...today.mods].reverse()) {
       const w = ctx.measureText(m.name).width + 44;
       x -= w;
       panel(x, 10, w, 32, 0.6);
@@ -2175,7 +2171,6 @@
       ctx.fillStyle = 'rgba(24,14,8,0.25)'; ctx.fillRect(0, 476, W, H - 476);
       ctx.fillStyle = '#2e1b0e'; ctx.fillRect(0, 474, W, 4);
     }
-    if (r.tester) { tester.draw(); return; }
     // gold
     panel(12, 490, 322, 96);
     coin(46, 538, 22, r.gold);
@@ -2266,7 +2261,7 @@
     }
     ctx.restore();
     drawHud();
-    if (r.time < 4 && !r.tester) {
+    if (r.time < 4) {
       ctx.globalAlpha = clamp(4 - r.time, 0, 1);
       panel(W / 2 - 280, 110, 560, 64);
       text('Play cards with 1 2 3, or tap them', W / 2, 136, 15, '#fff', 'center');
@@ -2297,7 +2292,7 @@
 
   function drawMenu() {
     backdrop(0.55);
-    text('Rumble Dash', 40, 66, 40, '#ffe28a', 'left', 800);
+    text('rdmodule', 40, 66, 40, '#ffe28a', 'left', 800);
     const rule = img('ui/divider.webp');
     if (rule) ctx.drawImage(rule, 40, 76, 700, 10);
     text('Run the lane. Spend Gold on minis. Beat today’s twist.', 310, 62, 16, '#fff', 'left', 500);
@@ -2407,7 +2402,7 @@
   function drawLoad() {
     const f = loading();
     ctx.fillStyle = '#1b1f2e'; ctx.fillRect(0, 0, W, H);
-    text('Rumble Dash', W / 2, 250, 64, '#ffe28a', 'center', 800);
+    text('rdmodule', W / 2, 250, 64, '#ffe28a', 'center', 800);
     ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.beginPath(); ctx.roundRect(W / 2 - 180, 300, 360, 12, 6); ctx.fill();
     ctx.fillStyle = '#f2c14e'; ctx.beginPath(); ctx.roundRect(W / 2 - 180, 300, 360 * f, 12, 6); ctx.fill();
     if (f < 1) text('Loading…', W / 2, 350, 16, '#ccc', 'center', 500);
@@ -2418,8 +2413,7 @@
     ready(['music.alliance', 'music.horde']); // behind the menu, for the run to come
     reveal = 0.6;
     sfx('ui.start', 0.4);
-    if (tester) tester.start(); // the tester's page has no menu
-    else mode = 'menu';
+    mode = 'menu';
   }
 
   function drawPause() {
@@ -2474,8 +2468,6 @@
       else if (k >= '1' && k <= '3') pickTalent(Number(k) - 1);
     } else if (mode === 'deck') {
       if (k === 'Enter' || k === 'Escape') closeDeck();
-    } else if (mode === 'play' && run.tester) {
-      tester.key(k);
     } else if (mode === 'play') {
       if (k >= '1' && k <= '3' && !ev.repeat) playCard(Number(k) - 1);
       else if (k === 'Tab') dropArcane();
@@ -2488,8 +2480,8 @@
       else if (k === 'm' || k === 'M' || k === 'Escape') mode = 'menu';
     }
   });
-  addEventListener('blur', () => { if (mode === 'play' && !run.tester) mode = 'pause'; });
-  document.addEventListener('visibilitychange', () => { if (document.hidden && mode === 'play' && !run.tester) mode = 'pause'; });
+  addEventListener('blur', () => { if (mode === 'play') mode = 'pause'; });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && mode === 'play') mode = 'pause'; });
 
   function toGame(ev) {
     const rc = canvas.getBoundingClientRect();
@@ -2518,19 +2510,9 @@
     }
     if (mode === 'over') { start(); return; }
     if (mode === 'pause') { mode = 'play'; return; }
-    if (run.tester) { tester.click(pt); return; }
     for (let i = 0; i < 3; i++) if (inRect(pt, cardRect(i))) { playCard(i); return; }
   });
   canvas.addEventListener('contextmenu', (ev) => ev.preventDefault());
-
-  // The tester (tester.js) is a page of its own and is not loaded by the game's. Where it is, it gets the parts of the
-  // game it works with, and the game opens on it instead of the menu.
-  const tester = globalThis.RumbleDashTester?.({
-    ctx, W, H, LEADER_X, POOL, LEADER_CARD, SECOND_DREAM, LEADERS, TALENTS, ENEMIES,
-    pick: () => pick, setPick: (i) => { pick = i; }, run: () => run, setMode: (m) => { mode = m; },
-    leaderCount, talentOf, pickTalent, newRun, addEnemy, playCard, store, sfx, inRect, img, text, panel, button, card,
-    loadSounds: () => ready(Object.keys(takes).filter((k) => !k.startsWith('music.'))),
-  }) || null;
 
   // ---------- frame ----------
   function resize() {

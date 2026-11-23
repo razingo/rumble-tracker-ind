@@ -1,7 +1,7 @@
 """One catalog of what every unit and spell has: its bodies (rigs), each body's abilities with the animation clips,
 effects and sounds they play, and the rest of its animations, effects and sounds by kind.
 Run: python -I build_unit_catalog.py [unit key regex]
-Needs animations, effects and sounds (their index.json) and gamedata/asset_index.json.
+Needs animations, effects and sounds (their index.json) and asset_index.json (build_indexes.py).
 Out: unit_catalog.json, units.<key> = {name, slug, collectible, bodies, effects, sounds}.
 
 Abilities come from the unit records (AspectAbility in Unit.m_aspects and its talent slots). Each names an Animator
@@ -38,7 +38,7 @@ def load_asset(assets, g):
     bundle = assets[g][0]
     if bundle not in _env_cache:
         if len(_env_cache) > 1: _env_cache.clear()  # (each holds dozens of bundles in memory)
-        _env_cache[bundle] = UnityPy.load(*[os.path.join(em.B, b) for b in sorted(em.closure(bundle))])
+        _env_cache[bundle] = em.load_lazy(bundle)
     env = _env_cache[bundle]
     for o in env.objects:
         if o.type.name == "AssetBundle":
@@ -118,14 +118,6 @@ def ability_states(ctrl, param):
     return [ctrl["states"][i] for i in sorted(seen)]
 
 # ---- catalog ----------------------------------------------------------------------------------------------------
-# RUMBLE_SHARD splits the work over several processes started side by side: "i/n" does every n-th piece and leaves its
-# part of the index in parts/<i>.json; "merge", run after them, puts the parts together into the index.
-SHARD = os.environ.get("RUMBLE_SHARD", "")
-MINE = (lambda i: True) if "/" not in SHARD else (lambda i, k=int(SHARD.split("/")[0]), n=int(SHARD.split("/")[1]): i % n == k)
-def parts_dir(out): d = os.path.join(out, "parts"); os.makedirs(d, exist_ok=True); return d
-def load_parts(out): return [json.load(open(os.path.join(parts_dir(out), f), encoding="utf8")) for f in sorted(os.listdir(parts_dir(out)))]
-def save_part(out, data): json.dump(data, open(os.path.join(parts_dir(out), SHARD.split("/")[0] + ".json"), "w", encoding="utf8"))
-
 def main():
     assets = json.load(open(os.path.join(ROOT, "asset_index.json")))
     anim = json.load(open(os.path.join(R, "animations", "index.json"), encoding="utf8"))
@@ -135,11 +127,10 @@ def main():
     talent_names = {}
     for r in recs.values():
         if em.typ(r) == "Talent": talent_names[r["guid"]] = re.sub(r"^.*?_(Talent)", r"\1", r["name"])
-    catalog = json.load(open(OUT, encoding="utf8")) if ONLY and os.path.exists(OUT) else {}
+    catalog = {}
     units = catalog.setdefault("units", {})
-    for part in (load_parts(R) if SHARD == "merge" else []): units.update(part)
-    for i, (key, own) in enumerate(sorted((k, o) for k, o in by_key.items() if not ONLY or ONLY.search(k))):
-        if SHARD == "merge" or not MINE(i): continue
+    for key, own in sorted(by_key.items()):
+        if ONLY and not ONLY.search(key): continue
         print(key, flush=True)
         a_unit = anim["units"].get(key, {})
         rigs = [c for c in [a_unit] + a_unit.get("others", []) if c.get("file")]
@@ -217,7 +208,6 @@ def main():
             "sounds": [{"event": s["event"], "trigger": s["trigger"], "ability": s["ability"], "activity": s.get("activity"), "files": s["files"]}
                        for s in snd_rows if bare(s["ability"]) not in used_abilities or not s["ability"]],
         }
-    if "/" in SHARD: save_part(R, units); return
     catalog["source"] = ("Warcraft Rumble game files: unit records (abilities, models, sounds), AnimatorControllers (ability -> "
                          "states -> clips); files are relative to  (animations/, effects/, sounds/)")
     catalog["units"] = dict(sorted(units.items()))

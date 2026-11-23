@@ -24,7 +24,8 @@ export function bindRdmodule() {
     else at = 0;
     if (at === SEQUENCE.length) {
       at = 0;
-      getJson('/api/rdmodule', 'the game').then((game) => { if (game.state === 'ready') webview.postMessage('rdmodule'); }, () => {});
+      getJson('/api/rdmodule', 'the rdmodule')
+        .then((status) => { if (status.state === 'ready') webview.postMessage('rdmodule'); }, () => {});
     }
   });
 }

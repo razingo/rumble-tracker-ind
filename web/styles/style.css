@@ -538,10 +538,16 @@ button { cursor: pointer; }
 
 /* Armory tab */
 .armory-page { max-width: 1280px; margin: 0 auto; padding: 20px; }
-.armory-toolbar { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+/* title, search, files; the tag filters sit under the search field, from its left edge */
+.armory-toolbar { display: grid; grid-template-columns: auto minmax(220px, 420px) 1fr; gap: 10px 14px; align-items: center; }
 .armory-toolbar h2 { margin: 0; }
-#armorySearch { flex: 1; min-width: 220px; max-width: 420px; }
-.armory-files { display: flex; gap: 8px; align-items: center; margin-left: auto; }
+#armorySearch { width: 100%; box-sizing: border-box; }
+.armory-tag-filters { grid-column: 2 / -1; grid-row: 2; }
+@media (max-width: 700px) {
+  .armory-toolbar { grid-template-columns: 1fr; }
+  .armory-tag-filters { grid-column: 1; grid-row: auto; }
+}
+.armory-files { display: flex; gap: 8px; align-items: center; justify-self: end; }
 .armory-files a { text-decoration: none; }
 .armory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 14px; }
 @media (max-width: 520px) { .armory-grid { grid-template-columns: 1fr; } }

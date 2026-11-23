@@ -65,6 +65,8 @@ nothing is downloaded.
   every half hour. The tracker stays usable on the old data meanwhile; the new data replaces it only once it is
   complete, and an open window loads it by itself. If the read fails, the old data stays and the tracker tries again
   within the hour.
+- **After a tracker update** that reads something more or differently, only the parts that changed are read again,
+  the same way.
 
 ## App updates
 
@@ -100,7 +102,7 @@ A few seconds after each start, the exe makes sure of these, for your Windows ac
 
 | Where | What |
 |---|---|
-| `%APPDATA%\RumbleTracker` | Your data: what you entered, the history, settings, the installed game data (`gamedata`), automatic backups (`backups`), a downloaded update (`update`, removed once installed) and the log (`tracker.log`, `tracker.previous.log`) |
+| `%APPDATA%\RumbleTracker` | Your data: what you entered, the history, settings, the game data read from your game install (`gamedata`, with the reading's working files in `gamedata-build`), the game's folder if you gave one (`config.json`), automatic backups (`backups`), a downloaded update (`update`, removed once installed) and the log (`tracker.log`, `tracker.previous.log`) |
 | `%APPDATA%\RumbleTracker\state` | The last read of each account's save (rebuilt by the next read; not in backups) |
 | `%LOCALAPPDATA%\RumbleTracker\app` | The program's files, unpacked from the exe once per version |
 | `%LOCALAPPDATA%\RumbleTracker\webview2` | The window's WebView2 data (Microsoft Edge WebView2 shows the page). The files there are WebView2's own (cache, settings); the tracker stores nothing of yours in it, and deleting the folder only resets the window |

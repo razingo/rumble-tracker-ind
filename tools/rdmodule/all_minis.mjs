@@ -1,11 +1,9 @@
 // List every Gryphon.Data.Mini (guid + internal name) from the unitdata_* bundles with its save-data ID, and the
-// tracker slug for the ones already in gamedata/unit_ids.json. usage: node all_minis.mjs <out.json>
+// tracker slug for the ones already in unit_ids.json. Run by extract.mjs: node all_minis.mjs <out.json>
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { readBundle } from '../gamedata/unityfs.mjs';
 
-const HERE = dirname(fileURLToPath(import.meta.url));
 const PERM = [8, 9, 10, 11, 12, 13, 14, 15, 4, 5, 6, 7, 0, 1, 2, 3, 30, 31, 28, 29, 26, 27, 24, 25, 22, 23, 20, 21, 18, 19, 16, 17];
 const INV = []; PERM.forEach((j, i) => { INV[j] = i; });
 const toId = (guid) => INV.map((i) => guid[i]).join('');

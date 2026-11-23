@@ -1,4 +1,4 @@
-// Prepares the private Python a self-built exe carries (tools/gamedata/python/), so the PC that runs the exe needs
+// Prepares the private Python the exe carries (tools/gamedata/python/), so the PC that runs the exe needs
 // neither Python nor an internet connection:   npm run fetch-python
 //
 // 1. Python's "embeddable package" from python.org (version and SHA-256 pinned).

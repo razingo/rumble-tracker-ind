@@ -1,4 +1,4 @@
-// Fetches what the rdmodule's extraction needs besides Python, into tools/rdmodule/vendor/ (a self-built exe carries
+// Fetches what the rdmodule's extraction needs besides Python, into tools/rdmodule/vendor/ (the exe carries
 // it):   npm run fetch-rdmodule-tools
 //
 // - three.js (MIT), which the render pages draw the 3D models with: the module and the few add-ons they import, from

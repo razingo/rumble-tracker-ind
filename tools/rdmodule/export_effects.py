@@ -3,7 +3,7 @@ Run: python -I export_effects.py [out_dir] [unit key regex]
 
 Unit data names the prefabs it shows by asset GUID (AspectModel/AspectModelAttachment.m_model, ImpactVFX.m_impactPrefab,
 AspectBeam.m_beamPrefab, m_modelVariants); bundles list their prefabs by that GUID in AssetBundle.m_Container
-(gamedata/asset_index.json, built once, ~1 min). Effects shared between units (heals, burns, death poofs) live in
+(asset_index.json, from build_indexes.py). Effects shared between units (heals, burns, death poofs) live in
 shared_data/talentdata records, so each unit's own records are followed through what they reference.
 Out (<out_dir>):
   index.json         units.<key> = [{record, type, ability, role, prefab, bundle, file}], prefabs.<name> = summary
@@ -13,7 +13,7 @@ Out (<out_dir>):
                      clips (Timeline AnimationTracks, Animators) sampled per animated property
   textures/<name>.png, meshes/<name>.obj  what the particles draw
 Particles are simulated in game: the JSON has the settings, not baked frames."""
-import os, re, sys, json, glob, zlib, UnityPy
+import os, re, sys, json, glob, math, zlib, UnityPy
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.environ["RUMBLE_WORK"]  # the working folder: exports, indexes, the tables read
@@ -99,13 +99,7 @@ def component(c):
     ptr = c.component if hasattr(c, "component") else c[1]
     return ptr.deref()
 
-# RUMBLE_SHARD splits the work over several processes started side by side: "i/n" does every n-th piece and leaves its
-# part of the index in parts/<i>.json; "merge", run after them, puts the parts together into the index.
-SHARD = os.environ.get("RUMBLE_SHARD", "")
-MINE = (lambda i: True) if "/" not in SHARD else (lambda i, k=int(SHARD.split("/")[0]), n=int(SHARD.split("/")[1]): i % n == k)
-def parts_dir(out): d = os.path.join(out, "parts"); os.makedirs(d, exist_ok=True); return d
-def load_parts(out): return [json.load(open(os.path.join(parts_dir(out), f), encoding="utf8")) for f in sorted(os.listdir(parts_dir(out)))]
-def save_part(out, data): json.dump(data, open(os.path.join(parts_dir(out), SHARD.split("/")[0] + ".json"), "w", encoding="utf8"))
+SHARD, MINE, load_parts, save_part = ea.SHARD, ea.MINE, ea.load_parts, ea.save_part  # the work split over processes
 
 def place(tmp, p):
     """Puts a finished file in its place; another process may have written the same one meanwhile, which is as good."""
@@ -146,8 +140,10 @@ def material(m):
     for k, t in em.tex_props(mat).items():
         f = save_texture(t)
         if f: out["textures"][k] = f
-    for k, c in sp.m_Colors: out["colors"][k] = [round(c.r, 3), round(c.g, 3), round(c.b, 3), round(c.a, 3)]
-    for k, f in sp.m_Floats: out["floats"][k] = round(f, 4)
+    # (a few materials hold an infinite number, which JSON has no way to write: 0 stands for it)
+    num = lambda x, places: round(x, places) if math.isfinite(x) else 0
+    for k, c in sp.m_Colors: out["colors"][k] = [num(x, 3) for x in (c.r, c.g, c.b, c.a)]
+    for k, f in sp.m_Floats: out["floats"][k] = num(f, 4)
     return out
 
 def timeline(director_obj, anim_clips):
@@ -392,12 +388,19 @@ def main():
         for g in sorted(guids):
             fn = safe(assets[g][2]) + ".json"
             names[g] = f"{safe(assets[g][2])}_{g[:6]}.json" if fn in names.values() else fn
-    summaries, files = {}, {}
+    # RUMBLE_PREFABS: "none" extracts nothing and writes only the index (every prefab under the name it would get);
+    # a JSON file lists the prefabs to extract, by name; empty: all of them
+    only = os.environ.get("RUMBLE_PREFABS", "")
+    wanted = set(json.load(open(only, encoding="utf8"))) if only not in ("", "none") else None
+    summaries, files = {}, (dict(names) if only == "none" else {})
     for part in (load_parts(OUT) if SHARD == "merge" else []): files.update(part["files"]); summaries.update(part["summaries"])
     for i, (bundle, guids) in enumerate(sorted(by_bundle.items())):
-        if SHARD == "merge" or not MINE(i): continue
+        if SHARD == "merge" or only == "none" or not MINE(i): continue
+        if wanted is not None:
+            guids = {g for g in guids if assets[g][2] in wanted}
+            if not guids: continue
         print(bundle, len(guids), flush=True)
-        env = UnityPy.load(*[os.path.join(B, b) for b in sorted(em.closure(bundle))])
+        env = em.load_lazy(bundle)
         cont = {}
         for o in env.objects:
             if o.type.name == "AssetBundle":

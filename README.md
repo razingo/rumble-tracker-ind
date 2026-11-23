@@ -2,8 +2,8 @@
 
 An unofficial collection, army and event tracker for **Warcraft Rumble on PC**. It reads your progress from the
 game's saved data on your own PC (read-only) and shows it in a window of its own: your minis and their levels, talents
-and upgrade costs, armies, the G.R.I.D. and what's on cooldown, events and reward trees, shop offers, your progress
-over time, and optional Windows notifications.
+and upgrade costs, armies, the G.R.I.D. and what's on cooldown, events and reward trees, shop offers, PvP seasons,
+your progress over time, and optional Windows notifications.
 
 **Not affiliated with or endorsed by Blizzard Entertainment.** Game art and data © Blizzard Entertainment; see
 [NOTICE.md](NOTICE.md).
@@ -32,8 +32,8 @@ WebView2, which comes with Windows 10 and 11. It doesn't use your browser, so yo
 aren't touched; links to other sites open in your default browser. On the rare PC without WebView2, the tracker
 only explains how to install it from Microsoft; start it again once WebView2 is installed.
 
-It uses the same data as the tracker with a browser window (version 0.9 and earlier), so it replaces that one: if the
-browser-window tracker is running when you start this one, it's asked to quit first.
+It uses the same data as the earlier tracker with a browser window, so it replaces that one: if the browser-window
+tracker is running when you start this one, it's asked to quit first.
 
 ### The tray icon
 
@@ -137,9 +137,9 @@ npm start
 
 `build-gamedata` reads the game data and art from your game install into `gamedata/`; they aren't in this repository.
 (Without it, `npm start` reads them itself on its first start, as the exe does.) [SELF-BUILD.md](SELF-BUILD.md)
-describes it, and how the exe is built with the builder and its own Python inside. From source there's no window or tray icon: `npm start` runs the server, and
-you open http://localhost:8765 in your browser. Your data goes to `data/` in the project folder, or to the folder in
-`RUMBLE_DATA_DIR`.
+describes it, and how the exe is built with the builder and its own Python inside. From source there's no window or
+tray icon: `npm start` runs the server, and you open http://localhost:8765 in your browser. Your data goes to `data/`
+in the project folder, or to the folder in `RUMBLE_DATA_DIR`.
 
 `npm run fetch-webview2` downloads the window's WebView2 libraries into `desktop/webview2/` (a pinned version, checked
 against its checksum and Microsoft's signature); the window's tests and `npm run build-release` need them.

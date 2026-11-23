@@ -22,7 +22,7 @@ test('names from the game data', () => {
   assert.deepEqual(currencyInfo('1'.repeat(32), { events, rules, now }), { name: 'Arc Energy' });
 });
 
-test('older game data uses the names in rules.json, or none', () => {
+test('a currency the game data does not name uses the name in rules.json, or none', () => {
   assert.equal(currencyInfo('2'.repeat(32), { events, rules, now }).name, 'Valor');
   assert.equal(currencyInfo('3'.repeat(32), { events, rules, now }).name, null);
 });

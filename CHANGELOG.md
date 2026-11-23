@@ -3,6 +3,13 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.1.0
+
+- After a tracker update, only the parts of the game data that changed are read again, not all of it.
+- Reading the game data and the additional data is faster and much lighter on memory and disk.
+- Armory: the tag filters stay below the search bar, on the left.
+- The banner now says when the tracker, not the game, was updated and is reading part of its data again.
+
 ## 0.0.2
 
 - Fixed: cards showed a plain pale border instead of their faction frames, and the army boards and wood backgrounds

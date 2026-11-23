@@ -37,6 +37,8 @@ It needs Warcraft Rumble for PC installed, and nothing else: no Python, and no i
   each of the 21 steps finishes and names the ones running. This takes about a minute.
 - **After a game patch:** the tracker sees that the installed game is a newer version than its data and reads the data
   again in the background, while it stays usable. It looks at start, when the game closes and every half hour.
+- **After a tracker update:** if the new version reads something more or differently, only that part is read again,
+  in the background.
 - **Otherwise:** it starts straight away.
 
 Reading goes easy on the PC: the programs it starts run at low priority, and only a few steps run at a time.
@@ -63,15 +65,16 @@ If the game is not installed at all, installing it is enough: the loading window
 ## What is read from the game
 
 About 690 small files, 5 MB: the minis' portraits, talent and trait icons, reward and store art, PvP and currency
-icons, the page's own card frames, army boards and backgrounds, and the tables behind them. Only what the tracker shows is extracted, and the image folders are built anew each
-time, so nothing unused stays behind.
+icons, the page's own card frames, army boards and backgrounds, and the tables behind them. Only what the tracker
+shows is extracted, and a step that runs again first clears what it wrote before, so nothing unused stays behind.
 
 `tools\gamedata\seed\` holds the few tables kept by hand, which are not in the game files: the minis' save IDs and
 keys, level and upgrade rules, army code numbers, and which family a two-family mini is filed under. A mini added by a
 game patch needs its save ID and key added to `seed\unit_ids.json`, then a new exe.
 
-When a new version of the tracker reads something more or differently, `BUILDER` in `tools\gamedata\build.mjs` is
-raised, and every tracker with data from the older builder reads it again.
+Each step of the reading has a version, made of its own script and inputs. After a new version of the tracker, only
+the steps that changed run again, with the steps that use what they make; the rest of the data stays as it is. A new
+version of the game runs all of them.
 
 ## From source
 

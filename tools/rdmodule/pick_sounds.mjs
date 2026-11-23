@@ -1,25 +1,22 @@
 // Picks the sounds the rdmodule uses out of the exported game audio (sounds, see export_sounds.py) and copies
-// them into its sounds folder (RDMODULE_SOUNDS; local
-// only, Blizzard audio). Each sound gets a key and up to a few takes: <key>-1.wav, <key>-2.wav, ...; index.json there
-// lists how many takes every key has.
+// them into its sounds folder (RDMODULE_SOUNDS). Each sound gets a key and up to a few takes: <key>-1.wav,
+// <key>-2.wav, ...; index.json there lists how many takes every key has.
 //   units (every sprite in sprites.json): <id>.attack and <id>.hit from the sounds the unit catalog ties to its main
 //   attack (see apply_catalog.mjs), <id>.death and <id>.ready from the unit's own; where the catalog has none, from the
 //   unit's sound banks by name: <id>.attack, <id>.hit, <id>.death, and <id>.ready
 //   (its English ready line; without one, another of its lines or its ready or birth sound)
 //   the rest: the fixed list below, and the music (whole files, named there)
-// usage: node tools/rdmodule/pick_sounds.mjs
+// Run by extract.mjs, twice: first to list the files it wants decoded (RDMODULE_SOUNDS_LIST), then to pick them.
 import { readFileSync, writeFileSync, mkdirSync, copyFileSync, rmSync, existsSync, statSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { catalog, mainAbility } from './apply_catalog.mjs';
 
-const HERE = dirname(fileURLToPath(import.meta.url));
-const RESEARCH = process.env.RUMBLE_WORK; // the working folder with the exports
-const SOUNDS = join(RESEARCH, 'sounds');
+const WORK = process.env.RUMBLE_WORK; // the working folder with the exports
+const SOUNDS = join(WORK, 'sounds');
 const OUT = process.env.RDMODULE_SOUNDS;
 const index = JSON.parse(readFileSync(join(SOUNDS, 'index.json'), 'utf8'));
-const sprites = JSON.parse(readFileSync(join(RESEARCH, 'sprites.json'), 'utf8')).sprites;
-const rigs = JSON.parse(readFileSync(join(RESEARCH, 'animations', 'index.json'), 'utf8'));
+const sprites = JSON.parse(readFileSync(join(WORK, 'sprites.json'), 'utf8')).sprites;
+const rigs = JSON.parse(readFileSync(join(WORK, 'animations', 'index.json'), 'utf8'));
 
 // sprites whose sounds come from another mini
 const SLUG = { 'emerald-whelp': 'whelp-eggs', 'emerald-drake': 'drake', 'skeleton-mage': 'skeletons', 'spirit-wolf': 'prowler', scarab: 'spiderlings' };

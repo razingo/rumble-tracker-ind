@@ -41,7 +41,9 @@ def externals(path):
                 if cab in CABS: names.add(CABS[cab])
     return names
 
-EXT_CACHE = {}
+# bundle -> the bundles it refers to: from the index when build_indexes.py made one, else found by opening the bundle
+EXT_FILE = os.path.join(ROOT, "ext_index.json")
+EXT_CACHE = {b: set(v) for b, v in json.load(open(EXT_FILE)).items()} if os.path.exists(EXT_FILE) else {}
 def closure(bundle, depth=3):
     """The bundle plus the bundles it refers to (a few levels: renderer -> material -> texture)."""
     seen, todo = {bundle}, [bundle]
@@ -54,6 +56,26 @@ def closure(bundle, depth=3):
                 if e not in seen and not e.startswith(("shared_shaders", "shaders")): seen.add(e); nxt.append(e)
         todo = nxt
     return seen
+
+def load_lazy(*bundles):
+    """These bundles alone, in name order; a bundle they refer to is loaded when a pointer into it is first followed.
+    Only the bundles closure() gives for them are, so a pointer resolves exactly when it would with all of those loaded
+    at once, which is what this replaces: dozens of bundles held in memory for the few that are read."""
+    allowed = set().union(*[closure(b) for b in bundles])
+    env = UnityPy.load(*[os.path.join(B, b) for b in sorted(bundles)])
+    loaded = set(bundles)
+    def find_file(name, is_dependency=True):
+        cab = env.get_cab(name)
+        if cab: return cab
+        b = CABS.get(os.path.basename(name).lower())
+        if b and b in allowed and b not in loaded:
+            loaded.add(b)
+            env.load_file(os.path.join(B, b), is_dependency=True)
+            cab = env.get_cab(name)
+            if cab: return cab
+        raise FileNotFoundError(f"File {name} not found")
+    env.find_file = find_file  # what PPtr.deref asks when a pointer leads out of its own bundle
+    return env
 
 # ---- names: minis from the game-built tables, everything else by its bundle name ----------------------------------
 minis = {m["slug"]: m for m in json.load(open(os.path.join(ROOT, "gamedata", "minis.json"), encoding="utf8"))["minis"]}
@@ -75,7 +97,7 @@ def tex_props(mat):
     return out
 
 def export_bundle(bundle, out_dir):
-    env = UnityPy.load(*[os.path.join(B, b) for b in sorted(closure(bundle))])
+    env = load_lazy(bundle)
     own = [f for f in env.files.values() if os.path.basename(getattr(f, "name", "") or "") == bundle]
     own_objs = [o for f in own for sf in f.files.values() if hasattr(sf, "objects") for o in sf.objects.values()]
     meshes, textures, done = [], {}, set()

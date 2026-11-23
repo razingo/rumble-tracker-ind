@@ -15,8 +15,7 @@ import { readBundle } from './unityfs.mjs';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DATA = process.env.RUMBLE_GAMEDATA || join(HERE, '..', '..', 'gamedata'); // the game data being built
 const WORK = process.env.RUMBLE_WORK || HERE; // working files passed between the steps
-const STATIC = DATA;
-const OUT = join(STATIC, 'minis.json');
+const OUT = join(DATA, 'minis.json');
 const DIR = process.env.RUMBLE_BUNDLES;
 const BUNDLES = /^(unitdata_|talentdata_|shared_|gryphongame_embedded|support_progression\.bundle|strtable_)/;
 const GROWTH = 1.1001, LEVELS = 31;
@@ -33,7 +32,6 @@ function balanced(t, i) { let d = 0, s = false; for (let j = i; j < t.length && 
   if (s) { if (c === '\\') j++; else if (c === '"') s = false; continue; } if (c === '"') s = true;
   else if (c === '{') d++; else if (c === '}' && --d === 0) return t.slice(i, j + 1); } return null; }
 const objs = {};
-const tables = [];
 for (const p of files) {
   let b; try { b = readBundle(p); } catch { continue; }
   for (const f of b.files) {
@@ -132,10 +130,10 @@ function statsOf(collection) {
 }
 
 // build
-const unitIds = JSON.parse(readFileSync(join(STATIC, 'unit_ids.json'), 'utf8')).units; // save id -> slug
+const unitIds = JSON.parse(readFileSync(join(DATA, 'unit_ids.json'), 'utf8')).units; // save id -> slug
 const old = JSON.parse(readFileSync(OUT, 'utf8'));
 const oldBySlug = new Map(old.minis.map((m) => [m.slug, m]));
-const talentOrder = JSON.parse(readFileSync(join(STATIC, 'army_code_minis.json'), 'utf8')).talentOrder || {};
+const talentOrder = JSON.parse(readFileSync(join(DATA, 'army_code_minis.json'), 'utf8')).talentOrder || {};
 const sprites = { art: new Map(), icons: new Map(), talents: new Map() }; // file name -> sprite name
 const tagIcons = {};
 const iconPath = (spriteName, file) => { if (!spriteName) return null; sprites.icons.set(file, spriteName); return `icons/${file}.webp`; };

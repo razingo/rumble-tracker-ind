@@ -174,7 +174,7 @@ class Gltf:
         if not ps: return
         self.meshes.append({"name": name, "primitives": ps}); self.nodes.append({"name": name, "mesh": len(self.meshes) - 1})
     def save(self, path):
-        doc = {"asset": {"version": "2.0", "generator": "rumble research export_maps.py"},
+        doc = {"asset": {"version": "2.0", "generator": "rumble tracker export_maps.py"},
                "scene": 0, "scenes": [{"nodes": list(range(len(self.nodes)))}], "nodes": self.nodes,
                "meshes": self.meshes, "materials": self.mats, "accessors": self.accs, "bufferViews": self.views,
                "buffers": [{"byteLength": len(self.bin)}]}

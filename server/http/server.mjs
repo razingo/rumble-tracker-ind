@@ -70,11 +70,11 @@ export function createHttpServer(ctx, deps) {
       }
       if (req.method !== 'GET') return send(res, 405, { error: 'The tracker doesn\'t accept this kind of request here.' });
       // The rdmodule (server/rdmodule.mjs): its code, and what was extracted for it.
-      const game = deps.rdmodule?.folders;
-      if (game && p.startsWith('/rdmodule/')) {
+      const rd = deps.rdmodule?.folders;
+      if (rd && p.startsWith('/rdmodule/')) {
         const rel = p.slice('/rdmodule'.length);
-        if (/^\/(sprites|sounds)\//.test(rel)) return serveFile(res, game.extracted, rel, GAME_HEADERS);
-        return serveFile(res, game.game, rel === '/' ? '/index.html' : rel, GAME_HEADERS);
+        if (/^\/(sprites|sounds)\//.test(rel)) return serveFile(res, rd.extracted, rel, GAME_HEADERS);
+        return serveFile(res, rd.code, rel === '/' ? '/index.html' : rel, GAME_HEADERS);
       }
       if (p.startsWith('/static/')) {
         // What the tracker read from the game comes first, then what npm run build-gamedata left in gamedata/.

@@ -6,7 +6,7 @@ import path from 'node:path';
 import { stat, readFile, writeFile, mkdir } from 'node:fs/promises';
 
 const configFile = (ctx) => path.join(ctx.paths.DATA, 'config.json');
-const readConfig = (ctx) => readFile(configFile(ctx), 'utf8').then((t) => JSON.parse(t.replace(/^﻿/, '')), () => ({}));
+const readConfig = (ctx) => readFile(configFile(ctx), 'utf8').then((t) => JSON.parse(t.replace(/^\uFEFF/, '')), () => ({}));
 
 /** What a typed or pasted folder becomes: no quotes around it, no slash at its end. */
 const clean = (dir) => String(dir || '').trim().replace(/^"(.*)"$/, '$1').replace(/[\\/]+$/, '');

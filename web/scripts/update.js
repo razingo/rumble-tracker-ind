@@ -5,13 +5,21 @@ import { alertDialog } from './dialogs.js';
 import { RELEASES_URL } from './lib/constants.js';
 import { esc, megabytes } from './lib/format.js';
 
-/** The banner shown while the game is newer than the game data: it is being read again, or why it can't be. */
+/**
+ * The banner shown while the game is newer than the game data: it is being read again, or why it can't be. Also while
+ * a new version of the tracker reads part of its game data anew.
+ */
 export function renderDataBanner() {
   const el = $('#dataBanner');
   const d = state?.dataStatus;
   if (!el) return;
   el.hidden = !(d?.stale || d?.reading);
   if (el.hidden) return;
+  if (d.readingPart && !d.stale) {
+    el.innerHTML = `<b>The tracker was updated.</b> This version reads part of its game data again from your game
+      install, in the background; this page picks it up when it is done.`;
+    return;
+  }
   const now = d.reading ? 'The tracker is reading the new game data from your game install now; this page picks it up when it is done.'
     : d.readError ? `Reading the new game data did not work (${esc(d.readError)}); the tracker tries again within the hour.`
       : d.canRead ? 'The tracker reads the new game data from your game install shortly.'

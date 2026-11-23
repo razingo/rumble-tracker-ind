@@ -8,7 +8,6 @@ import { readBundle } from './unityfs.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DATA = process.env.RUMBLE_GAMEDATA || join(HERE, '..', '..', 'gamedata'); // the game data being built
-const WORK = process.env.RUMBLE_WORK || HERE; // working files passed between the steps
 const IDX = JSON.parse(readFileSync(process.argv[2], 'utf8'));
 const WRITE = process.argv.includes('--write');
 const MINIS = join(DATA, 'minis.json');
@@ -56,7 +55,6 @@ for (const p of files) {
 const list = Object.values(boards).sort((a, b) => a.board.localeCompare(b.board));
 for (const x of list) console.log(x.board.padEnd(30), '| fixed', [...x.families, ...x.fixedTraits].join(','),
   '| options', x.options.join(', '));
-writeFileSync(join(WORK, 'army_boards.json'), JSON.stringify(list, null, 1) + '\n');
 
 // compare with minis.json (leaders matched by internal mini name -> slug through unit_ids? use name match on board)
 const minis = JSON.parse(readFileSync(MINIS, 'utf8'));

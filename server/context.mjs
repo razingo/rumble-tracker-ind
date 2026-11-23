@@ -32,8 +32,8 @@ export function createContext({ root, data, port = DEFAULT_PORT, standalone = fa
     accounts: new Map(), // account id -> { snapshot, events, lastChange, activeEvents, shop, pvp, … } (state/<id>.json)
     scan: { lastScan: null, lastError: null, lastErrorLog: null, gameBuild: null, scanning: false },
     // Reading the game data from the game install (gamedata.mjs): whether this tracker can, whether a read runs in
-    // the background now, and why the last one failed.
-    gameData: { canBuild: false, reading: false, error: null },
+    // the background now (part: only the steps a new version of the tracker changed), and why the last one failed.
+    gameData: { canBuild: false, reading: false, part: false, error: null },
     // A newer version of the tracker (update/checker.mjs): newVersion, and latestApp with the checksums for
     // downloading it. An update in progress has a state: null, 'downloading', 'restarting' or 'failed'.
     appUpdate: { newVersion: null, latestApp: null, lastCheck: null, checkError: null,

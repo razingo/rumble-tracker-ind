@@ -111,8 +111,9 @@ function uninstallSection() {
 function extraSection() {
   if (!extra?.available) return '';
   const when = typeof extra.extracted === 'string' ? ` on ${esc(dateTime(extra.extracted))}` : '';
-  const have = extra.extracted ? `<span class="extra-state good">✔ Extracted${when}</span>`
-    : '<span class="extra-state">Not extracted</span>';
+  const have = !extra.extracted ? '<span class="extra-state">Not extracted</span>'
+    : extra.outOfDate ? `<span class="extra-state">Extracted${when} · the game or the tracker changed since</span>`
+      : `<span class="extra-state good">✔ Extracted${when}</span>`;
   const line = extra.state === 'running'
     ? `<p class="muted small">Extracting in the background: ${extra.total
       ? `${extra.done} of ${extra.total} steps done${extra.label ? ` · now: ${esc(extra.label)}` : ''}` : 'starting'}</p>`
@@ -135,7 +136,7 @@ function watchExtra(dlg) {
 }
 
 async function extractExtra(dlg) {
-  if (!(await confirmDialog('', { title: 'But why?', ok: 'Extract' }))) return;
+  if (!(await confirmDialog('A PC with 8 GB of memory or less may have trouble with this.', { title: 'But why?', ok: 'Extract' }))) return;
   try {
     extra = await post('/api/rdmodule/extract', {});
   } catch (err) {

@@ -85,8 +85,10 @@ export function buildState(ctx, account) {
       dataVersion: t.gameData?.dataVersion || null,
       gameBuild: ctx.scan.gameBuild,
       stale: dataStale(ctx),
-      // reading: the newer game's data is being read now; canRead: this tracker reads it by itself
-      reading: gameData.reading, canRead: gameData.canBuild, readError: gameData.error,
+      // reading: game data is being read now (readingPart: only what a new version of the tracker reads anew);
+      // canRead: this tracker reads it by itself
+      reading: gameData.reading, readingPart: gameData.reading && gameData.part, canRead: gameData.canBuild,
+      readError: gameData.error,
     },
     // Shop with unit IDs resolved to slugs (null if unknown), plus G.R.I.D. history.
     shop: acc?.shop ? withSlugs(acc.shop) : null,

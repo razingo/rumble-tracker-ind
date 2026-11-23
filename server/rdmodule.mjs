@@ -1,6 +1,6 @@
 // The rdmodule, the page behind the tracker's hidden key sequence (web/scripts/rdmodule.js). Its code is in
 // rdmodule/; its pictures and sounds are not: Settings can have them extracted from the game install, in the
-// background (tools/rdmodule/extract.mjs), into <data>/rdmodule. The game window only opens once that is done.
+// background (tools/rdmodule/extract.mjs), into <data>/rdmodule. Its window only opens once that is done.
 import path from 'node:path';
 import { stat, readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
@@ -20,16 +20,18 @@ export function createRdmodule(ctx) {
   const exists = (file) => stat(file).then(() => true, () => false);
 
   return {
-    /** Where the game's code and what was extracted for it are served from. */
-    folders: { game: path.join(ROOT, 'rdmodule'), extracted: out },
+    /** Where its code and what was extracted for it are served from. */
+    folders: { code: path.join(ROOT, 'rdmodule'), extracted: out },
     /**
-     * { available, state: none | running | ready | failed, extracted, done, total, label, error }, where `extracted`
-     * is when the data that is there was extracted (it stays while a new extraction runs, or after one failed).
+     * { available, state: none | running | ready | failed, extracted, outOfDate, done, total, label, error }, where
+     * `extracted` is when the data that is there was extracted (it stays while a new extraction runs, or after one
+     * failed) and `outOfDate` whether the game or the tracker changed since, so that extracting again has work to do.
      */
     async status() {
       const t = await load();
       const extracted = await readFile(path.join(out, 'ready.json'), 'utf8').then((s) => JSON.parse(s).extracted || true, () => null);
-      return { available: !!t?.canExtract(), state: run.state !== 'idle' ? run.state : extracted ? 'ready' : 'none', extracted,
+      const outOfDate = !!(extracted && t?.outOfDate(out, await givenGameFolder(ctx)));
+      return { available: !!t?.canExtract(), state: run.state !== 'idle' ? run.state : extracted ? 'ready' : 'none', extracted, outOfDate,
         done: run.done, total: run.total, label: run.label, error: run.error };
     },
     /** Starts the extraction unless it runs already. It goes on in the background; status() tells how far it is. */
@@ -43,9 +45,9 @@ export function createRdmodule(ctx) {
         gameFolder: await givenGameFolder(ctx),
         gamedata: await exists(path.join(GAMEDATA, 'minis.json')) ? GAMEDATA : STATIC, out, work, log: console.log,
         onStep: (done, total, label) => Object.assign(run, { done, total, label }),
-      }).then(() => {
+      }).then((ran) => {
         Object.assign(run, { state: 'idle', done: 0, total: 0, label: '' });
-        console.log('Rdmodule: extracted');
+        console.log(ran.length ? `Rdmodule: extracted (${ran.length} steps)` : 'Rdmodule: nothing was due');
       }, (e) => {
         Object.assign(run, { state: 'failed', error: e.message.split('\n')[0] });
         console.log(`Rdmodule: extraction failed: ${e.message}`);

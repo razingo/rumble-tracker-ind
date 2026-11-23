@@ -51,5 +51,5 @@ The page uses two bundled fonts under the SIL Open Font License 1.1: Lilita One 
 The tracker reads Warcraft Rumble's saved settings from the Windows registry on the player's own PC, read-only, and
 keeps everything it stores in its own data folder on that PC (`%APPDATA%\RumbleTracker`). It sends nothing
 anywhere. Its game data is read from the game installed on the same PC; the only thing it asks the internet for is
-its own latest version, from GitHub. "Report a problem"
-only opens a pre-filled GitHub issue in the player's browser; it is sent only if the player submits it there.
+its own latest version, from GitHub. "Report a problem" only opens a pre-filled GitHub issue in the player's
+browser; it is sent only if the player submits it there.

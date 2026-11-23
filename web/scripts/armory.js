@@ -81,7 +81,7 @@ export function renderArmory() {
         <button class="chip" data-armory-import title="Adds the armies from an exported Armory file">Import armory…</button>
         <input type="file" id="armoryFile" accept="application/json,.json" hidden>
       </span>
-      ${tags.length ? `<div class="chips">${tags.map((t) => `<button class="chip small-chip"
+      ${tags.length ? `<div class="chips armory-tag-filters">${tags.map((t) => `<button class="chip small-chip"
         aria-pressed="${view.tags.some((x) => x.toLowerCase() === t.tag.toLowerCase())}"
         data-armory-tag-filter="${esc(t.tag)}">${esc(t.tag)}<small>${t.count}</small></button>`).join('')}</div>` : ''}
     </div>

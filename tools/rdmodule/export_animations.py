@@ -81,7 +81,7 @@ def euler_to_quat(x, y, z):  # Unity order: Z, then X, then Y (degrees)
 
 # ---- glTF ------------------------------------------------------------------------------------------------------------
 class Glb:
-    def __init__(self): self.bin = bytearray(); self.views = []; self.accs = []; self.doc = {"asset": {"version": "2.0", "generator": "rumble research export_animations.py"}}
+    def __init__(self): self.bin = bytearray(); self.views = []; self.accs = []; self.doc = {"asset": {"version": "2.0", "generator": "rumble tracker export_animations.py"}}
     def view(self, data, target=None):
         while len(self.bin) % 4: self.bin += b"\0"
         v = {"buffer": 0, "byteOffset": len(self.bin), "byteLength": len(data)}
@@ -265,7 +265,7 @@ def write_character(avatar, parts, clips, out_glb):
             "textures": list(tex_index)}
 
 def own_objects(bundles):
-    env = UnityPy.load(*[os.path.join(B, b) for b in sorted(set().union(*[em.closure(b) for b in bundles]))])
+    env = em.load_lazy(*bundles)
     return env, [o for f in env.files.values() if os.path.basename(getattr(f, "name", "") or "") in bundles
                  for sf in f.files.values() if hasattr(sf, "objects") for o in sf.objects.values()]
 
@@ -362,7 +362,8 @@ def save_part(out, data): json.dump(data, open(os.path.join(parts_dir(out), SHAR
 def main():
     os.makedirs(OUT, exist_ok=True)
     index_path = os.path.join(OUT, "index.json")
-    index = json.load(open(index_path, encoding="utf8")) if ONLY and os.path.exists(index_path) else {}
+    # (split over processes, each starts empty: an index from an earlier run would put its old entries in every part)
+    index = json.load(open(index_path, encoding="utf8")) if ONLY and not SHARD and os.path.exists(index_path) else {}
     def run(sec, key, bundles, cat, x, borrow=None):
         try: chars = export_set(key, bundles, OUT, borrow)
         except Exception as e: print("   FAILED", e); chars = []

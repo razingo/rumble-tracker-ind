@@ -2,13 +2,14 @@
 //   The first time, there is nothing to show yet: a page on the tracker's port has a bar that fills with each finished
 //   step, and the tracker starts when it is done. What the player can fix is shown there and tried again every 15
 //   seconds; when the game is not found, the page asks for its folder (game/folder.mjs).
-//   Later, the data is read again whenever the installed game is another version than the one it was read from (or
-//   this tracker reads more than the one before it did). That happens in the background, at low priority, while the
-//   tracker shows what it has; the new data takes the old one's place once it is whole, and the open page loads it.
+//   Later, it is read again when the installed game is another version than the one it was read from. After a new
+//   version of the tracker, only the steps that changed are run again, with what depends on them. Either happens in
+//   the background, at low priority, while the tracker shows what it has; the new data takes the old one's place once
+//   it is whole, and the open page loads it.
 // A build goes into a folder beside the data and replaces it at the end, so a failed one leaves the data as it was.
 import http from 'node:http';
 import path from 'node:path';
-import { rm, rename } from 'node:fs/promises';
+import { rm, rename, cp, stat } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { ISSUES_REPO } from './report.mjs';
@@ -22,7 +23,7 @@ const AFTER_FAILURE_MS = HOUR; // a background read that failed is not tried aga
 /**
  * The game data's part of the tracker: firstRead() before the tables are loaded, check() whenever a newer game may be
  * there. `builder` is tools/gamedata/build.mjs (given by tests; an app folder without it, as in tests, builds nothing).
- * ctx.gameData tells the page what is going on: { canBuild, reading, error }.
+ * ctx.gameData tells the page what is going on: { canBuild, reading, part, error }.
  */
 export async function createGameData(ctx, { builder } = {}) {
   const { paths, errorLog } = ctx;
@@ -33,13 +34,18 @@ export async function createGameData(ctx, { builder } = {}) {
   const findGame = async () => builder.findGame(await givenGameFolder(ctx));
   let failedAt = 0;
 
-  /** Reads the game data from `game` and puts it in place. */
-  async function build(game, onStep) {
+  /**
+   * Reads the game data from `game` and puts it in place. `due` is 'all', or the steps to run again (stepsDue): those
+   * are run on a copy of the data there is.
+   */
+  async function build(game, due = 'all', onStep) {
     await rm(stage, { recursive: true, force: true });
-    const r = await builder.buildGameData({ game, out: stage, work, log: console.log, onStep });
+    if (due !== 'all' && await stat(path.join(out, 'gamedata.json')).catch(() => null)) await cp(out, stage, { recursive: true });
+    else due = 'all';
+    const r = await builder.buildGameData({ game, out: stage, work, due, log: console.log, onStep });
     await rm(out, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
     await rename(stage, out);
-    console.log(`Game data read for ${r.gameBuild}: ${Object.keys(r.files).length} files`);
+    console.log(`Game data read for ${r.gameBuild} (${r.steps.length} steps)`);
     return r;
   }
 
@@ -122,7 +128,7 @@ ${page.error ? `<p>${esc(page.error)}</p>${ask || '<p style="opacity:.7">Trying 
     console.log('First start: reading the game data from the game install');
     for (;;) {
       try {
-        await build(game, (done, total, label) => Object.assign(page, { done, total, label }));
+        await build(game, 'all', (done, total, label) => Object.assign(page, { done, total, label }));
         break;
       } catch (e) {
         console.log(`Reading the game data failed: ${e.message}`);
@@ -143,8 +149,9 @@ ${page.error ? `<p>${esc(page.error)}</p>${ask || '<p style="opacity:.7">Trying 
   }
 
   /**
-   * Reads the game data again in the background when the installed game is another version than the data's. One at a
-   * time: a check asked for while one runs joins it. Resolves once the check, and the read it started, are over.
+   * Reads the game data again in the background when the installed game is another version than the data's, or the
+   * steps a new version of the tracker changed. One at a time: a check asked for while one runs joins it. Resolves
+   * once the check, and the read it started, are over.
    */
   let checking = null;
   function check() {
@@ -154,12 +161,14 @@ ${page.error ? `<p>${esc(page.error)}</p>${ask || '<p style="opacity:.7">Trying 
   async function run() {
     if (!builder || Date.now() - failedAt < AFTER_FAILURE_MS) return;
     const game = await findGame();
-    if (!builder.buildDue(game, ctx.tables.gameData)) return;
-    Object.assign(status, { reading: true, error: null });
+    const due = builder.stepsDue(game, ctx.tables.gameData);
+    if (!due.length) return;
+    Object.assign(status, { reading: true, part: due !== 'all', error: null });
     ctx.bump();
-    console.log(`Game data: the game is now ${builder.gameVersion(game)}, reading it again`);
+    console.log(due === 'all' ? `Game data: reading it for the game's version ${builder.gameVersion(game)}`
+      : `Game data: this version of the tracker reads ${due.join(', ')} anew`);
     try {
-      await build(game);
+      await build(game, due);
       await ctx.tables.load();
     } catch (e) {
       failedAt = Date.now();
@@ -167,7 +176,7 @@ ${page.error ? `<p>${esc(page.error)}</p>${ask || '<p style="opacity:.7">Trying 
       console.log(`Reading the game data failed: ${e.message}`);
       errorLog.add('game data', e.message);
     }
-    status.reading = false;
+    Object.assign(status, { reading: false, part: false });
     ctx.bump();
   }
 

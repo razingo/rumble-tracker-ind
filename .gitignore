@@ -1,7 +1,7 @@
 # Your own data when running from source (contains account IDs)
 /data/
 
-# Game data and art: npm run fetch-gamedata downloads it (published in razingo/rumble-tracker-data)
+# Game data and art, read from the game install: npm run build-gamedata writes it here
 /gamedata/
 
 # The window's WebView2 libraries: npm run fetch-webview2 downloads them
@@ -21,7 +21,7 @@ Thumbs.db
 # The game-data build's working files and Python environment (npm run build-gamedata)
 /tools/gamedata/work/
 
-# The private Python a self-built exe carries: npm run fetch-python prepares it
+# The private Python the exe carries: npm run fetch-python prepares it
 /tools/gamedata/python/
 
 # three.js and vgmstream for the rdmodule's extraction: npm run fetch-rdmodule-tools fetches them

@@ -1,5 +1,5 @@
 // Index every GUID -> { name, type, bundle } found in the game's JSON data objects (used by army_boards.mjs and
-// for research). usage: node build_guid_index.mjs [out.json]   (default: tools/gamedata/guid_index.json)
+// build_pvp.mjs). usage: node build_guid_index.mjs [out.json]   (default: guid_index.json in the working folder)
 import { readdirSync, writeFileSync } from 'node:fs';
 import { join, basename, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
