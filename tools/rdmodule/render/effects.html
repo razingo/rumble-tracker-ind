@@ -12,8 +12,8 @@
 </style>
 <script type="importmap">
 { "imports": {
-  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  "three": "https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/"
 } }
 </script>
 </head>
@@ -88,9 +88,15 @@ function mmColor(v, t, r = Math.random()) {
 // ---- materials --------------------------------------------------------------------------------------------------
 const texLoader = new THREE.TextureLoader(), texCache = {};
 const white = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1); white.needsUpdate = true;
+let texturesLoading = 0; // textures asked for that have neither arrived nor failed yet (the capture waits for them)
 function tex(name) {
   if (!name) return white;
-  if (!texCache[name]) { const t = texLoader.load('textures/' + name); t.wrapS = t.wrapT = THREE.RepeatWrapping; texCache[name] = t; }
+  if (!texCache[name]) {
+    texturesLoading++;
+    const done = () => { texturesLoading--; };
+    const t = texLoader.load('textures/' + name, done, undefined, done);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping; texCache[name] = t;
+  }
   return texCache[name];
 }
 const VERT_COMMON = /* glsl */`
@@ -343,6 +349,11 @@ async function loadEffect(row) {
   };
   const root = build(pf.root, '');
   scene.add(root);
+  // Every mesh the effect names is loaded before anything is built from it: built as each arrives, the parts would
+  // be drawn in the order their files came in, which is another on every run.
+  const named = new Set();
+  root.traverse((o) => { for (const r of [o.userData.node.renderer, o.userData.node.meshRenderer]) if (r?.mesh) named.add(r.mesh); });
+  await Promise.all([...named].map(meshGeometry));
   root.traverse((o) => {
     const n = o.userData.node;
     if (n.particles) {

@@ -2,8 +2,9 @@
 //
 // Output in dist/release/:
 //   RumbleTracker.exe                     Node.js runtime, launcher and app files
-//   RumbleTracker-<version>-win-x64.zip   exe, README, LICENSE, NOTICE, and the Node.js, WebView2 and font licenses
-//                                         in THIRD-PARTY-NOTICES
+//   RumbleTracker-<version>-win-x64.zip   exe, README, LICENSE, NOTICE, and in THIRD-PARTY-NOTICES the licenses of
+//                                         everything the exe carries: Node.js, WebView2, the fonts, Python and its
+//                                         packages, three.js and vgmstream
 //   SHA256SUMS.txt                        checksums of the zip and the exe
 //
 // Only what APP_FILES lists is bundled. No game data is: the exe reads it from the game install, with the builder in
@@ -310,6 +311,19 @@ function zip(entries) {
   end.writeUInt32LE(pos, 16);
   return Buffer.concat([...local, cd, end]);
 }
+// The licenses of the software the exe carries, which go with every copy of it.
+const PYTHON = path.join(ROOT, 'tools', 'gamedata', 'python');
+const VENDOR = path.join(ROOT, 'tools', 'rdmodule', 'vendor');
+const notice = (file) => readFile(file)
+  .catch(() => fail(`${path.relative(ROOT, file)} is missing: a license that must ship with the exe.`));
+/** A license file of one of Python's packages, from the folder pip keeps about it (<name>-<version>.dist-info). */
+async function packageNotice(name, file) {
+  const packages = path.join(PYTHON, 'Lib', 'site-packages');
+  const info = (await readdir(packages)).find((d) => d.startsWith(`${name}-`) && d.endsWith('.dist-info'));
+  if (!info) fail(`Python's package ${name} is missing from tools/gamedata/python.`);
+  const inLicenses = path.join(packages, info, 'licenses', file);
+  return notice(await stat(inLicenses).then(() => inLicenses, () => path.join(packages, info, file)));
+}
 const folder = `RumbleTracker-${version}-win-x64`;
 const zipName = `${folder}.zip`;
 const zipBuf = zip([
@@ -322,6 +336,22 @@ const zipBuf = zip([
   [`${folder}/THIRD-PARTY-NOTICES/WebView2-NOTICE.txt`, await readFile(path.join(WEBVIEW2, 'NOTICE.txt'))],
   [`${folder}/THIRD-PARTY-NOTICES/Font-LilitaOne-OFL.txt`, await readFile(path.join(ROOT, 'web', 'fonts', 'OFL-LilitaOne.txt'))],
   [`${folder}/THIRD-PARTY-NOTICES/Font-Nunito-OFL.txt`, await readFile(path.join(ROOT, 'web', 'fonts', 'OFL-Nunito.txt'))],
+  [`${folder}/THIRD-PARTY-NOTICES/Python-LICENSE.txt`, await notice(path.join(PYTHON, 'LICENSE.txt'))],
+  [`${folder}/THIRD-PARTY-NOTICES/UnityPy-LICENSE.txt`, await packageNotice('unitypy', 'LICENSE')],
+  [`${folder}/THIRD-PARTY-NOTICES/Pillow-LICENSE.txt`, await packageNotice('pillow', 'LICENSE')],
+  [`${folder}/THIRD-PARTY-NOTICES/lz4-LICENSE.txt`, await packageNotice('lz4', 'LICENSE')],
+  [`${folder}/THIRD-PARTY-NOTICES/Brotli-LICENSE.txt`, await packageNotice('brotli', 'LICENSE')],
+  [`${folder}/THIRD-PARTY-NOTICES/texture2ddecoder-LICENSE.txt`, await packageNotice('texture2ddecoder', 'LICENSE')],
+  [`${folder}/THIRD-PARTY-NOTICES/etcpak-LICENSE.txt`, await packageNotice('etcpak', 'LICENSE')],
+  [`${folder}/THIRD-PARTY-NOTICES/astc-encoder-py-LICENSE.txt`, await packageNotice('astc_encoder_py', 'LICENSE')],
+  [`${folder}/THIRD-PARTY-NOTICES/archspec-LICENSE-APACHE.txt`, await packageNotice('archspec', 'LICENSE-APACHE')],
+  [`${folder}/THIRD-PARTY-NOTICES/archspec-LICENSE-MIT.txt`, await packageNotice('archspec', 'LICENSE-MIT')],
+  [`${folder}/THIRD-PARTY-NOTICES/archspec-NOTICE.txt`, await packageNotice('archspec', 'NOTICE')],
+  [`${folder}/THIRD-PARTY-NOTICES/fsspec-LICENSE.txt`, await packageNotice('fsspec', 'LICENSE')],
+  [`${folder}/THIRD-PARTY-NOTICES/attrs-LICENSE.txt`, await packageNotice('attrs', 'LICENSE')],
+  [`${folder}/THIRD-PARTY-NOTICES/tpk_ar-LICENSE.txt`, await packageNotice('tpk_ar', 'LICENSE')],
+  [`${folder}/THIRD-PARTY-NOTICES/three.js-LICENSE.txt`, await notice(path.join(VENDOR, 'three', 'LICENSE'))],
+  [`${folder}/THIRD-PARTY-NOTICES/vgmstream-COPYING.txt`, await notice(path.join(VENDOR, 'vgmstream', 'COPYING'))],
 ]);
 await writeFile(path.join(OUT, zipName), zipBuf);
 await writeFile(path.join(OUT, 'SHA256SUMS.txt'), `${sha256(zipBuf)}  ${zipName}\n${sha256(exe)}  ${EXE_NAME}\n`);

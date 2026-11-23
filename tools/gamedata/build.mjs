@@ -19,7 +19,7 @@
 // of the game runs them all.
 // It goes easy on the PC: the programs it starts run at low priority, and only a few steps at a time.
 import { readdirSync, readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync, rmSync } from 'node:fs';
-import { join, dirname, sep, basename } from 'node:path';
+import { join, dirname, basename } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawn, spawnSync } from 'node:child_process';
 import { Worker } from 'node:worker_threads';
@@ -32,8 +32,9 @@ const OWN_PYTHON = join(HERE, 'python', 'python.exe');
 const PACKAGES = ['UnityPy==1.25.4', 'Pillow'];
 const { priority } = osConstants;
 const AT_ONCE = Math.max(2, Math.min(4, availableParallelism() - 1)); // steps running side by side
-// What each step is made of: its script and the files it reads besides the game's (in this folder). A step's version
-// is the contents of these, so a step changes exactly when one of them does.
+const PROGRAM_MINUTES = 10; // a program still running by then hangs: it is stopped and its step fails
+// What each step is made of: its script and the files it reads besides the game's (in this folder), and its settings
+// below. A step's version is the contents of these, so a step changes exactly when one of them does.
 const TABLES = ['unityfs.mjs'], IMAGES = ['extract_reward_icons.py'];
 const SOURCES = {
   'Starting tables': readdirSync(SEED).map((f) => `seed/${f}`),
@@ -52,17 +53,52 @@ const SOURCES = {
   'Interface art': [...IMAGES, 'interface_sprites.json'],
   'Card frames': [...IMAGES, 'frame_sprites.json', 'make_card_frames.py'],
 };
-/** { step: version } for steps given as { step: [files in `dir`] }: a version is the contents of the step's files. */
-export function versionsOf(sources, dir) {
-  const version = (files) => {
+// The image steps' settings: [folder, list of sprites, size in pixels, the bundles to look in first].
+const IMAGE_STEPS = {
+  'Event rewards': ['rewards', 'event_reward_sprites.json', '96'],
+  'Store art': ['store', 'store_sprites.json', '160'],
+  Portraits: ['art', 'mini_art_sprites.json', '256', '^unitui_'],
+  'Talent icons': ['talents', 'mini_talents_sprites.json', '96', '^talentui_'],
+  'Trait icons': ['icons', 'mini_icons_sprites.json', '64', '^iconsglobal'],
+  'Leader and Wildcard icons': ['icons', 'tag_sprites.json', '64', '^iconsglobal'],
+  'Family pair icons': ['icons/fam', 'family_pair_sprites.json', '64', '^iconsglobal'],
+  'Currency icons': ['currency', 'currency_sprites.json', '96', '^iconsglobal'],
+  'PvP icons': ['pvp', 'pvp_sprites.json', '128', 'pvp'],
+  'PvP rewards': ['rewards', 'pvp_reward_sprites.json', '96'],
+  'Interface art': ['ui', 'interface_sprites.json', '1800'],
+};
+const FRAME_SIZE = '1024'; // the slot backgrounds the card frames are cut from
+const SETTINGS = { ...IMAGE_STEPS, 'Card frames': [FRAME_SIZE] };
+const PYTHON_STEPS = ['Event icons', ...Object.keys(IMAGE_STEPS), 'Card frames']; // the steps Python runs
+/**
+ * The private Python's version and its packages' (npm run fetch-python writes them down), or null without it: a
+ * Python found on the PC is taken as it is. They count in the versions of the steps Python runs, as another UnityPy
+ * or Pillow may read an image differently.
+ */
+export function pythonVersions() {
+  const file = join(HERE, 'python', 'versions.json');
+  return existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : null;
+}
+/** `settings` with the tools' versions added for the steps that use them: { step: [its own settings, the tools] }. */
+export function withTools(settings, steps, tools) {
+  if (!tools) return settings;
+  return { ...settings, ...Object.fromEntries(steps.map((name) => [name, [settings[name] ?? null, tools]])) };
+}
+/**
+ * { step: version } for steps given as { step: [files in `dir`] }: a version is the contents of the step's files and
+ * of its settings ({ step: anything JSON can hold }), where it has some.
+ */
+export function versionsOf(sources, dir, settings = {}) {
+  const version = (name, files) => {
     const h = createHash('sha1');
     for (const f of files) h.update(f).update(readFileSync(join(dir, f)));
+    if (name in settings) h.update(JSON.stringify(settings[name]));
     return h.digest('hex').slice(0, 12);
   };
-  return Object.fromEntries(Object.entries(sources).map(([name, files]) => [name, version(files)]));
+  return Object.fromEntries(Object.entries(sources).map(([name, files]) => [name, version(name, files)]));
 }
 /** { step: version } for every step here, as they are in this version of the tracker. */
-export const stepVersions = () => versionsOf(SOURCES, HERE);
+export const stepVersions = () => versionsOf(SOURCES, HERE, withTools(SETTINGS, PYTHON_STEPS, pythonVersions()));
 const PYTHONS = ['3.14', '3.13', '3.12', '3.11']; // the versions the packages are known to install on
 
 /** A problem the player can fix; its message is shown as it is. needsFolder: the game's folder is what is wanted. */
@@ -107,18 +143,32 @@ export function stepsDue(game, stamp) {
 }
 
 const lastLines = (out) => out.trim().split(/\r?\n/).slice(-6).join('\n');
-/** Runs a program to its end; resolves with its output's lines, rejects when it fails. `background`: low priority. */
-export function runProgram(cmd, args, env, { background = false } = {}) {
+// The programs running now. They end with the tracker: one left behind would go on reading for nobody.
+const programs = new Set();
+process.once('exit', () => { for (const child of programs) child.kill(); });
+/**
+ * Runs a program to its end; resolves with its output's lines, rejects when it fails or is not done after `minutes`
+ * (it is stopped then). `background`: low priority.
+ */
+export function runProgram(cmd, args, env, { background = false, minutes = PROGRAM_MINUTES } = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(cmd, args, { cwd: HERE, env, windowsHide: true });
+    programs.add(child);
+    let late = false;
+    const limit = setTimeout(() => { late = true; child.kill(); }, minutes * 60000);
+    child.on('close', () => { programs.delete(child); clearTimeout(limit); });
     // background work gives way to everything else on the PC (Windows also lowers its disk priority with this)
     if (background && child.pid) try { setPriority(child.pid, priority.PRIORITY_LOW); } catch { /* it has ended already */ }
     let out = '';
     child.stdout.on('data', (d) => { out += d; });
     child.stderr.on('data', (d) => { out += d; });
     child.on('error', reject);
-    child.on('close', (code) => (code === 0 ? resolve(out.trim().split(/\r?\n/))
-      : reject(new Error(`${basename(args.find((a) => /\.py$/.test(a)) || cmd)} failed:\n${lastLines(out)}`))));
+    const name = basename(args.find((a) => /\.py$/.test(a)) || cmd);
+    child.on('close', (code) => {
+      if (code === 0 && !late) resolve(out.trim().split(/\r?\n/));
+      else if (late) reject(new Error(`${name} was not done after ${minutes} minutes and was stopped.`));
+      else reject(new Error(`${name} failed:\n${lastLines(out)}`));
+    });
   });
 }
 /** Runs a script (a file path) in a thread of its own (inside the exe there is no node to start). */
@@ -154,7 +204,7 @@ export async function python(work, log) {
     found = true;
     log(`Installing ${PACKAGES.join(', ')} (${cmd} ${a.join(' ')})`);
     try {
-      await runProgram(exe, ['-m', 'pip', 'install', '--disable-pip-version-check', ...PACKAGES], process.env);
+      await runProgram(exe, ['-m', 'pip', 'install', '--disable-pip-version-check', ...PACKAGES], process.env, { minutes: 20 });
     } catch (e) {
       why = e.message.split('\n').pop();
       continue;
@@ -239,12 +289,13 @@ export async function buildGameData({ game = findGame(), out, work, due = 'all',
   // An image step: the sprites a list names, into a folder. The list is beside the scripts when kept by hand, in the
   // working folder when a table builder wrote it. What the step wrote last time goes first, so nothing unused stays
   // and nothing old is taken for new.
-  const images = (step, dir, list, size, prefer) => async () => {
+  const images = (step) => async () => {
+    const [dir, list, size, prefer] = IMAGE_STEPS[step];
     const listFile = join(existsSync(join(HERE, list)) ? HERE : work, list);
     for (const f of made[step] || []) rmSync(join(out, f), { force: true });
     const names = JSON.parse(readFileSync(listFile, 'utf8'));
     made[step] = (Array.isArray(names) ? names : Object.keys(names))
-      .map((n) => `${dir.split(sep).join('/')}/${n.endsWith('.png') ? n : `${n}.webp`}`);
+      .map((n) => `${dir}/${n.endsWith('.png') ? n : `${n}.webp`}`);
     return runProgram(await py(), ['-I', join(HERE, 'extract_reward_icons.py'), join(out, dir), listFile, size,
       ...(prefer ? [prefer] : [])], env, QUIET);
   };
@@ -270,28 +321,26 @@ export async function buildGameData({ game = findGame(), out, work, due = 'all',
       rmSync(join(out, 'events'), { recursive: true, force: true });
       return runProgram(await py(), ['-I', join(HERE, 'extract_event_icons.py'), join(out, 'events')], env, QUIET);
     }],
-    ['Event rewards', ['Python', 'Events'], images('Event rewards', 'rewards', 'event_reward_sprites.json', '96')],
-    ['Store art', ['Python', 'Store'], images('Store art', 'store', 'store_sprites.json', '160')],
-    ['Portraits', ['Python', 'Minis'], images('Portraits', 'art', 'mini_art_sprites.json', '256', '^unitui_')],
-    ['Talent icons', ['Python', 'Minis'], images('Talent icons', 'talents', 'mini_talents_sprites.json', '96', '^talentui_')],
-    ['Trait icons', ['Python', 'Minis'], images('Trait icons', 'icons', 'mini_icons_sprites.json', '64', '^iconsglobal')],
-    ['Leader and Wildcard icons', ['Python', 'Starting tables'],
-      images('Leader and Wildcard icons', 'icons', 'tag_sprites.json', '64', '^iconsglobal')],
-    ['Family pair icons', ['Python', 'Starting tables'],
-      images('Family pair icons', join('icons', 'fam'), 'family_pair_sprites.json', '64', '^iconsglobal')],
-    ['Currency icons', ['Python', 'Starting tables'], images('Currency icons', 'currency', 'currency_sprites.json', '96', '^iconsglobal')],
-    ['PvP icons', ['Python', 'PvP'], images('PvP icons', 'pvp', 'pvp_sprites.json', '128', 'pvp')],
-    ['PvP rewards', ['Python', 'PvP'], images('PvP rewards', 'rewards', 'pvp_reward_sprites.json', '96')],
+    ['Event rewards', ['Python', 'Events'], images('Event rewards')],
+    ['Store art', ['Python', 'Store'], images('Store art')],
+    ['Portraits', ['Python', 'Minis'], images('Portraits')],
+    ['Talent icons', ['Python', 'Minis'], images('Talent icons')],
+    ['Trait icons', ['Python', 'Minis'], images('Trait icons')],
+    ['Leader and Wildcard icons', ['Python', 'Starting tables'], images('Leader and Wildcard icons')],
+    ['Family pair icons', ['Python', 'Starting tables'], images('Family pair icons')],
+    ['Currency icons', ['Python', 'Starting tables'], images('Currency icons')],
+    ['PvP icons', ['Python', 'PvP'], images('PvP icons')],
+    ['PvP rewards', ['Python', 'PvP'], images('PvP rewards')],
     // the page's own art: wood, key art and army boards as they are; the card frames are cut out of the game's slot
     // backgrounds (make_card_frames.py)
-    ['Interface art', ['Python', 'Starting tables'], images('Interface art', 'ui', 'interface_sprites.json', '1800')],
+    ['Interface art', ['Python', 'Starting tables'], images('Interface art')],
     ['Card frames', ['Python', 'Starting tables'], async () => {
       const slots = join(work, 'frames');
       rmSync(slots, { recursive: true, force: true });
       for (const f of readdirSync(join(out, 'ui'), { withFileTypes: true }).filter((e) => /^(frame-|fill-mask)/.test(e.name))) {
         rmSync(join(out, 'ui', f.name));
       }
-      await runProgram(await py(), ['-I', join(HERE, 'extract_reward_icons.py'), slots, join(HERE, 'frame_sprites.json'), '1024'],
+      await runProgram(await py(), ['-I', join(HERE, 'extract_reward_icons.py'), slots, join(HERE, 'frame_sprites.json'), FRAME_SIZE],
         env, QUIET);
       const lines = await runProgram(await py(), ['-I', join(HERE, 'make_card_frames.py'), slots, join(out, 'ui')], env, QUIET);
       rmSync(slots, { recursive: true, force: true }); // (only needed to cut the frames from)

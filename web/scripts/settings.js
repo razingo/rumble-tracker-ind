@@ -2,12 +2,12 @@
 // bottom, extracting the additional data (for the rdmodule, web/scripts/rdmodule.js). The
 // server keeps the settings and sends the notifications, also while the page is closed.
 import { $, getJson, post, showMessage, state } from './core.js';
-import { confirmDialog, alertDialog } from './dialogs.js';
+import { showDialog, confirmDialog, alertDialog } from './dialogs.js';
 import { CLOSE_CHOICES } from './lib/constants.js';
 import { esc, dateTime } from './lib/format.js';
 
 let notify = null; // { settings, types, log, pending, playing }
-let general = null; // { startWithWindows, closeWindow, checkUpdates, gameFolder }, each null where it doesn't apply
+let general = null; // { startWithWindows, closeWindow (both null from source), checkUpdates, gameFolder, gameFolderUsed }
 let extra = null; // the additional data: { available, state, done, total, label, error } (server/rdmodule.mjs)
 let extraTimer = null;
 
@@ -23,13 +23,13 @@ const dialogHead = '<div class="dialog-head"><h2>Settings</h2><button class="chi
 
 /** The game's folder, where the tracker reads its game data from the game: the one found, or one given by hand. */
 function gameFolderSection() {
-  if (general?.gameFolder == null) return '';
+  if (!general) return '';
   return `<label class="game-folder">Warcraft Rumble's folder
       <input type="text" data-setting="gameFolder" value="${esc(general.gameFolder)}" spellcheck="false"
         placeholder="${esc(general.gameFolderUsed || 'D:\\Games\\Warcraft Rumble')}"></label>
     <p class="muted small">${general.gameFolderUsed ? `The game data is read from ${esc(general.gameFolderUsed)}.`
       : 'The game was not found on this PC.'} Fill this in only if that is wrong: the folder that holds
-      WarcraftRumble.exe. Empty means it is looked for. It applies from the tracker's next start.</p>`;
+      WarcraftRumble.exe. Leave it empty to have the tracker look for the game.</p>`;
 }
 
 /** Start with Windows and what closing the window does, which only the exe has, and the check for new versions. */
@@ -115,8 +115,8 @@ function extraSection() {
     : extra.outOfDate ? `<span class="extra-state">Extracted${when} · the game or the tracker changed since</span>`
       : `<span class="extra-state good">✔ Extracted${when}</span>`;
   const line = extra.state === 'running'
-    ? `<p class="muted small">Extracting in the background: ${extra.total
-      ? `${extra.done} of ${extra.total} steps done${extra.label ? ` · now: ${esc(extra.label)}` : ''}` : 'starting'}</p>`
+    ? `<p class="muted small">${extra.waiting ? 'Waiting for the game data to be read first' : `Extracting in the background: ${
+      extra.total ? `${extra.done} of ${extra.total} steps done${extra.label ? ` · now: ${esc(extra.label)}` : ''}` : 'starting'}`}</p>`
     : extra.state === 'failed' ? `<p class="muted small">The last extraction failed: ${esc(extra.error || 'unknown reason')}</p>` : '';
   const button = extra.state === 'running' ? '<span class="extra-state">Extracting…</span>'
     : `<button type="button" class="chip" data-extract>${extra.extracted ? 'Extract again?' : 'Extract additional data?'}</button>`;
@@ -136,7 +136,19 @@ function watchExtra(dlg) {
 }
 
 async function extractExtra(dlg) {
-  if (!(await confirmDialog('A PC with 8 GB of memory or less may have trouble with this.', { title: 'But why?', ok: 'Extract' }))) return;
+  // how things are right now: the disk may have filled, or been cleared, since Settings was opened
+  extra = await getJson('/api/rdmodule', 'the additional data').catch(() => extra);
+  const gb = (bytes) => (bytes / 2 ** 30).toFixed(1).replace(/\.0$/, '');
+  if (extra?.freeSpace != null && extra.freeSpace < extra.neededSpace) {
+    // too little room: nothing to press but Cancel, until some is freed
+    await showDialog({ title: 'But why?', buttons: [{ label: 'Cancel', value: false, primary: true }],
+      message: `This needs about ${gb(extra.neededSpace)} GB of free disk space, and ${gb(extra.freeSpace)} GB is free. `
+        + 'Free some space, then come back.' });
+    return;
+  }
+  // (a note only for a PC it applies to)
+  const note = extra?.smallPc ? 'A PC with 8 GB of memory or less may have trouble with this.' : '';
+  if (!(await confirmDialog(note, { title: 'But why?', ok: 'Extract' }))) return;
   try {
     extra = await post('/api/rdmodule/extract', {});
   } catch (err) {

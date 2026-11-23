@@ -1,7 +1,7 @@
 # Export the game's sounds (Wwise) to WAV, named after their original files, plus an index tying units, spells,
 # bosses, music and UI to their sound events.
 # usage: python -I export_sounds.py [out_dir] [bank filter regex]
-#   out_dir defaults to sounds (gitignored: Blizzard's assets, for local use only)
+#   out_dir defaults to sounds in the working folder
 # Needs vgmstream-cli (RUMBLE_VGMSTREAM): Wwise Vorbis/Opus can't be decoded by anything else here.
 #
 # How the audio is stored (Data/StreamingAssets/Audio/GeneratedSoundBanks/Windows):
@@ -58,6 +58,10 @@ def convert(item):
     return None if r.returncode == 0 and os.path.exists(dst) else f"{src}: {r.stderr.strip()[:200] or r.stdout.strip()[-200:]}"
 
 items = [(s, f) for s, f in files.items() if os.path.exists(os.path.join(AUDIO, s))]
+# Several of the game's files can carry one name. The first of them is the one converted, so the same one every run
+# (converted side by side, whichever finished first would have been kept).
+taken = set()
+items = [(s, f) for s, f in items if not (f["out"] in taken or taken.add(f["out"]))]
 # RUMBLE_SOUND_FILES: "none" writes only the index; a JSON file lists the files to convert (as the index names them)
 WANTED = os.environ.get("RUMBLE_SOUND_FILES", "")
 if WANTED == "none": items = []
@@ -67,7 +71,7 @@ elif WANTED:
 missing = [s for s in files if not os.path.exists(os.path.join(AUDIO, s))]
 print(f"{len(banks)} banks, {len(items)} files to convert ({len(missing)} listed but not on disk)", flush=True)
 errors = []
-with ThreadPoolExecutor(max_workers=max(2, (os.cpu_count() or 4) - 1)) as pool:
+with ThreadPoolExecutor(max_workers=max(2, min(4, (os.cpu_count() or 4) - 1))) as pool:  # a few decoders at a time
     for k, err in enumerate(pool.map(convert, items)):
         if err: errors.append(err)
         if k % 1000 == 999: print(f"  {k + 1}/{len(items)}", flush=True)

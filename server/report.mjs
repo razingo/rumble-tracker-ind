@@ -35,6 +35,15 @@ export function clean(text) {
     .slice(0, MAX_MESSAGE * 4);
 }
 
+/**
+ * An error's message in one line, for the player: a failed program's message is its name, then its last lines of
+ * output, of which the last one says why ("x.py failed:\n…\nValueError: …" becomes "x.py failed: ValueError: …").
+ */
+export function briefError(e) {
+  const lines = String(e?.message ?? e).trim().split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  return lines.length > 1 ? `${lines[0]} ${lines.at(-1)}` : lines[0] || 'unknown error';
+}
+
 /** Recent distinct errors, newest last; repeats increment a counter. */
 export function createErrorLog() {
   const list = [];

@@ -25,8 +25,8 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, dirname, normalize, extname, sep } from 'node:path';
 import { availableParallelism, totalmem } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { BuildError, findGame, gameVersion, python, runProgram, runScript, runSteps, versionsOf, withDependents }
-  from '../gamedata/build.mjs';
+import { BuildError, findGame, gameVersion, python, pythonVersions, runProgram, runScript, runSteps, versionsOf,
+  withDependents, withTools } from '../gamedata/build.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..', '..');
@@ -44,6 +44,7 @@ const INDEX_SHARDS = Math.max(2, Math.min(4, Math.floor(CORES / 3)));
 const AT_ONCE = Math.max(3, Math.min(12, CORES - 2));
 // Units whose skeletons have no animations of their own take them from these, which are exported for that.
 const DONORS = ['thaurissan', 'whelpeggs'];
+const SOUND_LANGUAGES = 'sfx,en-US'; // the sounds indexed and decoded: effects, and voice lines in English
 
 /** Whether the extraction's own tools are here (npm run fetch-rdmodule-tools; the exe carries them). */
 export const canExtract = () => existsSync(join(VENDOR, 'three', 'build', 'three.module.js'))
@@ -69,6 +70,10 @@ const SOURCES = {
   Backdrops: ['render/render.html', LIST],
   'Effect sprites': ['render/effects.html', 'render/effects_capture.js'],
 };
+// The steps' settings, which are part of their versions like their files.
+const SETTINGS = { Animations: DONORS, 'Index of the sounds': SOUND_LANGUAGES, Sounds: SOUND_LANGUAGES };
+const PYTHON_STEPS = ['Index of the sounds', 'Index of the game files', 'Index of the effects', 'Tower models', 'Map', 'Animations',
+  'Catalog of attacks', 'Effects', 'Sounds']; // the steps Python runs
 // The steps whose bulky export a step reads. Those exports are gone after an extraction, so when the step runs again
 // they are made again first.
 const BULK = { Sprites: ['Animations', 'Tower models'], Backdrops: ['Map'], 'Effect sprites': ['Effects'], 'Sounds picked': ['Sounds'] };
@@ -85,8 +90,36 @@ const stampOf = (out) => (existsSync(join(out, READY)) ? JSON.parse(readFileSync
 export function stepsDue(game, stamp) {
   if (!stamp?.steps) return 'all';
   if (game && existsSync(join(game, '.build.info')) && stamp.gameBuild !== gameVersion(game)) return 'all';
-  const now = versionsOf(SOURCES, HERE);
+  const now = stepVersions();
   return Object.keys(now).filter((name) => stamp.steps[name] !== now[name]);
+}
+/** { step: version } for every step here, as they are in this version of the tracker. */
+export function stepVersions() {
+  // the tools a step uses count too: Python and its packages, vgmstream for the sounds, three.js for the pictures
+  const fetched = existsSync(join(VENDOR, 'versions.json')) ? JSON.parse(readFileSync(join(VENDOR, 'versions.json'), 'utf8')) : {};
+  const py = pythonVersions();
+  let settings = withTools(SETTINGS, PYTHON_STEPS.filter((s) => s !== 'Sounds'), py);
+  settings = withTools(settings, ['Sounds'], (py || fetched.vgmstream) && { python: py, vgmstream: fetched.vgmstream });
+  settings = withTools(settings, ['Sprites', 'Backdrops', 'Effect sprites'], fetched.three && { three: fetched.three });
+  return versionsOf(SOURCES, HERE, settings);
+}
+/**
+ * The names of the steps to run when `due` are (see stepsDue): those and what depends on them; then, as the bulky
+ * exports are gone after an extraction, the steps that make the ones a running step reads (a split step with all its
+ * parts). `steps` are [name, the names of the steps it waits for] as for runSteps.
+ */
+export function stepsToRun(steps, due) {
+  const names = steps.map((x) => x[0]);
+  const run = withDependents(steps, names.filter((n) => due.includes(base(n))));
+  for (let grew = true; grew;) {
+    grew = false;
+    for (const n of [...run]) {
+      for (const b of BULK[base(n)] || []) {
+        for (const maker of names.filter((x) => base(x) === b)) if (!run.has(maker)) { run.add(maker); grew = true; }
+      }
+    }
+  }
+  return run.add('Python');
 }
 
 const alt = (names) => `^(${[...new Set(names)].filter(Boolean).join('|')})$`;
@@ -109,7 +142,7 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'applic
 const inside = (root, p) => { const f = normalize(join(root, p)); return f.startsWith(normalize(root) + sep) ? f : null; };
 // three.js from here instead of the web; a page says in its title when it is done, or that it failed
 const local = (page) => page
-  .replaceAll('https://cdn.jsdelivr.net/npm/three@0.160.0/', '/three/')
+  .replaceAll('https://cdn.jsdelivr.net/npm/three@0.187.0/', '/three/')
   .replaceAll('window.__done = true;', `window.__done = true;
   await fetch('/save/log-' + (location.pathname + location.search).replace(/\\W+/g, '-') + '.json', { method: 'POST',
     body: JSON.stringify(window.__log || document.getElementById('log')?.textContent || '') }).catch(() => {});
@@ -128,12 +161,20 @@ async function capturePage() {
   swap('window.__ready = true;', `${await readFile(join(PAGES, 'effects_capture.js'), 'utf8')}\nwindow.__ready = true;`);
   return local(page);
 }
-/** Serves the render pages and the exports to them, and saves the pictures they post. Resolves with the server. */
-function renderServer(work, sprites) {
+/**
+ * Serves the render pages and the exports to them, and saves the pictures they post. Resolves with the server.
+ * Only this machine's own pages may use it, and only its own pages may save.
+ */
+export function renderServer(work, sprites) {
   const server = createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
-    // only this machine's own pages may use it
-    if (!/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(req.headers.host || '')) { res.writeHead(403); res.end(); return; }
+    const { host = '', origin } = req.headers;
+    // (a page of another site, open in a browser, names itself as the origin of what it sends)
+    if (!/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(host) || (origin && origin !== `http://${host}`)) {
+      res.writeHead(403);
+      res.end();
+      return;
+    }
     try {
       if (req.method === 'POST' && url.pathname.startsWith('/save/')) {
         const name = url.pathname.slice(6);
@@ -218,7 +259,7 @@ export async function extractRdmodule({ gameFolder = '', gamedata, out, work, al
   const env = { ...process.env, RUMBLE_WORK: work, RUMBLE_GAMEDATA: gamedata,
     RUMBLE_BUNDLES: join(game, 'Data', 'StreamingAssets', 'Bundles'),
     RUMBLE_AUDIO: join(game, 'Data', 'StreamingAssets', 'Audio', 'GeneratedSoundBanks', 'Windows'),
-    RUMBLE_VGMSTREAM: join(VENDOR, 'vgmstream', 'vgmstream-cli.exe'), RUMBLE_SOUND_LANGUAGES: 'sfx,en-US',
+    RUMBLE_VGMSTREAM: join(VENDOR, 'vgmstream', 'vgmstream-cli.exe'), RUMBLE_SOUND_LANGUAGES: SOUND_LANGUAGES,
     RDMODULE_SPRITES: sprites, RDMODULE_SOUNDS: sounds };
   // Python is set up once, by whichever step asks first (when only some steps run, none comes surely before the rest)
   let ready = null;
@@ -278,21 +319,9 @@ export async function extractRdmodule({ gameFolder = '', gamedata, out, work, al
     ['Backdrops', ['Attack clips', 'Map'], page('render.html?backdrops', 'backdrops', /^bg-.*\.png$/)],
     ['Effect sprites', ['Effects'], page('fx/effects.html?capture', 'effects', /^fx-.*\.png$|^fx\.json$/)],
   ];
-  // What runs: the steps that are due and what depends on them; then, as the bulky exports are gone, the steps that
-  // make the ones a running step reads (a split step with all its parts).
   let only = null;
   if (due !== 'all') {
-    const names = steps.map((x) => x[0]);
-    only = withDependents(steps, names.filter((n) => due.includes(base(n))));
-    for (let grew = true; grew;) {
-      grew = false;
-      for (const n of [...only]) {
-        for (const b of BULK[n] || []) {
-          for (const maker of names.filter((x) => base(x) === b)) if (!only.has(maker)) { only.add(maker); grew = true; }
-        }
-      }
-    }
-    only.add('Python');
+    only = stepsToRun(steps, due);
     log(`Due: ${[...new Set([...only].map(base))].filter((n) => n !== 'Python').join(', ')}`);
   }
   try {
@@ -311,7 +340,7 @@ export async function extractRdmodule({ gameFolder = '', gamedata, out, work, al
     await new Promise((resolve) => { server.close(resolve); server.closeAllConnections(); });
   }
   await writeFile(join(stage, READY), JSON.stringify({ extracted: new Date().toISOString(), gameBuild: gameVersion(game),
-    steps: versionsOf(SOURCES, HERE) }, null, 1) + '\n');
+    steps: stepVersions() }, null, 1) + '\n');
   await rm(out, { recursive: true, force: true, maxRetries: 20, retryDelay: 500 });
   await rename(stage, out);
   await prune(work).catch((e) => log(`  the working folder was not cleared: ${e.message}`));

@@ -1,6 +1,6 @@
-# Runs the tests and the style check on every push and pull request. Windows, as the tracker runs there, so the tray
-# icon and Windows integration scripts are tested too. Read-only: no permissions beyond reading the repository and no
-# stored git credentials.
+# Runs the tests and the style check on every push and pull request, and builds the exe on pushes to main. Windows, as
+# the tracker runs there, so the tray icon and Windows integration scripts are tested too. Read-only: no permissions
+# beyond reading the repository and no stored git credentials.
 name: Test
 
 on:
@@ -39,3 +39,34 @@ jobs:
 
       - name: Check style
         run: npm run check-style
+
+      # the Python scripts need the game to run, so here they are only compiled (the runner's own Python)
+      - name: Python scripts compile
+        run: python -m compileall -q -l tools/gamedata tools/rdmodule
+
+  # The exe is built as for a release, to see that it still builds. Nothing is kept or published.
+  build:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '26.13.1'
+
+      - name: WebView2 libraries
+        run: npm run fetch-webview2
+
+      - name: Python for the exe
+        run: npm run fetch-python
+
+      - name: Tools for the additional data
+        run: npm run fetch-rdmodule-tools
+
+      - name: Build
+        run: npm run build-release

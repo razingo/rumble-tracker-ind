@@ -15,7 +15,7 @@ const FILES = {
   pvpHistory: 'pvp_history.json',   // PvP readings and inferred matches: { [account]: [entry] } (game/pvp.mjs)
   progress: 'progress.json',        // daily samples: { [account]: { first, days: [...] } }
   notifySettings: 'notifications.json',
-  appSettings: 'settings.json',     // { closeWindow: 'ask' | 'tray' | 'quit' } (the exe only)
+  appSettings: 'settings.json',     // { closeWindow: 'ask' | 'tray' | 'quit' (the exe only), checkUpdates }
   plans: 'plans.json',              // reward goals: { [account]: { [eventId]: { cost, label, set } } }
   sentLog: 'notified.json',         // { sent: { key: time }, log, pending }; pending ones wait for quiet hours to end
 };

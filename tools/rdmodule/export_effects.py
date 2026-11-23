@@ -110,8 +110,15 @@ def place(tmp, p):
 
 def safe(s): return re.sub(r"[^A-Za-z0-9_.-]+", "_", s).strip("_") or "unnamed"
 
+def named(o):
+    """A file name for a texture or mesh: its name and a number for which object it is. The game has different ones
+    under one name, and by the name alone whichever was written first would stand for all of them: another on every
+    run, as the processes of a split export write side by side."""
+    r = o.object_reader
+    return f"{safe(o.m_Name)}.{zlib.crc32(f'{r.assets_file.name}/{r.path_id}'.encode()):08x}"
+
 def save_texture(tex):
-    name = safe(tex.m_Name)
+    name = named(tex)
     p = os.path.join(OUT, "textures", name + ".png")
     if not os.path.exists(p):
         try: tmp = f"{p}.{os.getpid()}.tmp"; tex.image.save(tmp, "PNG"); place(tmp, p)
@@ -119,7 +126,7 @@ def save_texture(tex):
     return name + ".png"
 
 def save_mesh(mesh):
-    name = safe(mesh.m_Name)
+    name = named(mesh)
     p = os.path.join(OUT, "meshes", name + ".obj")
     if not os.path.exists(p):
         try:

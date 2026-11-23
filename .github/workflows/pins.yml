@@ -1,0 +1,28 @@
+# Once a month, lists the pinned software that has a newer version out (Node.js, Python and its packages, three.js,
+# vgmstream, the WebView2 libraries). The run fails when something is behind, so GitHub sends a notice; it changes
+# nothing by itself. Read-only: no permissions beyond reading the repository and no stored git credentials.
+name: Pinned versions
+
+on:
+  schedule:
+    - cron: '0 6 1 * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '26.13.1'
+
+      - name: Check the pins
+        run: npm run check-pins

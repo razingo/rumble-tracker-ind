@@ -7,7 +7,7 @@
 # (sampled frames) and a constant block, in that curve order. m_ClipBindingConstant.genericBindings says which bone
 # (CRC32 of its path below the Animator) and which property (1 position xyz, 2 rotation quaternion xyzw, 3 scale
 # xyz, 4 euler xyz) each run of curves drives. Unity is left-handed: x is mirrored for glTF.
-import os, re, sys, json, glob, math, struct, zlib, UnityPy
+import os, re, sys, json, glob, math, struct, zlib
 from UnityPy.helpers.MeshHelper import MeshHandler
 
 HERE = os.path.dirname(os.path.abspath(__file__))

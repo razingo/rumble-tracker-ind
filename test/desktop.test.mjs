@@ -94,6 +94,19 @@ test('uninstalling knows every file the release zip puts next to the exe', () =>
   assert.deepEqual(removed, inZip);
 });
 
+test('the release zip carries a license for everything the exe carries', () => {
+  const build = readFileSync(path.join(DESKTOP, '..', 'tools', 'build-release.mjs'), 'utf8');
+  const notices = [...build.matchAll(/`\$\{folder\}\/THIRD-PARTY-NOTICES\/([^`$]+)`/g)].map((m) => m[1]);
+  // Node.js, the window's libraries, the fonts, Python, three.js, vgmstream, and each package fetch-python installs
+  const fetched = readFileSync(path.join(DESKTOP, '..', 'tools', 'fetch-python.mjs'), 'utf8');
+  const packages = [...fetched.matchAll(/'([A-Za-z0-9_.-]+)==[\d.]+'/g)].map((m) => m[1].toLowerCase().replace(/[-_.]+/g, ''));
+  assert.ok(packages.length > 5, 'found the pinned packages in fetch-python.mjs');
+  const named = (name) => notices.some((n) => n.toLowerCase().replace(/[-_.]+/g, '').startsWith(name));
+  for (const name of ['nodejs', 'webview2', 'font', 'python', 'threejs', 'vgmstream', ...packages]) {
+    assert.ok(named(name), `a license for ${name}`);
+  }
+});
+
 test('integration script compiles', { skip: !windows && 'Windows only', timeout: 60000 }, async () => {
   // Only the type definition, as running it would create a shortcut and register a link type.
   const script = readFileSync(path.join(DESKTOP, 'integration.ps1'), 'utf8');
@@ -103,4 +116,16 @@ test('integration script compiles', { skip: !windows && 'Windows only', timeout:
       encoded(typeOnly)], { windowsHide: true }, (e, stdout, stderr) => (e ? reject(new Error(stderr || e.message)) : resolve(stdout)));
   });
   assert.match(out, /compiled/);
+});
+
+test('the log\'s lines carry no Windows user name', () => {
+  // (the launcher is one program with no parts to import: its cleaning is read out of it)
+  const launcher = readFileSync(path.join(DESKTOP, 'launcher.cjs'), 'utf8');
+  const source = /const escapeRe = .*\n/.exec(launcher)[0] + /function withoutUserName[\s\S]*?\n}\n/.exec(launcher)[0];
+  const withoutUserName = new Function('HOME_FOLDER', 'USER_NAME', `${source}; return withoutUserName;`)('C:\\Users\\Jo Doe', 'Jo Doe');
+  assert.equal(withoutUserName('Data folder: C:\\Users\\Jo Doe\\AppData\\Roaming\\RumbleTracker'),
+    'Data folder: ~\\AppData\\Roaming\\RumbleTracker');
+  assert.equal(withoutUserName('unpacked in c:/users/jo doe/AppData/Local'), 'unpacked in ~/AppData/Local');
+  assert.equal(withoutUserName('D:\\Games\\Jo Doe\\Warcraft Rumble'), 'D:\\Games\\<user>\\Warcraft Rumble');
+  assert.equal(withoutUserName('Warcraft Rumble started: reading the save'), 'Warcraft Rumble started: reading the save');
 });

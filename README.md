@@ -123,7 +123,8 @@ Start `RumbleTracker.exe` from a Command Prompt or a shortcut to use these:
 
 The tracker's code is MIT-licensed ([LICENSE](LICENSE)). That license doesn't cover the game art and data, which belong
 to Blizzard Entertainment ([NOTICE.md](NOTICE.md)). The exe contains the Node.js runtime, Microsoft's WebView2
-libraries and two open-licensed fonts, whose licenses are in `THIRD-PARTY-NOTICES` in the zip.
+libraries, two open-licensed fonts, Python with the packages that read the game's images, three.js and vgmstream;
+their licenses are in `THIRD-PARTY-NOTICES` in the zip.
 
 ## For developers
 
@@ -172,9 +173,9 @@ Environment variables for development and testing:
 | `server/rdmodule.mjs`, `rdmodule/` | The rdmodule and its page |
 | `gamedata/` | Game data and art (© Blizzard, see NOTICE), served as `/static/…`. Not in the repository; read from the game install |
 | `desktop/` | The exe's launcher (`launcher.cjs`), the unseen window the rdmodule's pictures are drawn in (`render.ps1`), the window and tray icon (`window.ps1`, with the WebView2 libraries in `webview2/`), Windows integration (`integration.ps1`), Uninstall in Settings (`uninstall.ps1`) and the script that draws the icon (`make-icon.ps1`, into `web/favicon.ico`) |
-| `tools/` | The game-data builder (`gamedata/`: `build.mjs` runs the steps, the table builders, the image extractors, and `seed/` with the few tables kept by hand), the rdmodule's exports (`rdmodule/`, with three.js and vgmstream from `fetch-rdmodule-tools.mjs`), the private Python for the exe (`fetch-python.mjs`) and the WebView2 libraries (`fetch-webview2.ps1`), building the release (`build-release.mjs`, Node.js 25.5+) and the style check (`check-style.mjs`); `git.mjs` finds Git for the ones that need it |
+| `tools/` | The game-data builder (`gamedata/`: `build.mjs` runs the steps, the table builders, the image extractors, and `seed/` with the few tables kept by hand), the rdmodule's exports (`rdmodule/`, with three.js and vgmstream from `fetch-rdmodule-tools.mjs`), the private Python for the exe (`fetch-python.mjs`) and the WebView2 libraries (`fetch-webview2.ps1`), building the release (`build-release.mjs`, Node.js 25.5+), the style check (`check-style.mjs`) the check that two extractions give the same files (`check-extraction.mjs`) and the list of pinned software with a newer version out (`check-pins.mjs`); `git.mjs` finds Git for the ones that need it |
 | `test/` | Node's built-in test runner. `helpers.mjs` builds save values and a tracker in a temporary folder; the tests of the window, tray and Windows integration (`desktop.test.mjs`) run on Windows only |
-| `.github/workflows/` | `test.yml` runs the tests and the style check on every push; `release.yml` builds and attests a release when a `v<version>` tag is pushed, once the tests of that commit passed |
+| `.github/workflows/` | `test.yml` runs the tests and the style check on every push, compiles the Python scripts, and builds the exe on pushes to `main`; `pins.yml` runs `check-pins` once a month; `release.yml` builds and attests a release when a `v<version>` tag is pushed, once the tests of that commit passed |
 | `docs/` | The player guide with its screenshots, and how the tracker works in the background |
 
 **Security.** The server listens on 127.0.0.1 only and answers only the tracker's own page: requests for another host

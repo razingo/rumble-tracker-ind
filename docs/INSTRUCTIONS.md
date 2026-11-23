@@ -33,7 +33,7 @@ The second row holds the status and the buttons:
 |---|---|
 | Status | *Live · last read 5 seconds ago* means the tracker is reading your save. *Game closed* means Warcraft Rumble isn't running, so the save can't change and the tracker waits for the game to start. Anything else is covered in [Tips](#tips). |
 | **☕ Buy me a coffee** | A voluntary way to support the tracker, which is free and stays free. Opens in your browser. |
-| **⚙ Settings** | Start with Windows, what closing the window does, the game's folder, notifications and uninstalling ([below](#settings)) |
+| **⚙ Settings** | Start with Windows, what closing the window does, checking for new versions, the game's folder, notifications and uninstalling ([below](#settings)) |
 | **🐞 Report a problem** | Report a bug ([below](#report-a-problem)). A red dot means the tracker noticed an error. |
 | **Backup** | Save or restore everything you entered ([below](#backup)) |
 | **⏻ Quit** | Stops the tracker. Closing the window keeps it running in the tray or quits it, as you chose in **⚙ Settings**. |
@@ -181,8 +181,8 @@ the setting. Both settings are only in `RumbleTracker.exe`.
 **Check for new versions** has the tracker ask GitHub once a day whether a newer version is out.
 
 **Warcraft Rumble's folder** shows where the tracker reads its game data from. Leave it empty unless that is wrong,
-for example after moving the game by hand: then give the folder that holds `WarcraftRumble.exe`. It applies from the
-tracker's next start.
+for example after moving the game by hand: then give the folder that holds `WarcraftRumble.exe`. The tracker uses
+it right away.
 
 **Uninstall the tracker…**, at the bottom, removes the tracker from this PC: it stops, then deletes
 `RumbleTracker.exe`, its data and backups, the game data it read, the Start menu shortcut and Start with Windows.
@@ -239,6 +239,7 @@ The tracker also backs up by itself when it starts, every 24 hours and when it s
 | You see | What to do |
 |---|---|
 | *The game was updated to …* | Right after a patch, the tracker reads its game data again from your game install, in the background; the banner goes when that is done. A mini the patch added may stay unnamed until a newer version of the tracker. |
+| *The tracker was updated* | A new version of the tracker reads its game data again from your game install, in the background; the banner goes when that is done. |
 | *Warcraft Rumble was not found on this PC* (at the start) | The game is installed but Windows has no entry for it, as with a copied folder. Type its folder, the one that holds `WarcraftRumble.exe`, into the field and press *Use this folder*. It can be changed later in **⚙ Settings**. |
 | A pop-up about a new version | *Download now* downloads it with a progress bar, checks it and restarts the tracker with it, keeping your data. If the new version can't start, the previous one is put back. *Later* hides the pop-up until the tracker restarts. |
 | *The tracker isn't responding* | The tracker was stopped. Start `RumbleTracker.exe` again. |

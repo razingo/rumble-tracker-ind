@@ -8,7 +8,7 @@ Abilities come from the unit records (AspectAbility in Unit.m_aspects and its ta
 parameter (m_animParamName); the body's AnimatorController (AspectModel.m_animatorController, by asset GUID) has
 states entered by transitions on that parameter (or <param>_Start); the clips are those states' motions plus the
 states they flow into without a condition (Start -> Channel)."""
-import os, re, sys, json, UnityPy
+import os, re, sys, json
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.environ["RUMBLE_WORK"]  # the working folder: exports, indexes, the tables read

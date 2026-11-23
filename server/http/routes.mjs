@@ -7,6 +7,7 @@ import { ISSUES_REPO, diagnostics } from '../report.mjs';
 import { buildState, liveState, resolveAccount, dataStale } from '../state.mjs';
 import { createHandlers, armoryFile } from './handlers.mjs';
 import { host } from '../host.mjs';
+import { givenGameFolder, setGameFolder } from '../game/folder.mjs';
 import { MINUTE, MB, CLOSE_CHOICES } from '../../web/scripts/lib/constants.js';
 import { localDay } from '../../web/scripts/lib/format.js';
 
@@ -39,8 +40,9 @@ const rateLimit = (n, ms) => ({
 });
 
 /**
- * deps: { shutdown(reason), startUpdate(), notifier: { test }, gameRunning(),
- *   autostart: { get(), set(on) } | null }.
+ * deps: { shutdown(reason), startUpdate(), checkForUpdate(), notifier: { test }, gameRunning(),
+ *   autostart: { get(), set(on) } | null, gameData: { check(), gameFolder() }, rdmodule: { status(), start() } }.
+ * The ones a test leaves out are not used by what it tests.
  * Returns a Map of "METHOD /path" to handler(req, url).
  */
 export function createRoutes(ctx, deps) {
@@ -53,9 +55,9 @@ export function createRoutes(ctx, deps) {
     startWithWindows: deps.autostart ? await deps.autostart.get() : null,
     closeWindow: ctx.standalone ? ctx.user.appSettings.closeWindow : null,
     checkUpdates: ctx.user.appSettings.checkUpdates,
-    // the game's folder given by hand ('' when none), and the one in use; null where the game data is downloaded
-    ...(deps.gameFolder ? { gameFolder: await deps.gameFolder.given(), gameFolderUsed: await deps.gameFolder.used() }
-      : { gameFolder: null }),
+    // the game's folder given by hand ('' when none), and the one in use ('' when the game is not found)
+    gameFolder: await givenGameFolder(ctx),
+    gameFolderUsed: await deps.gameData?.gameFolder() || '',
   });
 
   // "METHOD /path" to a handler(req, url) that returns [status, body]
@@ -120,12 +122,12 @@ export function createRoutes(ctx, deps) {
         deps.checkForUpdate?.();
       }
       if (b.gameFolder !== undefined) {
-        if (!deps.gameFolder) return [400, { error: 'This tracker does not read its game data from the game.' }];
         try {
-          await deps.gameFolder.set(b.gameFolder);
+          await setGameFolder(ctx, b.gameFolder);
         } catch (e) {
           return [400, { error: e.message }];
         }
+        deps.gameData?.check({ retry: true }); // the game there may be another version than the data's
       }
       if (b.closeWindow !== undefined) {
         if (!ctx.standalone) return [400, { error: 'Closing the window only matters in the RumbleTracker.exe version.' }];
@@ -171,7 +173,11 @@ export function createRoutes(ctx, deps) {
     // The rdmodule: whether its additional data was extracted, and extracting it (Settings).
     routes.set('GET /api/rdmodule', async () => [200, await deps.rdmodule.status()]);
     routes.set('POST /api/rdmodule/extract', async () => {
-      if (!(await deps.rdmodule.start())) return [400, { error: 'This tracker cannot extract the additional data.' }];
+      try {
+        if (!(await deps.rdmodule.start())) return [400, { error: 'This tracker cannot extract the additional data.' }];
+      } catch (e) {
+        return [400, { error: e.message }]; // (the disk is too full)
+      }
       return [200, { ok: true, ...(await deps.rdmodule.status()) }];
     });
   }

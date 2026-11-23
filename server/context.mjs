@@ -10,6 +10,7 @@ import { DEFAULT_PORT } from '../web/scripts/lib/constants.js';
  */
 export function createContext({ root, data, port = DEFAULT_PORT, standalone = false, appVersion = null }) {
   const errorLog = createErrorLog();
+  let lastJob = Promise.resolve();
   const ctx = {
     paths: {
       ROOT: root,
@@ -27,13 +28,22 @@ export function createContext({ root, data, port = DEFAULT_PORT, standalone = fa
     // The revision of what the page shows. It starts from the clock, so a restarted server never repeats one.
     rev: Date.now(),
     bump() { ctx.rev++; },
+    /**
+     * Runs a heavy background job (reading the game data, the rdmodule's extraction) once the one before it is over,
+     * so the PC never carries two of them. Resolves or rejects as the job does.
+     */
+    oneAtATime(job) {
+      const run = lastJob.then(job);
+      lastJob = run.catch(() => {});
+      return run;
+    },
     tables: null,
     user: null,
     accounts: new Map(), // account id -> { snapshot, events, lastChange, activeEvents, shop, pvp, … } (state/<id>.json)
     scan: { lastScan: null, lastError: null, lastErrorLog: null, gameBuild: null, scanning: false },
     // Reading the game data from the game install (gamedata.mjs): whether this tracker can, whether a read runs in
-    // the background now (part: only the steps a new version of the tracker changed), and why the last one failed.
-    gameData: { canBuild: false, reading: false, part: false, error: null },
+    // the background now (forTracker: because the tracker changed, not the game), and why the last one failed.
+    gameData: { canBuild: false, reading: false, forTracker: false, error: null },
     // A newer version of the tracker (update/checker.mjs): newVersion, and latestApp with the checksums for
     // downloading it. An update in progress has a state: null, 'downloading', 'restarting' or 'failed'.
     appUpdate: { newVersion: null, latestApp: null, lastCheck: null, checkError: null,

@@ -41,7 +41,9 @@ It needs Warcraft Rumble for PC installed, and nothing else: no Python, and no i
   in the background.
 - **Otherwise:** it starts straight away.
 
-Reading goes easy on the PC: the programs it starts run at low priority, and only a few steps run at a time.
+Reading goes easy on the PC: the programs it starts run at low priority, and only a few steps run at a time. A step
+that is not done after 10 minutes is stopped, and the read is tried again later. Quitting the tracker stops a read in
+progress; the data it had stays as it was.
 
 The data is kept in `%APPDATA%\RumbleTracker\gamedata`, with working files in `gamedata-build` beside it. New data
 replaces the old only once it is complete.
@@ -55,7 +57,7 @@ moved by hand has no such entry, or a wrong one. Then:
    that holds `WarcraftRumble.exe` (for example `D:\Games\Warcraft Rumble`), and press **Use this folder**. The
    tracker checks that the game's files are in it and starts reading right away.
 2. Later, the folder can be changed in **⚙ Settings** under *Warcraft Rumble's folder*. Emptying the field makes the
-   tracker look for the game again. A change applies from the tracker's next start.
+   tracker look for the game again. A change is used right away.
 
 The folder is kept as `gameFolder` in `%APPDATA%\RumbleTracker\config.json`. From source, the `RUMBLE_GAME_DIR`
 environment variable does the same.
@@ -72,9 +74,10 @@ shows is extracted, and a step that runs again first clears what it wrote before
 keys, level and upgrade rules, army code numbers, and which family a two-family mini is filed under. A mini added by a
 game patch needs its save ID and key added to `seed\unit_ids.json`, then a new exe.
 
-Each step of the reading has a version, made of its own script and inputs. After a new version of the tracker, only
-the steps that changed run again, with the steps that use what they make; the rest of the data stays as it is. A new
-version of the game runs all of them.
+Each step of the reading has a version, made of its own script, its inputs, its settings (an image size, for
+example) and the versions of the tools it uses (Python and its packages). After a new version of the tracker, only
+the steps that changed run again, with the steps that use what they make; the rest of the data stays as it is. A
+new version of the game runs all of them.
 
 ## From source
 
@@ -88,16 +91,24 @@ version is unchanged, and a game folder can be given, as in `npm run build-gamed
 Both use the private Python if `fetch-python` was run, and otherwise a Python 3.11 to 3.14 on the PC, whose packages
 are then downloaded on first use.
 
+`npm run check-extraction` checks that the additional data comes out the same on every run: it extracts twice, each
+time from nothing, and compares every file (about four minutes; it needs the game and `build-gamedata`, so it is run
+by hand before a release, not in CI). Effect pictures may differ in a few pixels by the graphics card's rounding; it
+tells those apart from real differences, and keeps both versions of a file that really differs.
+
+`npm run check-pins` lists the pinned software that has a newer version out. A workflow runs it once a month and
+fails when something is behind; taking a newer version means editing its pin and checksum, then testing.
+
 ## Software from others in the exe
 
 | What | License | Where its license file is |
 |---|---|---|
 | Node.js | MIT and others | `THIRD-PARTY-NOTICES` in the zip |
 | WebView2 libraries | Microsoft's, BSD-style | `THIRD-PARTY-NOTICES` in the zip |
-| Python | PSF | `tools\gamedata\python` |
-| UnityPy, Pillow, lz4, Brotli, texture2ddecoder, etcpak, astc-encoder-py, archspec, fsspec, attrs, tpk_ar | each its own | `tools\gamedata\python\Lib\site-packages` |
-| three.js | MIT | `tools\rdmodule\vendor\three` |
-| vgmstream, with the codec libraries it ships | ISC and others | `tools\rdmodule\vendor\vgmstream` |
+| Python | PSF | `THIRD-PARTY-NOTICES` in the zip |
+| UnityPy, Pillow, lz4, Brotli, texture2ddecoder, etcpak, astc-encoder-py, archspec, fsspec, attrs, tpk_ar | each its own | `THIRD-PARTY-NOTICES` in the zip |
+| three.js | MIT | `THIRD-PARTY-NOTICES` in the zip |
+| vgmstream, with the codec libraries it ships | ISC and others | `THIRD-PARTY-NOTICES` in the zip |
 
 UnityPy's audio package (fmod_toolkit, which holds FMOD's libraries) is left out. An empty stand-in takes its place,
 as nothing here reads audio through it.

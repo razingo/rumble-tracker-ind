@@ -1,5 +1,5 @@
 // Capture for the rdmodule's effect sprites. The render server (extract.mjs) adds this to the end of the effects viewer's own
-// script (map_render/effects.html, served as /fx/effects.html with a black background and no grid), so it uses that
+// script (effects.html, served as /fx/effects.html with a black background and no grid), so it uses that
 // page's simulation as it is: loadEffect, step, restart, fitCamera, camera, controls, renderer, scene, effect, ui.
 // /fx/effects.html?capture renders every effect in sprites.json ("effects": key -> { unit, prefab, and optionally
 // seconds, from, frames, yaw, pitch, zoom, tint }), ?capture=a,b only those; each is saved as sprites/fx-<key>.png, a sheet
@@ -8,6 +8,19 @@
 const FX_OUT = 256; // the longer side of a frame
 const FX_RATE = 24; // frames a second
 
+// The particles' random numbers come from the effect's name, so an effect is drawn the same on every run, whichever
+// effects are drawn before it.
+function seedRandom(text) {
+  let a = 2166136261;
+  for (let i = 0; i < text.length; i++) a = Math.imul(a ^ text.charCodeAt(i), 16777619);
+  Math.random = () => { // (mulberry32)
+    a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 async function captureEffect(spec) {
   ui('unit').value = spec.unit;
   fillEffects();
@@ -15,6 +28,9 @@ async function captureEffect(spec) {
   if (!row) throw new Error(`no ${spec.prefab} under ${spec.unit}`);
   ui('loop').checked = false; paused = true;
   await loadEffect(row);
+  // the textures load on their own: until they are all here, a frame may be drawn without one (a minute at most,
+  // for a PC busy with the other exports)
+  for (let i = 0; i < 3000 && texturesLoading > 0; i++) await new Promise((r) => setTimeout(r, 20));
   const dt = 1 / 60, from = spec.from || 0, total = Math.min(spec.seconds ? from + spec.seconds : effect.duration, effect.duration);
   // once through, so the viewer frames how far it spreads; then the camera moves to the game's side and stays put
   for (let x = 0; x < total; x += dt) step(dt);
@@ -94,6 +110,7 @@ if (params.has('capture')) {
       // (an effect whose textures were not loaded yet comes out empty: it gets two more tries)
       let out = null;
       for (let tries = 0; !out; tries++) {
+        seedRandom(key);
         try { out = await captureEffect(spec); } catch (e) { if (tries >= 2 || e.message !== 'nothing drawn') throw e; await new Promise((r) => setTimeout(r, 300)); }
       }
       const blob = await new Promise((r) => out.sheet.toBlob(r, 'image/png'));

@@ -10,7 +10,7 @@ trademarks of Blizzard Entertainment, Inc. in the U.S. and/or other countries.
 
 The MIT license in `LICENSE` covers the tracker's own code only: the local server (`server/`), the page's scripts
 and styles (`web/`), the Windows launcher and window (`desktop/`, apart from the WebView2 libraries) and the build
-tools (`tools/`).
+tools (`tools/`, apart from the Python, three.js and vgmstream that the `fetch` commands download).
 
 It does **not** cover the material below, which belongs to its owners and is included only so the tracker can show
 your collection in a recognizable way.
@@ -40,6 +40,20 @@ The window shows the page with Microsoft Edge WebView2. The exe contains Microso
 (`Microsoft.Web.WebView2`, © Microsoft Corporation, under Microsoft's BSD-style license); the WebView2 runtime itself
 is part of Windows. The license ships in the zip as `THIRD-PARTY-NOTICES/WebView2-LICENSE.txt`, with
 `WebView2-NOTICE.txt`.
+
+## Python and its packages
+
+The exe carries its own Python (© Python Software Foundation, PSF License), which reads the images from the game's
+files, with these packages, each under its own license: UnityPy and tpk_ar (MIT), Pillow (MIT-CMU), lz4 (BSD), Brotli
+(MIT), texture2ddecoder (MIT), etcpak (MIT), astc-encoder-py (MIT), archspec (Apache 2.0 or MIT), fsspec (BSD) and
+attrs (MIT). Their licenses ship in the zip under `THIRD-PARTY-NOTICES`. UnityPy's audio package (fmod_toolkit, which
+holds FMOD's libraries) is left out.
+
+## three.js and vgmstream
+
+The exe carries three.js (© three.js authors, MIT) and vgmstream (ISC, with the codec libraries it ships under their
+own licenses, listed in its `COPYING`). Their licenses ship in the zip as `THIRD-PARTY-NOTICES/three.js-LICENSE.txt`
+and `vgmstream-COPYING.txt`.
 
 ## Fonts
 

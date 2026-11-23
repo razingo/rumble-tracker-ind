@@ -79,6 +79,10 @@ const prune = (d) => {
 };
 prune(OUT);
 
+// What was installed, for the versions of the steps that use it (tools/gamedata/build.mjs, pythonVersions)
+writeFileSync(path.join(OUT, 'versions.json'), JSON.stringify({ python: VERSION,
+  packages: Object.fromEntries([...PACKAGES, ...FROM_SOURCE].map((p) => p.split('=='))) }, null, 1) + '\n');
+
 // it must be able to do its job
 const exe = path.join(OUT, 'python.exe');
 const check = spawnSync(exe, ['-I', '-c',

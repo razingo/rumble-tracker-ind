@@ -3,6 +3,17 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.1.1
+
+- After this update the tracker reads its images again once, in the background; it takes under a minute.
+- Fixed: after a tracker update, the banner said the game was updated. It now says the tracker was.
+- When the game data can't be read, the tracker says why, instead of only naming the step that failed.
+- A game folder changed in Settings is used right away, without restarting the tracker.
+- Quitting the tracker also stops a read of the game data that is in progress, and a read that hangs is stopped after
+  10 minutes.
+- The log (`tracker.log`) no longer holds your Windows user name.
+- The zip now carries the licenses of everything the exe contains.
+
 ## 0.1.0
 
 - After a tracker update, only the parts of the game data that changed are read again, not all of it.

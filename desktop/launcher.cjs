@@ -64,10 +64,21 @@ const rotateLog = () => {
 // MAX_LOG each are kept.
 const MAX_LOG = 2 * 1024 * 1024;
 const MAX_LINE = 4000;
+// The log may be attached to a bug report, so its lines carry no Windows user name: the home folder is written as ~,
+// and the name elsewhere as <user>.
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const HOME_FOLDER = os.homedir();
+const USER_NAME = (() => { try { return os.userInfo().username; } catch { return ''; } })();
+function withoutUserName(line, home = HOME_FOLDER, user = USER_NAME) {
+  let s = line;
+  for (const h of home ? [home, home.replace(/\\/g, '/')] : []) s = s.replace(new RegExp(escapeRe(h), 'gi'), '~');
+  if (user.length >= 3) s = s.replace(new RegExp(`\\b${escapeRe(user)}\\b`, 'gi'), '<user>');
+  return s;
+}
 let logBytes = null; // bytes in the current log; read from disk on the first write
 for (const level of ['log', 'info', 'warn', 'error']) {
   console[level] = (...a) => {
-    let line = a.map((x) => (typeof x === 'string' ? x : x instanceof Error ? x.stack : JSON.stringify(x))).join(' ');
+    let line = withoutUserName(a.map((x) => (typeof x === 'string' ? x : x instanceof Error ? x.stack : JSON.stringify(x))).join(' '));
     if (line.length > MAX_LINE) line = `${line.slice(0, MAX_LINE)}… (${line.length - MAX_LINE} more characters)`;
     const text = `${new Date().toISOString()} ${line}\n`;
     try {

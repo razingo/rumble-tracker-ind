@@ -28,7 +28,11 @@ $defaultData = Join-Path $env:APPDATA 'RumbleTracker'
 if ([IO.Path]::GetFullPath($data).TrimEnd('\') -ne [IO.Path]::GetFullPath($defaultData).TrimEnd('\')) { $data = $null }
 $targets = @($data, $env:RT_HOME, $exe, "$exe.old", "$exe.failed") +
   @('README.md', 'LICENSE.txt', 'NOTICE.md' | ForEach-Object { Join-Path $folder $_ }) +
-  @('Node.js-LICENSE.txt', 'WebView2-LICENSE.txt', 'WebView2-NOTICE.txt', 'Font-LilitaOne-OFL.txt', 'Font-Nunito-OFL.txt' |
+  @('Node.js-LICENSE.txt', 'WebView2-LICENSE.txt', 'WebView2-NOTICE.txt', 'Font-LilitaOne-OFL.txt', 'Font-Nunito-OFL.txt',
+    'Python-LICENSE.txt', 'UnityPy-LICENSE.txt', 'Pillow-LICENSE.txt', 'lz4-LICENSE.txt', 'Brotli-LICENSE.txt',
+    'texture2ddecoder-LICENSE.txt', 'etcpak-LICENSE.txt', 'astc-encoder-py-LICENSE.txt', 'archspec-LICENSE-APACHE.txt',
+    'archspec-LICENSE-MIT.txt', 'archspec-NOTICE.txt', 'fsspec-LICENSE.txt', 'attrs-LICENSE.txt', 'tpk_ar-LICENSE.txt',
+    'three.js-LICENSE.txt', 'vgmstream-COPYING.txt' |
     ForEach-Object { Join-Path $notices $_ })
 # never a drive's root, whatever the environment says
 $targets = $targets | Where-Object { $_ -and ([IO.Path]::GetFullPath($_)).Length -gt 3 }

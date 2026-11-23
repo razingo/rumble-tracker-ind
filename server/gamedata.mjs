@@ -12,18 +12,22 @@ import path from 'node:path';
 import { rm, rename, cp, stat } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { setTimeout as sleep } from 'node:timers/promises';
-import { ISSUES_REPO } from './report.mjs';
+import { ISSUES_REPO, briefError } from './report.mjs';
 import { givenGameFolder, setGameFolder } from './game/folder.mjs';
 import { esc } from '../web/scripts/lib/format.js';
 import { APP_NAME, SECOND, HOUR } from '../web/scripts/lib/constants.js';
 
 const RETRY_MS = 15 * SECOND;
 const AFTER_FAILURE_MS = HOUR; // a background read that failed is not tried again sooner
+// What a failed read tells the player, where the reason is not one they can fix themselves: after a game patch, the
+// game's files may be in a form this version of the tracker does not know yet.
+const unread = (e) => `The game data could not be read (${briefError(e)}). If this started with a game patch, a newer `
+  + 'version of the tracker may be able to read it.';
 
 /**
  * The game data's part of the tracker: firstRead() before the tables are loaded, check() whenever a newer game may be
  * there. `builder` is tools/gamedata/build.mjs (given by tests; an app folder without it, as in tests, builds nothing).
- * ctx.gameData tells the page what is going on: { canBuild, reading, part, error }.
+ * ctx.gameData tells the page what is going on: { canBuild, reading, forTracker, error }.
  */
 export async function createGameData(ctx, { builder } = {}) {
   const { paths, errorLog } = ctx;
@@ -133,7 +137,7 @@ ${page.error ? `<p>${esc(page.error)}</p>${ask || '<p style="opacity:.7">Trying 
       } catch (e) {
         console.log(`Reading the game data failed: ${e.message}`);
         errorLog.add('game data', e.message);
-        page.error = e instanceof builder.BuildError ? e.message : `The game data could not be read (${e.message.split('\n')[0]}).`;
+        page.error = e instanceof builder.BuildError ? e.message : unread(e);
         page.noGame = !!e.needsFolder;
         const wait = new AbortController();
         retryNow = () => wait.abort();
@@ -154,7 +158,8 @@ ${page.error ? `<p>${esc(page.error)}</p>${ask || '<p style="opacity:.7">Trying 
    * once the check, and the read it started, are over.
    */
   let checking = null;
-  function check() {
+  function check({ retry = false } = {}) {
+    if (retry) failedAt = 0; // something changed that a failed read may have wanted (the game's folder)
     checking ??= run().finally(() => { checking = null; });
     return checking;
   }
@@ -163,20 +168,22 @@ ${page.error ? `<p>${esc(page.error)}</p>${ask || '<p style="opacity:.7">Trying 
     const game = await findGame();
     const due = builder.stepsDue(game, ctx.tables.gameData);
     if (!due.length) return;
-    Object.assign(status, { reading: true, part: due !== 'all', error: null });
+    // (the same game as the data's: it is the tracker that changed, whether it reads some steps anew or all of them)
+    const sameGame = ctx.tables.gameData?.gameBuild === builder.gameVersion(game);
+    Object.assign(status, { reading: true, forTracker: sameGame, error: null });
     ctx.bump();
-    console.log(due === 'all' ? `Game data: reading it for the game's version ${builder.gameVersion(game)}`
-      : `Game data: this version of the tracker reads ${due.join(', ')} anew`);
+    console.log(!sameGame ? `Game data: reading it for the game's version ${builder.gameVersion(game)}`
+      : `Game data: this version of the tracker reads ${due === 'all' ? 'all of it' : due.join(', ')} anew`);
     try {
-      await build(game, due);
+      await ctx.oneAtATime(() => build(game, due));
       await ctx.tables.load();
     } catch (e) {
       failedAt = Date.now();
-      status.error = e instanceof builder.BuildError ? e.message : e.message.split('\n')[0];
+      status.error = e instanceof builder.BuildError ? e.message : unread(e);
       console.log(`Reading the game data failed: ${e.message}`);
       errorLog.add('game data', e.message);
     }
-    Object.assign(status, { reading: false, part: false });
+    Object.assign(status, { reading: false, forTracker: false });
     ctx.bump();
   }
 

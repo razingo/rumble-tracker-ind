@@ -66,7 +66,9 @@ nothing is downloaded.
   complete, and an open window loads it by itself. If the read fails, the old data stays and the tracker tries again
   within the hour.
 - **After a tracker update** that reads something more or differently, only the parts that changed are read again,
-  the same way.
+  the same way. A banner says *The tracker was updated* meanwhile.
+- A read that hangs is stopped after 10 minutes, and quitting the tracker stops one in progress. Either way the
+  data the tracker had stays as it was.
 
 ## App updates
 
