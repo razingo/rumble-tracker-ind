@@ -3,6 +3,14 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.3.0
+
+- The rdmodule's effects are drawn with their own random numbers, so each effect comes out the same whichever
+  effects are drawn before it. The effects look a little different from before, and the rdmodule's data shows as out
+  of date once after this update.
+- Fixed: the progress line in Settings stopped moving when you closed Settings and opened it again.
+- The player guide now says that a new mini gets its name once the new game data is read.
+
 ## 0.2.0
 
 - A mini that a game patch adds now shows up by itself, with its name, art and stats, once the game's files have it.
