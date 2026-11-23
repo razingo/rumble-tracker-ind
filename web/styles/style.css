@@ -849,6 +849,11 @@ button { cursor: pointer; }
 .dialog-toggle { font-weight: 800; }
 .notify-account select, .close-window select { margin-left: 6px; }
 .close-window { display: block; margin-top: 10px; }
+.game-folder { display: block; margin-top: 14px; }
+.extra-row { align-items: center; gap: 12px; }
+.extra-state { font-size: 13px; opacity: .75; }
+.extra-state.good { color: #8fd98a; opacity: 1; }
+.game-folder input { display: block; width: 100%; box-sizing: border-box; margin-top: 4px; }
 .notify-table { width: 100%; border-collapse: collapse; }
 .notify-table.off { opacity: .5; }
 .notify-table th { font-size: 11px; font-weight: 700; color: var(--muted); text-align: center; line-height: 1.15; }

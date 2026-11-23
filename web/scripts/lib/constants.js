@@ -3,8 +3,6 @@
 export const APP_NAME = 'Rumble Collection Tracker';
 export const EXE_NAME = 'RumbleTracker.exe';
 export const REPO = 'razingo/rumble-tracker-ind';
-// This app's entry in the signed data pack's `apps` (server/datapack/datapack.mjs)
-export const APP_KEY = REPO.split('/')[1];
 export const RELEASES_URL = `https://github.com/${REPO}/releases/latest`;
 export const DEFAULT_PORT = 8765;
 

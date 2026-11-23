@@ -4,9 +4,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { deflateRawSync, crc32 } from 'node:zlib';
-import { latestAppOf, zipUrl, zipEntry, downloadUpdate } from '../server/update/appupdate.mjs';
+import { latestAppOf, latestRelease, zipUrl, zipEntry, downloadUpdate, sha256 as sha } from '../server/update/appupdate.mjs';
 import { readLimited } from '../server/download.mjs';
-import { sha256 as sha } from '../server/datapack/datapack.mjs';
 
 
 /** A zip like tools/build-release.mjs writes (deflate; `stored` names are kept uncompressed). */
@@ -60,6 +59,21 @@ test('release info must be complete and consistent', () => {
   assert.equal(latestAppOf({ ...app, zip: 'RumbleTracker-0.5.0-win-x64.zip' }), null);
   assert.equal(latestAppOf({ ...app, exeSha256: 'abc' }), null);
   assert.equal(zipUrl(app), 'https://github.com/razingo/rumble-tracker-ind/releases/download/v0.4.0/RumbleTracker-0.4.0-win-x64.zip');
+});
+
+test('the latest release comes from GitHub, with its checksums when it lists them', async () => {
+  const files = 'https://github.com/razingo/rumble-tracker-ind/releases/download/v0.4.0/';
+  const sums = `${app.zipSha256}  ${app.zip}\n${app.exeSha256} *RumbleTracker.exe\n`;
+  const github = (assets, tag = 'v0.4.0') => async (url) => (String(url).includes('api.github.com')
+    ? new Response(JSON.stringify({ tag_name: tag, assets })) : new Response(sums));
+  const listed = [{ name: 'SHA256SUMS.txt', browser_download_url: `${files}SHA256SUMS.txt` }];
+  assert.deepEqual(await latestRelease({ fetchImpl: github(listed) }), { version: '0.4.0', app });
+  // no checksum file, or one that is not among this repository's release files: the version only
+  assert.deepEqual(await latestRelease({ fetchImpl: github([]) }), { version: '0.4.0', app: null });
+  const elsewhere = [{ name: 'SHA256SUMS.txt', browser_download_url: 'https://example.com/SHA256SUMS.txt' }];
+  assert.deepEqual(await latestRelease({ fetchImpl: github(elsewhere) }), { version: '0.4.0', app: null });
+  await assert.rejects(latestRelease({ fetchImpl: github(listed, 'nightly') }), /no version number/);
+  await assert.rejects(latestRelease({ fetchImpl: async () => new Response('', { status: 403 }) }), /GitHub answered 403/);
 });
 
 test('reads both deflated and stored zip entries', () => {

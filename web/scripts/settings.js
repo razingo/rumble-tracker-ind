@@ -1,4 +1,5 @@
-// The Settings dialog: Start with Windows, what closing the window does, the notifications and uninstalling. The
+// The Settings dialog: Start with Windows, what closing the window does, the notifications, uninstalling and, at the
+// bottom, extracting the additional data (for the rdmodule, web/scripts/rdmodule.js). The
 // server keeps the settings and sends the notifications, also while the page is closed.
 import { $, getJson, post, showMessage, state } from './core.js';
 import { confirmDialog, alertDialog } from './dialogs.js';
@@ -6,18 +7,32 @@ import { CLOSE_CHOICES } from './lib/constants.js';
 import { esc, dateTime } from './lib/format.js';
 
 let notify = null; // { settings, types, log, pending, playing }
-let general = null; // { startWithWindows, closeWindow }, each null when running from source
+let general = null; // { startWithWindows, closeWindow, checkUpdates, gameFolder }, each null where it doesn't apply
+let extra = null; // the additional data: { available, state, done, total, label, error } (server/rdmodule.mjs)
+let extraTimer = null;
 
 async function loadSettings() {
-  [notify, general] = await Promise.all([
+  [notify, general, extra] = await Promise.all([
     getJson('/api/notifications', 'the notification settings'),
     getJson('/api/settings', 'the settings'),
+    getJson('/api/rdmodule', 'the additional data').catch(() => null),
   ]);
 }
 
 const dialogHead = '<div class="dialog-head"><h2>Settings</h2><button class="chip" value="close" aria-label="Close">✕</button></div>';
 
-/** Start with Windows and what closing the window does, which only the exe has. */
+/** The game's folder, where the tracker reads its game data from the game: the one found, or one given by hand. */
+function gameFolderSection() {
+  if (general?.gameFolder == null) return '';
+  return `<label class="game-folder">Warcraft Rumble's folder
+      <input type="text" data-setting="gameFolder" value="${esc(general.gameFolder)}" spellcheck="false"
+        placeholder="${esc(general.gameFolderUsed || 'D:\\Games\\Warcraft Rumble')}"></label>
+    <p class="muted small">${general.gameFolderUsed ? `The game data is read from ${esc(general.gameFolderUsed)}.`
+      : 'The game was not found on this PC.'} Fill this in only if that is wrong: the folder that holds
+      WarcraftRumble.exe. Empty means it is looked for. It applies from the tracker's next start.</p>`;
+}
+
+/** Start with Windows and what closing the window does, which only the exe has, and the check for new versions. */
 function generalSection() {
   const autostart = general?.startWithWindows == null
     ? '<p class="muted small">Start with Windows is available in RumbleTracker.exe.</p>'
@@ -29,7 +44,10 @@ function generalSection() {
       <select data-setting="closeWindow">${Object.entries(CLOSE_CHOICES).map(([value, label]) =>
         `<option value="${value}" ${general.closeWindow === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label>
       <p class="muted small">In the tray, notifications still arrive. "Ask me" asks once, and your answer is kept here.</p>`;
-  return `<h3>General</h3>${autostart}${close}<span class="dialog-message small" data-setting-message></span>`;
+  const updates = general?.checkUpdates == null ? '' : `<label class="dialog-toggle"><input type="checkbox"
+      data-setting="checkUpdates" ${general.checkUpdates ? 'checked' : ''}> Check for new versions</label>
+      <p class="muted small">Asks GitHub once a day for the tracker's latest version. Nothing about you is sent.</p>`;
+  return `<h3>General</h3>${autostart}${close}${updates}<span class="dialog-message small" data-setting-message></span>`;
 }
 
 /** One notification type: on or off, its warning time if it has one, and whether it is sent while playing. */
@@ -89,6 +107,45 @@ function uninstallSection() {
     <div class="dialog-actions"><button type="button" class="chip danger" data-uninstall>Uninstall the tracker…</button></div>`;
 }
 
+/** The additional data, where this tracker can extract it: whether it is extracted, how far a run is, the button. */
+function extraSection() {
+  if (!extra?.available) return '';
+  const when = typeof extra.extracted === 'string' ? ` on ${esc(dateTime(extra.extracted))}` : '';
+  const have = extra.extracted ? `<span class="extra-state good">✔ Extracted${when}</span>`
+    : '<span class="extra-state">Not extracted</span>';
+  const line = extra.state === 'running'
+    ? `<p class="muted small">Extracting in the background: ${extra.total
+      ? `${extra.done} of ${extra.total} steps done${extra.label ? ` · now: ${esc(extra.label)}` : ''}` : 'starting'}</p>`
+    : extra.state === 'failed' ? `<p class="muted small">The last extraction failed: ${esc(extra.error || 'unknown reason')}</p>` : '';
+  const button = extra.state === 'running' ? '<span class="extra-state">Extracting…</span>'
+    : `<button type="button" class="chip" data-extract>${extra.extracted ? 'Extract again?' : 'Extract additional data?'}</button>`;
+  return `<div data-extra><div class="dialog-actions extra-row">${button}${have}</div>${line}</div>`;
+}
+
+/** While the extraction runs and Settings is open, its progress is asked for every two seconds. */
+function watchExtra(dlg) {
+  clearTimeout(extraTimer);
+  if (extra?.state !== 'running' || !dlg.open) return;
+  extraTimer = setTimeout(async () => {
+    extra = await getJson('/api/rdmodule', 'the additional data').catch(() => extra);
+    const box = dlg.querySelector('[data-extra]');
+    if (box) box.outerHTML = extraSection();
+    watchExtra(dlg);
+  }, 2000);
+}
+
+async function extractExtra(dlg) {
+  if (!(await confirmDialog('', { title: 'But why?', ok: 'Extract' }))) return;
+  try {
+    extra = await post('/api/rdmodule/extract', {});
+  } catch (err) {
+    return alertDialog(err.message, { title: 'Not started' });
+  }
+  const box = dlg.querySelector('[data-extra]');
+  if (box) box.outerHTML = extraSection();
+  watchExtra(dlg);
+}
+
 const UNINSTALL_MESSAGE = 'This removes RumbleTracker.exe and everything the tracker keeps on this PC: your names, '
   + 'armies, goals, history and settings, the automatic backups, the game data, the Start menu shortcut and Start '
   + 'with Windows. It can\'t be undone.\n\nIf you might come back, first save a backup with Backup → Export backup.';
@@ -111,8 +168,8 @@ function renderSettings() {
     dlg.innerHTML = '<p>Loading…</p>';
     return;
   }
-  dlg.innerHTML = `<form method="dialog" class="dialog-form">${dialogHead}${generalSection()}${notificationsSection()}
-    ${recentSection()}${uninstallSection()}</form>`;
+  dlg.innerHTML = `<form method="dialog" class="dialog-form">${dialogHead}${generalSection()}${gameFolderSection()}${notificationsSection()}
+    ${recentSection()}${uninstallSection()}${extraSection()}</form>`;
 }
 
 const notifyMessage = (dlg) => dlg.querySelector('.dialog-message:not([data-setting-message])');
@@ -189,5 +246,6 @@ export function bindSettings() {
     if (e.target === dlg) dlg.close();
     else if (e.target.closest('[data-notify-test]')) sendTest(dlg);
     else if (e.target.closest('[data-uninstall]')) uninstall(dlg);
+    else if (e.target.closest('[data-extract]')) extractExtra(dlg);
   });
 }

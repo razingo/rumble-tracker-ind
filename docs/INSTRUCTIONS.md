@@ -33,7 +33,7 @@ The second row holds the status and the buttons:
 |---|---|
 | Status | *Live · last read 5 seconds ago* means the tracker is reading your save. *Game closed* means Warcraft Rumble isn't running, so the save can't change and the tracker waits for the game to start. Anything else is covered in [Tips](#tips). |
 | **☕ Buy me a coffee** | A voluntary way to support the tracker, which is free and stays free. Opens in your browser. |
-| **⚙ Settings** | Start with Windows, what closing the window does, notifications and uninstalling ([below](#settings)) |
+| **⚙ Settings** | Start with Windows, what closing the window does, the game's folder, notifications and uninstalling ([below](#settings)) |
 | **🐞 Report a problem** | Report a bug ([below](#report-a-problem)). A red dot means the tracker noticed an error. |
 | **Backup** | Save or restore everything you entered ([below](#backup)) |
 | **⏻ Quit** | Stops the tracker. Closing the window keeps it running in the tray or quits it, as you chose in **⚙ Settings**. |
@@ -64,7 +64,7 @@ Two things need you now and then:
 - **Talents.** The save only says *how many* talents a mini has, not which ones. Tick the ones you picked in the mini's
   details; *Talents to tick* counts the minis still waiting for that.
 - **Needs your input** appears when the game has a mini the tracker can't name yet, usually a brand-new one right after
-  a patch. Pick which mini it is, or wait for the next game-data update.
+  a patch. Pick which mini it is; a later version of the tracker will know it.
 
 ## Army
 
@@ -178,6 +178,12 @@ notifications arrive without starting it yourself.
 tracker*, or *Ask me*. With *Ask me*, the first close asks (*Cancel* keeps the window open), and your answer becomes
 the setting. Both settings are only in `RumbleTracker.exe`.
 
+**Check for new versions** has the tracker ask GitHub once a day whether a newer version is out.
+
+**Warcraft Rumble's folder** shows where the tracker reads its game data from. Leave it empty unless that is wrong,
+for example after moving the game by hand: then give the folder that holds `WarcraftRumble.exe`. It applies from the
+tracker's next start.
+
 **Uninstall the tracker…**, at the bottom, removes the tracker from this PC: it stops, then deletes
 `RumbleTracker.exe`, its data and backups, the game data it read, the Start menu shortcut and Start with Windows.
 Export a backup first if you might come back.
@@ -232,9 +238,10 @@ The tracker also backs up by itself when it starts, every 24 hours and when it s
 
 | You see | What to do |
 |---|---|
-| *The game was updated to …* | Right after a patch, the tracker reads its game data again from your game install the next time it starts. A mini the patch added may stay unnamed until a new version of the tracker. |
-| *The tracker isn't responding* | The tracker was stopped. Start `RumbleTracker.exe` again. |
+| *The game was updated to …* | Right after a patch, the tracker reads its game data again from your game install, in the background; the banner goes when that is done. A mini the patch added may stay unnamed until a newer version of the tracker. |
+| *Warcraft Rumble was not found on this PC* (at the start) | The game is installed but Windows has no entry for it, as with a copied folder. Type its folder, the one that holds `WarcraftRumble.exe`, into the field and press *Use this folder*. It can be changed later in **⚙ Settings**. |
 | A pop-up about a new version | *Download now* downloads it with a progress bar, checks it and restarts the tracker with it, keeping your data. If the new version can't start, the previous one is put back. *Later* hides the pop-up until the tracker restarts. |
+| *The tracker isn't responding* | The tracker was stopped. Start `RumbleTracker.exe` again. |
 | A damaged data file, under *Report a problem* | The tracker moved it aside (`<name>.corrupt-<date>` in the data folder) and started without it. Restore the last good backup from **Backup → Automatic backups**. |
 | *No Rumble data found on this PC* | Start Warcraft Rumble on this PC at least once and log in. The tracker reads what the game saved here. |
 | The status says the save couldn't be read | The game was usually saving at that moment, and it clears within a few seconds. If it stays, please [report it](#report-a-problem). |

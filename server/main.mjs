@@ -12,79 +12,60 @@ import { readJson, flushWrites } from './store.mjs';
 import { readRumblePrefs } from './game/prefs.mjs';
 import { watchGame, watchGameFromTray, gameRunningOnce } from './game/watch.mjs';
 import { createScanner } from './scan/scanner.mjs';
-import { allowedUrl } from './datapack/datapack.mjs';
-import { createPackChecker } from './datapack/checker.mjs';
-import { firstRunDownload } from './datapack/firstrun.mjs';
-import { selfBuilding, selfBuild } from './datapack/selfbuild.mjs';
-import { PACK_URL } from './datapack/pack-keys.mjs';
+import { createGameData } from './gamedata.mjs';
+import { createUpdateChecker } from './update/checker.mjs';
 import { createUpdater } from './update/updater.mjs';
 import { cleanUpdates } from './update/appupdate.mjs';
 import { createNotifier } from './notifications/runner.mjs';
 import { writeDailyBackup } from './backup.mjs';
 import { readAutostart, setAutostart, refreshAutostart, autostartCommand } from './autostart.mjs';
 import { createHttpServer } from './http/server.mjs';
-import { DEFAULT_PORT, SECOND, HOUR, DAY, SCAN_MS } from '../web/scripts/lib/constants.js';
+import { createRdmodule } from './rdmodule.mjs';
+import { givenGameFolder, setGameFolder } from './game/folder.mjs';
+import { DEFAULT_PORT, SECOND, MINUTE, DAY, SCAN_MS } from '../web/scripts/lib/constants.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SCANS_AFTER_EXIT = 6; // the game may still write its save while closing
 const NOTIFY_MS = 30 * SECOND;
-const PACK_CHECK_MS = 6 * HOUR;
+const GAME_DATA_CHECK_MS = 30 * MINUTE; // whether the installed game is a newer version than the game data
+const UPDATE_CHECK_MS = DAY;
 const BACKUP_MS = DAY;
 // In RumbleTracker.exe the launcher has already attached to host.mjs with its options. From source, environment
 // variables and defaults apply.
 const STANDALONE = host.attached;
 
+const PACKAGE = await readJson(path.join(ROOT, 'package.json'), {}).catch(() => ({}));
 const ctx = createContext({
   root: ROOT,
   data: path.resolve(host.options.dataDir || process.env.RUMBLE_DATA_DIR || path.join(ROOT, 'data')),
   port: Number(host.options.port || process.env.PORT || DEFAULT_PORT),
   standalone: STANDALONE,
-  appVersion: await readJson(path.join(ROOT, 'package.json'), {}).then((p) => p.version || null, () => null),
+  appVersion: PACKAGE.version || null,
 });
+// a released exe (tools/build-release.mjs marks the ones GitHub builds) may replace itself with a newer release
+ctx.official = STANDALONE && PACKAGE.official === true;
 process.on('unhandledRejection', (e) => {
   console.log(`Unexpected error: ${e?.message || e}`);
   ctx.errorLog.add('server', e?.stack || String(e));
 });
 await mkdir(ctx.paths.STATE, { recursive: true });
 
-// Game data
+// Game data, read from the game install: the first time behind a loading page, later in the background (gamedata.mjs)
 ctx.tables = createTables(ctx.paths);
-const SELF_BUILDING = await selfBuilding(ctx);
-// Game-data updates come from RUMBLE_DATA_PACK_URL or config.json's dataPackUrl. The exe also has PACK_URL; from
-// source there are none unless one is set, and npm run fetch-gamedata updates gamedata/. A self-building
-// tracker (npm run build-selfbuilt) has no PACK_URL either: it reads its game data from the game install.
-const config = await ctx.readUserJson(path.join(ctx.paths.DATA, 'config.json'), {});
-ctx.dataPack.url = process.env.RUMBLE_DATA_PACK_URL || config.dataPackUrl || (host.attached && !SELF_BUILDING ? PACK_URL : '');
-if (ctx.dataPack.url && !allowedUrl(ctx.dataPack.url)) {
-  console.log('Data pack address ignored: it must be https.');
-  ctx.dataPack.url = '';
-}
-const canDownload = !!ctx.dataPack.url;
-
-// Game data isn't bundled. A self-building tracker reads it from the game install, the first time and after each
-// game patch. Otherwise, from source npm run fetch-gamedata downloads it, and the exe installs it on its first start.
-if (SELF_BUILDING) await selfBuild(ctx);
-else if (!(await ctx.tables.hasGameData())) {
-  if (!canDownload) {
-    console.error(`No game data in ${ctx.paths.STATIC}. Run "npm run fetch-gamedata" once to download the signed data pack, `
-      + 'then start again.');
-    process.exit(1);
-  }
-  await firstRunDownload(ctx);
+const gameData = await createGameData(ctx);
+await gameData.firstRead();
+if (!(await ctx.tables.hasGameData())) {
+  console.error(`No game data in ${ctx.paths.GAMEDATA}, and nothing here to read it from the game with.`);
+  process.exit(1);
 }
 try {
   await ctx.tables.load();
 } catch (e) {
-  // The installed pack is damaged. Set it aside, then use gamedata/ (from source) or download the pack again.
-  if (!(await ctx.tables.packInstalled())) throw e;
-  const moved = await ctx.tables.setPackAside();
-  const msg = `The installed game data could not be read (${e.message}); it was moved to ${moved}.`;
-  console.log(msg);
-  ctx.errorLog.add('data pack', msg);
-  if (!(await ctx.tables.hasGameData())) {
-    if (!canDownload) throw e;
-    await firstRunDownload(ctx);
-  }
+  // What was read is damaged: it is read anew.
+  console.log(`The game data could not be loaded (${e.message}); reading it again`);
+  ctx.errorLog.add('game data', e.message);
+  await gameData.discard();
+  await gameData.firstRead();
   await ctx.tables.load();
 }
 
@@ -100,7 +81,10 @@ let stopping = false;
 const onGame = (running) => {
   console.log(running ? 'Warcraft Rumble started: reading the save' : 'Warcraft Rumble closed: reading paused');
   if (running) scan();
-  else scansLeft = SCANS_AFTER_EXIT;
+  else {
+    scansLeft = SCANS_AFTER_EXIT;
+    gameData.check(); // the game may have been patched before this session
+  }
   ctx.bump();
 };
 const onGameWatchFailed = (message) => {
@@ -144,13 +128,13 @@ async function shutdown(reason, code = 0) {
 host.onQuit((reason) => shutdown(reason));
 if (!STANDALONE) for (const sig of ['SIGINT', 'SIGTERM', 'SIGBREAK']) process.on(sig, () => shutdown(`Stopped (${sig})`));
 
-// Notifications, data packs, app updates
+// Notifications, app updates
 const notifier = createNotifier(ctx, { gameRunning });
 const notify = () => notifier.tick().catch((e) => {
   console.log(`Notifications: ${e.message}`);
   ctx.errorLog.add('notifications', e.message);
 });
-const checkDataPack = createPackChecker(ctx, { onNews: notify });
+const checkForUpdate = createUpdateChecker(ctx, { onNews: notify });
 const startUpdate = createUpdater(ctx, { shutdown });
 cleanUpdates(ctx.paths.UPDATE); // a download the launcher already copied into place
 
@@ -180,14 +164,19 @@ setInterval(() => {
 }, SCAN_MS);
 setInterval(notify, NOTIFY_MS);
 notify();
-checkDataPack();
-setInterval(checkDataPack, PACK_CHECK_MS);
+checkForUpdate();
+setInterval(checkForUpdate, UPDATE_CHECK_MS);
+gameData.check();
+setInterval(() => gameData.check(), GAME_DATA_CHECK_MS);
 
 // Closing the window keeps the tracker running in the tray, or quits it when that's the setting. With "Ask me" the page
 // asked and saved the answer before the window closed (web/scripts/closing.js); without an answer it stays in the tray.
 if (STANDALONE) host.onWindowClosed(() => { if (ctx.user.appSettings.closeWindow === 'quit') shutdown('Window closed'); });
 
-const server = createHttpServer(ctx, { shutdown, startUpdate, notifier, gameRunning, autostart });
+// the game's folder, for Settings
+const gameFolder = { given: () => givenGameFolder(ctx), used: gameData.gameFolder, set: (dir) => setGameFolder(ctx, dir) };
+const server = createHttpServer(ctx, { shutdown, startUpdate, checkForUpdate, notifier, gameRunning, autostart,
+  rdmodule: createRdmodule(ctx), gameFolder });
 server.listen(ctx.port, '127.0.0.1', () => {
   console.log(`Rumble Collection Tracker running at http://localhost:${ctx.port}`);
   console.log(`Data folder: ${ctx.paths.DATA}`);

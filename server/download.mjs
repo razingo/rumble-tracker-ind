@@ -1,4 +1,4 @@
-// Reading a download with a size limit, for the data-pack update and the app update.
+// Reading a download with a size limit, for the app update.
 
 /**
  * The body of a fetch response. Past `limit` bytes it throws `tooLarge` (a message), which also stops the download.

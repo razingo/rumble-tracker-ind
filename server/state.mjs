@@ -17,13 +17,13 @@ export const dataStale = (ctx) => {
 
 /** App update for the page: { version, auto, state, error, later, done, total }, or null when this is the latest. */
 function updateState(ctx) {
-  const { dataPack, appUpdate } = ctx;
-  if (!dataPack.newVersion) return null;
+  const { appUpdate } = ctx;
+  if (!appUpdate.newVersion) return null;
   return {
-    version: dataPack.newVersion,
-    auto: ctx.standalone && !!dataPack.latestApp, // can download and install itself
+    version: appUpdate.newVersion,
+    auto: ctx.official && !!appUpdate.latestApp, // can download and install itself
     state: appUpdate.state, error: appUpdate.error,
-    later: appUpdate.later === dataPack.newVersion,
+    later: appUpdate.later === appUpdate.newVersion,
     done: appUpdate.done, total: appUpdate.total,
   };
 }
@@ -49,7 +49,7 @@ function tagList(armies) {
 
 /** The full state for one account (resolveAccount first). */
 export function buildState(ctx, account) {
-  const { user: u, tables: t, dataPack } = ctx;
+  const { user: u, tables: t, gameData } = ctx;
   const ids = [...ctx.accounts.keys()];
   const acc = account && ctx.accounts.get(account);
   const picks = (account && u.talents[account]) || {};
@@ -85,8 +85,8 @@ export function buildState(ctx, account) {
       dataVersion: t.gameData?.dataVersion || null,
       gameBuild: ctx.scan.gameBuild,
       stale: dataStale(ctx),
-      pack: { configured: !!dataPack.url, lastCheck: dataPack.lastCheck, result: dataPack.result,
-        error: dataPack.error, needsAppUpdate: dataPack.needsAppUpdate, newVersion: dataPack.newVersion },
+      // reading: the newer game's data is being read now; canRead: this tracker reads it by itself
+      reading: gameData.reading, canRead: gameData.canBuild, readError: gameData.error,
     },
     // Shop with unit IDs resolved to slugs (null if unknown), plus G.R.I.D. history.
     shop: acc?.shop ? withSlugs(acc.shop) : null,

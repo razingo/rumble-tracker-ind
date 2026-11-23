@@ -32,7 +32,7 @@ export function createNotifier(ctx, { gameRunning, toast = showToast }) {
     const due = dueNotifications({
       now, accounts: list, events: ctx.tables.events, store: ctx.tables.store, rules: ctx.tables.rules,
       pvp: ctx.tables.pvp, plans: u().plans, settings,
-      multi: list.length > 1, appUpdateNeeded: ctx.dataPack.needsAppUpdate, newVersion: ctx.dataPack.newVersion,
+      multi: list.length > 1, newVersion: ctx.appUpdate.newVersion,
     }).filter((n) => !log.sent[n.key]);
     if (!due.length && !(log.pending.length && !inQuietHours(settings.quiet))) return;
     const stamp = new Date(now).toISOString();

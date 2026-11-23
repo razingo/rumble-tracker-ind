@@ -1,27 +1,24 @@
-// New tracker versions: the banner when game data needs a newer version, and the update pop-up.
+// The banner when the game is newer than the tracker's game data, and the pop-up for a new version of the tracker.
 import { schedulePoll, poll } from './app.js';
 import { $, post, openExternal, state } from './core.js';
 import { alertDialog } from './dialogs.js';
 import { RELEASES_URL } from './lib/constants.js';
 import { esc, megabytes } from './lib/format.js';
 
-/** The banner shown when game-data updates need a newer tracker, or when the game is newer than its data. */
+/** The banner shown while the game is newer than the game data: it is being read again, or why it can't be. */
 export function renderDataBanner() {
   const el = $('#dataBanner');
   const d = state?.dataStatus;
   if (!el) return;
-  if (d?.pack?.needsAppUpdate) {
-    el.hidden = false;
-    el.innerHTML = `<b>A newer version of the tracker is needed.</b> New game data can't be verified by this version, so
-      it isn't installed. Download the latest RumbleTracker from GitHub Releases; your data is kept.
-      <button class="chip" data-releases-open>Download the latest version</button>`;
-    return;
-  }
-  el.hidden = !d?.stale;
-  if (!d?.stale) return;
-  el.innerHTML = `<b>The game was updated to ${esc(d.gameBuild)}.</b> The tracker's game data is from ${esc(d.dataBuild)},
-    so new minis, events or shop offers may be missing or unnamed until a data update
-    arrives${d.pack?.configured ? ' (it checks for one every 6 hours)' : ''}. Your own progress is read from the game as usual.`;
+  el.hidden = !(d?.stale || d?.reading);
+  if (el.hidden) return;
+  const now = d.reading ? 'The tracker is reading the new game data from your game install now; this page picks it up when it is done.'
+    : d.readError ? `Reading the new game data did not work (${esc(d.readError)}); the tracker tries again within the hour.`
+      : d.canRead ? 'The tracker reads the new game data from your game install shortly.'
+        : 'Run npm run build-gamedata to read the new game data.';
+  el.innerHTML = `<b>The game was updated${d.stale ? ` to ${esc(d.gameBuild)}` : ''}.</b> The tracker's game data is from
+    ${esc(d.dataBuild)}, so new minis, events or shop offers may be missing or unnamed for a moment. ${now}
+    Your own progress is read from the game as usual.`;
 }
 
 /**
@@ -56,7 +53,7 @@ export function renderUpdate() {
     else {
       body = `${u.state === 'failed' ? `<p class="text-warn">The update didn't work: ${esc(u.error || 'unknown error')}</p>` : ''}
         <p>${u.auto ? 'The tracker can download and install it now, then restart. Your data is kept.'
-          : 'Download it from GitHub Releases; your data is kept.'}</p>
+          : 'Download it from GitHub Releases, or build it; your data is kept.'}</p>
         <div class="dialog-actions"><button class="button" data-update-now>${u.auto && u.state !== 'failed'
           ? 'Download now' : 'Open GitHub Releases'}</button>
           <button class="chip" data-update-later>Later</button></div>`;
@@ -92,9 +89,6 @@ async function updateLater() {
 }
 
 export function bindUpdate() {
-  $('#dataBanner').addEventListener('click', (e) => {
-    if (e.target.closest('[data-releases-open]')) openExternal(RELEASES_URL);
-  });
   const dlg = $('#updateDialog');
   dlg.addEventListener('click', (e) => {
     if (e.target.closest('[data-update-now]')) updateNow();

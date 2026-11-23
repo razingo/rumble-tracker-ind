@@ -132,8 +132,6 @@ function shellOpen(url) {
 let windowHost = null; // the window program while it runs
 let windowRestarts = 0;
 const MAX_WINDOW_RESTARTS = 3;
-// Rumble Dash, the small game behind the page's hidden key sequence (web/scripts/minigame.js)
-const MINIGAME = process.env.RUMBLE_MINIGAME_URL || 'https://razingo.github.io/rumble-dash/';
 
 /** Opens the window or brings it to the front. */
 function showWindow() {
@@ -149,7 +147,7 @@ function startWindowHost(onQuit, show = !NO_WINDOW) {
       RT_PAGE: PAGE, RT_DATA: DATA, RT_EXE: process.execPath,
       RT_PARENT: String(process.pid), RT_GAME: 'WarcraftRumble', RT_LIB: path.join(APP_DIR, 'desktop', 'webview2'),
       RT_PROFILE: path.join(HOME, 'webview2'), RT_CACHE: path.join(APP_DIR, 'desktop', 'window-helpers.dll'),
-      RT_SHOW: show ? '1' : '', RT_MINIGAME: MINIGAME, RT_MINIGAME_PROFILE: path.join(HOME, 'webview2-minigame') },
+      RT_SHOW: show ? '1' : '', RT_RDMODULE: `${PAGE}rdmodule/`, RT_RDMODULE_PROFILE: path.join(HOME, 'webview2-rdmodule') },
   });
   windowHost = child;
   let buf = '';
@@ -455,9 +453,9 @@ function handOverOnPortRace() {
 }
 
 /**
- * Loads the server from the unpacked files, connected through server/host.mjs. The first start downloads the game data
- * before the server finishes loading and serves a progress page meanwhile, so this returns as soon as the port
- * answers. Returns whether it started.
+ * Loads the server from the unpacked files, connected through server/host.mjs. The first start reads the game data
+ * from the game install before the server finishes loading and serves a progress page meanwhile, so this returns as
+ * soon as the port answers. Returns whether it started.
  */
 async function startServer(app) {
   const load = createRequire(path.join(app.dir, 'launcher-helper.cjs'))(path.join(app.dir, 'import.cjs'));

@@ -1,9 +1,12 @@
-// A hidden key sequence, ↑ ↑ ↓ ↓ ← → ← → W R, opens Rumble Dash, a small game, in a window of its own
-// (desktop/window.ps1). Only in the exe's window, where the page runs in WebView2.
-const SEQUENCE = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'w', 'r'];
+// A hidden key sequence, ↑ ↑ ↓ ↓ ← → ← → B A, opens the rdmodule in a window of its own
+// (desktop/window.ps1), once its pictures and sounds were extracted from the game install (Extract additional data?
+// in Settings). Only in the exe's window, where the page runs in WebView2.
+import { getJson } from './core.js';
+
+const SEQUENCE = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
 const IGNORED = ['Shift', 'CapsLock'];
 
-export function bindMinigame() {
+export function bindRdmodule() {
   const webview = window.chrome?.webview;
   if (!webview) return;
   let at = 0;
@@ -21,7 +24,7 @@ export function bindMinigame() {
     else at = 0;
     if (at === SEQUENCE.length) {
       at = 0;
-      webview.postMessage('minigame');
+      getJson('/api/rdmodule', 'the game').then((game) => { if (game.state === 'ready') webview.postMessage('rdmodule'); }, () => {});
     }
   });
 }

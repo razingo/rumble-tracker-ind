@@ -1,6 +1,6 @@
 {
   "name": "rumble-tracker-ind",
-  "version": "0.3.7",
+  "version": "0.0.1",
   "private": true,
   "description": "Unofficial Warcraft Rumble collection, army and event tracker in a window of its own (not affiliated with Blizzard Entertainment).",
   "license": "MIT",
@@ -9,12 +9,11 @@
     "start": "node server/main.mjs",
     "test": "node --test \"test/*.test.mjs\"",
     "check-style": "node tools/check-style.mjs",
-    "fetch-gamedata": "node tools/fetch-gamedata.mjs",
     "build-gamedata": "node tools/gamedata/build.mjs",
+    "fetch-rdmodule-tools": "node tools/fetch-rdmodule-tools.mjs",
     "fetch-python": "node tools/fetch-python.mjs",
     "fetch-webview2": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/fetch-webview2.ps1",
-    "build-release": "node tools/build-release.mjs",
-    "build-selfbuilt": "node tools/build-release.mjs --self-build"
+    "build-release": "node tools/build-release.mjs"
   },
   "engines": {
     "node": ">=22"

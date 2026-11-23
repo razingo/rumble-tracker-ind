@@ -106,7 +106,7 @@ export function setTables(rules, minisFile) {
 export const setState = (s) => { state = s; };
 export const setDirty = (d) => { dirty = d; };
 
-// Tabs keep the game tables they load. After a data-pack update those are dropped and loaded again when needed.
+// Tabs keep the game tables they load. After the game data was read again, those are dropped and loaded when needed.
 const tableResets = [];
 export const onTablesReload = (fn) => { tableResets.push(fn); };
 export const resetTableCaches = () => { for (const fn of tableResets) fn(); };

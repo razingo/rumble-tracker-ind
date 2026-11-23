@@ -52,6 +52,10 @@ export function createRoutes(ctx, deps) {
   const settings = async () => ({
     startWithWindows: deps.autostart ? await deps.autostart.get() : null,
     closeWindow: ctx.standalone ? ctx.user.appSettings.closeWindow : null,
+    checkUpdates: ctx.user.appSettings.checkUpdates,
+    // the game's folder given by hand ('' when none), and the one in use; null where the game data is downloaded
+    ...(deps.gameFolder ? { gameFolder: await deps.gameFolder.given(), gameFolderUsed: await deps.gameFolder.used() }
+      : { gameFolder: null }),
   });
 
   // "METHOD /path" to a handler(req, url) that returns [status, body]
@@ -110,6 +114,19 @@ export function createRoutes(ctx, deps) {
         if (!deps.autostart) return [400, { error: 'Only the RumbleTracker.exe version can start with Windows.' }];
         if (!(await deps.autostart.set(b.startWithWindows))) return [500, { error: 'Windows did not accept the change.' }];
       }
+      if (typeof b.checkUpdates === 'boolean') {
+        ctx.user.appSettings.checkUpdates = b.checkUpdates;
+        await ctx.user.save('appSettings');
+        deps.checkForUpdate?.();
+      }
+      if (b.gameFolder !== undefined) {
+        if (!deps.gameFolder) return [400, { error: 'This tracker does not read its game data from the game.' }];
+        try {
+          await deps.gameFolder.set(b.gameFolder);
+        } catch (e) {
+          return [400, { error: e.message }];
+        }
+      }
       if (b.closeWindow !== undefined) {
         if (!ctx.standalone) return [400, { error: 'Closing the window only matters in the RumbleTracker.exe version.' }];
         if (!Object.hasOwn(CLOSE_CHOICES, b.closeWindow)) return [400, { error: 'That is not a choice for closing the window.' }];
@@ -127,12 +144,12 @@ export function createRoutes(ctx, deps) {
     },
     // Diagnostics shown before opening an issue (already cleaned).
     'GET /api/report': async (req, url) => {
-      const t = ctx.tables, dp = ctx.dataPack;
+      const t = ctx.tables;
       const text = diagnostics({
         appVersion: ctx.appVersion, gameBuild: ctx.scan.gameBuild, accounts: ctx.accounts.size, errors: ctx.errorLog.list(),
         data: {
-          dataBuild: t.gameData?.gameBuild, dataVersion: t.gameData?.dataVersion, pack: await t.fromPack(), stale: dataStale(ctx),
-          packResult: dp.url ? dp.result : null, packError: dp.url ? dp.error : null,
+          dataBuild: t.gameData?.gameBuild, dataVersion: t.gameData?.dataVersion, stale: dataStale(ctx),
+          readError: ctx.gameData.error,
         },
         page: url.searchParams.get('page'),
       });
@@ -145,11 +162,19 @@ export function createRoutes(ctx, deps) {
     },
     // Later in the update pop-up hides it until the tracker restarts.
     'POST /api/update/later': async () => {
-      ctx.appUpdate.later = ctx.dataPack.newVersion;
+      ctx.appUpdate.later = ctx.appUpdate.newVersion;
       ctx.bump();
       return [200, { ok: true }];
     },
   }));
+  if (deps.rdmodule) {
+    // The rdmodule: whether its additional data was extracted, and extracting it (Settings).
+    routes.set('GET /api/rdmodule', async () => [200, await deps.rdmodule.status()]);
+    routes.set('POST /api/rdmodule/extract', async () => {
+      if (!(await deps.rdmodule.start())) return [400, { error: 'This tracker cannot extract the additional data.' }];
+      return [200, { ok: true, ...(await deps.rdmodule.status()) }];
+    });
+  }
   if (ctx.standalone) {
     // Take a screenshot in Report a problem opens Windows' snipping overlay, which copies the capture.
     routes.set('POST /api/screenshot', async () => {

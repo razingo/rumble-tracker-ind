@@ -13,7 +13,7 @@ import { testContext, hexId } from './helpers.mjs';
 
 const ACC = hexId(1, 1), UNIT = hexId(0xa, 0xb), OTHER = hexId(0xc, 0xd);
 let ctx, cleanup, server, base;
-const calls = { quit: [], update: 0, autostart: false };
+const calls = { quit: [], update: 0, checks: 0, autostart: false };
 
 const freePort = () => new Promise((resolve) => {
   const s = net.createServer().listen(0, '127.0.0.1', () => {
@@ -38,6 +38,7 @@ before(async () => {
       calls.update++;
       return [200, { ok: true }];
     },
+    checkForUpdate: () => { calls.checks++; },
     notifier: { test: async () => true },
     gameRunning: async () => false,
     autostart: { get: async () => calls.autostart, set: async (on) => {
@@ -185,8 +186,16 @@ test('saves what closing the window does', async () => {
   assert.equal(ctx.user.appSettings.closeWindow, 'tray');
   assert.equal((await api('POST', '/api/settings', { closeWindow: 'later' })).status, 400);
   // a saved choice that isn't one any more falls back to asking
-  assert.deepEqual(cleanAppSettings({ closeWindow: 'later' }), { closeWindow: 'ask' });
-  assert.deepEqual(cleanAppSettings(undefined), { closeWindow: 'ask' });
+  assert.deepEqual(cleanAppSettings({ closeWindow: 'later' }), { closeWindow: 'ask', checkUpdates: true });
+  assert.deepEqual(cleanAppSettings(undefined), { closeWindow: 'ask', checkUpdates: true });
+});
+
+test('turns the check for new versions off and on', async () => {
+  assert.equal((await api('GET', '/api/settings')).body.checkUpdates, true);
+  assert.equal((await api('POST', '/api/settings', { checkUpdates: false })).body.checkUpdates, false);
+  assert.equal(ctx.user.appSettings.checkUpdates, false);
+  assert.equal(calls.checks, 1, 'a check follows at once, which clears a version found before');
+  assert.equal((await api('POST', '/api/settings', { checkUpdates: true })).body.checkUpdates, true);
 });
 
 test('running from source, there are no routes that act on the exe', async () => {
@@ -204,10 +213,10 @@ test('running from source, there are no routes that act on the exe', async () =>
 test('quit, update and Later in the exe', async () => {
   await api('POST', '/api/update', {});
   assert.equal(calls.update, 1);
-  ctx.dataPack.newVersion = '9.9.9';
+  ctx.appUpdate.newVersion = '9.9.9';
   await api('POST', '/api/update/later', {});
   assert.equal((await api('GET', '/api/state')).body.update.later, true);
-  ctx.dataPack.newVersion = null;
+  ctx.appUpdate.newVersion = null;
   assert.equal((await api('POST', '/api/quit', {})).status, 200);
   await new Promise((r) => setTimeout(r, 300));
   assert.deepEqual(calls.quit, ['Quit from the page']);

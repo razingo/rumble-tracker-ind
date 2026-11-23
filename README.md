@@ -11,7 +11,7 @@ over time, and optional Windows notifications.
 ## Download and run
 
 You need Windows 10 or 11 (64-bit) and Warcraft Rumble for PC installed, played at least once on this PC. Nothing
-else: no Node.js, no Python, no installer, no internet connection.
+else: no Node.js, no Python, no installer.
 
 1. Open [Releases](https://github.com/razingo/rumble-tracker-ind/releases/latest) and download
    `RumbleTracker-<version>-win-x64.zip`, or build the exe yourself ([SELF-BUILD.md](SELF-BUILD.md)).
@@ -19,8 +19,8 @@ else: no Node.js, no Python, no installer, no internet connection.
 3. The tracker opens in its own window. The first time, it reads its game data from your game install, with a
    loading bar (about a minute), then shows the tracker.
 
-**This tracker is independent of any download for its game data.** Names, stats, events, shop offers and all images
-are read from the Warcraft Rumble installed on your PC; the exe carries none of them and fetches none.
+**The tracker needs no download for its game data.** Names, stats, events, shop offers and all images are read from
+the Warcraft Rumble installed on your PC; the exe carries none of them and fetches none.
 
 The tracker reads the game's save every few seconds, so the window updates on its own while you play. The
 **[player guide](https://github.com/razingo/rumble-tracker-ind/blob/main/docs/INSTRUCTIONS.md)** walks through every tab.
@@ -56,7 +56,7 @@ Releases are built by GitHub Actions from this repository's source; with the Git
 
 | What | Where |
 |---|---|
-| Your own data: names you gave, armies, talents, G.R.I.D. and PvP history, progress, notification settings, downloaded game data and app updates | `%APPDATA%\RumbleTracker` |
+| Your own data: names you gave, armies, talents, G.R.I.D. and PvP history, progress, notification settings, and the game data read from your game install | `%APPDATA%\RumbleTracker` |
 | Automatic backups (one a day, kept for 7 days) | `%APPDATA%\RumbleTracker\backups` |
 | The tracker's log (`tracker.log`, attach it to a bug report if asked) | `%APPDATA%\RumbleTracker` |
 | The program's files, unpacked from the exe on first start, and the window's WebView2 data | `%LOCALAPPDATA%\RumbleTracker` |
@@ -66,10 +66,11 @@ to one JSON file, which *Import backup…* restores, also on another PC.
 
 ### Updating
 
-When a new version is out, the tracker offers to install it. *Download now* fetches the release from GitHub, checks it
-against the checksums in the signed data pack, replaces `RumbleTracker.exe` and restarts; if the new version fails to
-start, the previous one is put back. You can also download the release yourself and replace the exe. Either way your
-data stays where it is. The [changelog](CHANGELOG.md) lists what changed.
+Once a day the tracker asks GitHub whether a newer version is out, and offers it in a pop-up. *Download now* fetches
+the release, checks it against the checksums published with it, replaces `RumbleTracker.exe` and restarts; if the new
+version fails to start, the previous one is put back. An exe you built yourself is only told about the new version,
+and is left as it is. You can also download the release and replace the exe by hand. Either way your data stays where
+it is. The check can be turned off in **⚙ Settings**. The [changelog](CHANGELOG.md) lists what changed.
 
 ### Uninstalling
 
@@ -80,17 +81,20 @@ everything the tracker does in the background and every place it stores somethin
 
 ## Game data updates
 
-After a game patch, the next start of the tracker sees that the game's files changed and reads its game data again
-from your game install, with the same loading bar as on the first start. Nothing is downloaded. A mini that a patch
-adds only shows once a new version of the tracker knows its save ID; this tracker doesn't update itself, so download
-or build the new version (your data is kept).
+After a game patch the tracker notices that the installed game is a newer version than its game data, and reads the
+data again from your game install. It does that in the background, at low priority, while you keep using the tracker;
+a banner says so, and the window picks the new data up when it is ready. It looks at start, when the game closes and
+every half hour. Nothing is downloaded.
+
+A mini that a patch adds shows as *Needs your input* until a newer version of the tracker knows its save ID.
 
 ## Privacy
 
 - The tracker only **reads** the game's saved data (from the Windows registry). It never changes it, and it ignores
   the login tokens stored next to it.
-- It sends nothing about you anywhere and downloads nothing. *Report a problem* and the other links open in your own
-  browser.
+- It sends nothing about you anywhere. Its only request to the internet asks GitHub for the tracker's latest version,
+  once a day, and can be turned off in **⚙ Settings**; a new version is downloaded only when you click *Download now*.
+  *Report a problem* and the other links open in your own browser.
 - The local page is only reachable from this PC, and only by the tracker's own page.
 
 ## Found a problem?
@@ -112,7 +116,8 @@ Start `RumbleTracker.exe` from a Command Prompt or a shortcut to use these:
 - **No window at start** (just the tray icon): `RumbleTracker.exe --background` (what *Start with Windows* uses).
 - **Port:** the tracker uses <http://localhost:8765>, or the next free port up to 8784 if another program has it. To
   use one specific port: `set PORT=8800` before starting the exe.
-- **Data pack address:** `"dataPackUrl": "https://…/"` in `%APPDATA%\RumbleTracker\config.json` (https only).
+- **The game's folder**, if the tracker doesn't find the game: `set RUMBLE_GAME_DIR=D:\Games\Warcraft Rumble` before
+  starting the exe, or the field in **⚙ Settings**.
 
 ## License
 
@@ -130,9 +135,9 @@ npm run build-gamedata
 npm start
 ```
 
-`build-gamedata` reads the game data and art from your game install into `gamedata/` (once, and again after a game
-patch); they aren't in this repository. [SELF-BUILD.md](SELF-BUILD.md) describes it, and how the exe is built with
-the builder and its own Python inside. From source there's no window or tray icon: `npm start` runs the server, and
+`build-gamedata` reads the game data and art from your game install into `gamedata/`; they aren't in this repository.
+(Without it, `npm start` reads them itself on its first start, as the exe does.) [SELF-BUILD.md](SELF-BUILD.md)
+describes it, and how the exe is built with the builder and its own Python inside. From source there's no window or tray icon: `npm start` runs the server, and
 you open http://localhost:8765 in your browser. Your data goes to `data/` in the project folder, or to the folder in
 `RUMBLE_DATA_DIR`.
 
@@ -148,9 +153,7 @@ Environment variables for development and testing:
 |---|---|
 | `RUMBLE_DATA_DIR` | The data folder, instead of `data/` (from source) or `%APPDATA%\RumbleTracker` (exe) |
 | `PORT` | One fixed port; `RUMBLE_FIRST_PORT` moves the range of 20 ports the exe tries instead |
-| `RUMBLE_DATA_PACK_URL` | The data pack address for `fetch-gamedata` and the update checks. From source the tracker only checks for game data updates when this or `dataPackUrl` is set |
 | `RUMBLE_GAME_DIR` | The game's folder, when Windows has no install entry for it |
-| `RUMBLE_SELF_BUILD` | From source, read the game data from the game install at start, as the exe does |
 | `RUMBLE_PYTHON` | The Python the image steps use, instead of the private one or one found on this PC |
 | `RUMBLE_ISSUES_REPO` | The repository *Report a problem* opens issues in, as `owner/name` |
 | `RUMBLE_RELEASE_OUT` | Where `npm run build-release` writes, instead of `dist/release` |
@@ -161,14 +164,15 @@ Environment variables for development and testing:
 | `server/` | The local server. `main.mjs` starts the parts and runs the timers. `host.mjs` connects it to the exe's launcher when there is one. Also the shared state (`context.mjs`), game tables (`tables.mjs`), the user's files (`userdata.mjs`, `store.mjs`), the page's state (`state.mjs`), backups, request filtering (`guard.mjs`), Start with Windows (`autostart.mjs`), the problem report's details (`report.mjs`), downloads with a size limit (`download.mjs`) and the Windows programs it runs (`system.mjs`) |
 | `server/scan/` | Reading the save on a timer (`scanner.mjs`) and the history kept from it (`history.mjs`) |
 | `server/http/` | The HTTP server and static files (`server.mjs`), the API routes (`routes.mjs`) and the handlers that change the user's data (`handlers.mjs`) |
-| `server/update/` | In-app updates: the download and its checks (`appupdate.mjs`), and *Download now* (`updater.mjs`) |
+| `server/update/` | New versions: asking GitHub for the latest release (`checker.mjs`), the download and its checks (`appupdate.mjs`), and *Download now* (`updater.mjs`) |
 | `server/game/` | The save: reading it from the registry (`prefs.mjs`), decoding it (`model.mjs`, with `web/scripts/lib/protobuf.js`), currency names, PvP match results and whether the game runs (`watch.mjs`) |
 | `server/notifications/` | What's due (`notify.mjs`), sending it (`runner.mjs`) and the Windows notification itself (`toast.mjs`) |
-| `server/datapack/` | Reading the game data from the game install at start, with its progress page (`selfbuild.mjs`). Also the signed data packs of the tracker this one comes from, unused here unless a pack address is set (`datapack.mjs`, `checker.mjs`, `firstrun.mjs`, the accepted public keys) |
+| `server/gamedata.mjs` | Reading the game data from the game install: the first time behind a loading page, after a game patch in the background |
 | `web/` | The page. `scripts/app.js` starts it and switches tabs, `core.js` holds what the modules share, and each tab, dialog and menu has its own module; the Army tab also has `army-code.js` (army codes) and `army-pools.js`. `scripts/lib/` has the code the server and build tools use too: shared names and units, formatting, the protobuf reader and writer, schedules, PvP seasons, input limits and the reward-tree planner. `styles/style.css` is the page's look; `styles/art.css` adds the textures and frames from the game files |
-| `gamedata/` | Game data and art (© Blizzard, see NOTICE), served as `/static/…`. Not in the repository; `npm run build-gamedata` fills it from the game install |
-| `desktop/` | The exe's launcher (`launcher.cjs`), the window and tray icon (`window.ps1`, with the WebView2 libraries in `webview2/`), Windows integration (`integration.ps1`), Uninstall in Settings (`uninstall.ps1`) and the script that draws the icon (`make-icon.ps1`, into `web/favicon.ico`) |
-| `tools/` | The game-data builder (`gamedata/`: `build.mjs` runs the steps, the table builders, the image extractors, and `seed/` with the few tables kept by hand), the private Python for the exe (`fetch-python.mjs`) and the WebView2 libraries (`fetch-webview2.ps1`), building the release (`build-release.mjs`, Node.js 25.5+) and the style check (`check-style.mjs`); `git.mjs` finds Git for the ones that need it |
+| `server/rdmodule.mjs`, `rdmodule/` | The rdmodule and its page |
+| `gamedata/` | Game data and art (© Blizzard, see NOTICE), served as `/static/…`. Not in the repository; read from the game install |
+| `desktop/` | The exe's launcher (`launcher.cjs`), the unseen window the rdmodule's pictures are drawn in (`render.ps1`), the window and tray icon (`window.ps1`, with the WebView2 libraries in `webview2/`), Windows integration (`integration.ps1`), Uninstall in Settings (`uninstall.ps1`) and the script that draws the icon (`make-icon.ps1`, into `web/favicon.ico`) |
+| `tools/` | The game-data builder (`gamedata/`: `build.mjs` runs the steps, the table builders, the image extractors, and `seed/` with the few tables kept by hand), the rdmodule's exports (`rdmodule/`, with three.js and vgmstream from `fetch-rdmodule-tools.mjs`), the private Python for the exe (`fetch-python.mjs`) and the WebView2 libraries (`fetch-webview2.ps1`), building the release (`build-release.mjs`, Node.js 25.5+) and the style check (`check-style.mjs`); `git.mjs` finds Git for the ones that need it |
 | `test/` | Node's built-in test runner. `helpers.mjs` builds save values and a tracker in a temporary folder; the tests of the window, tray and Windows integration (`desktop.test.mjs`) run on Windows only |
 | `.github/workflows/` | `test.yml` runs the tests and the style check on every push; `release.yml` builds and attests a release when a `v<version>` tag is pushed, once the tests of that commit passed |
 | `docs/` | The player guide with its screenshots, and how the tracker works in the background |

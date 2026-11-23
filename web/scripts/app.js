@@ -5,7 +5,7 @@ import { renderArmy, bindArmy } from './army.js';
 import { bindBackupMenu } from './backup.js';
 import { renderCalendar, bindCalendar } from './calendar.js';
 import { bindClosing } from './closing.js';
-import { bindMinigame } from './minigame.js';
+import { bindRdmodule } from './rdmodule.js';
 import { renderCurrencies, renderSummary, renderNeeds, renderPlanner, renderFilters, renderGrid, renderEvents,
   bindCollection } from './collection.js';
 import { $, store, getJson, post, RULES, ALWAYS_OWNED, state, dirty, setTables, setState, setDirty,
@@ -43,7 +43,7 @@ async function loadTables() {
   setTables(rules, minis);
 }
 
-/** After a data-pack update, loads the game tables again. The tabs reload theirs when next needed. */
+/** After the game data was read again, loads the game tables again. The tabs reload theirs when next needed. */
 async function reloadTables() {
   try {
     await loadTables();
@@ -55,7 +55,7 @@ async function reloadTables() {
 
 async function boot() {
   bindClosing(); // first, so the window can close while the page loads
-  bindMinigame();
+  bindRdmodule();
   await loadTables();
   $('#accountLabel').maxLength = LIMITS.accountName;
   bindHeader();
@@ -130,7 +130,7 @@ export async function poll() {
       location.reload();
       return;
     }
-    // A data pack brought new game data, so reload the tables before drawing.
+    // The game data was read again, so reload the tables before drawing.
     const dataVersion = s.dataStatus?.dataVersion || null;
     if (state && dataVersion !== state.dataStatus?.dataVersion) await reloadTables();
     for (const m of ALWAYS_OWNED) {

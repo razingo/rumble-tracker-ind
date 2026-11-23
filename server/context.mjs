@@ -16,8 +16,8 @@ export function createContext({ root, data, port = DEFAULT_PORT, standalone = fa
       DATA: data,
       STATE: path.join(data, 'state'),         // scan snapshots per account
       PUBLIC: path.join(root, 'web'),
-      STATIC: path.join(root, 'gamedata'),     // game data from npm run fetch-gamedata, served as /static/
-      GAMEDATA: path.join(data, 'gamedata'),   // an installed data pack, used before STATIC
+      GAMEDATA: path.join(data, 'gamedata'),   // game data read from the game install, served as /static/
+      STATIC: path.join(root, 'gamedata'),     // the same from npm run build-gamedata, used where GAMEDATA has none
       UPDATE: path.join(data, 'update'),       // a downloaded app update
       BACKUPS: path.join(data, 'backups'),     // automatic backups
     },
@@ -31,11 +31,14 @@ export function createContext({ root, data, port = DEFAULT_PORT, standalone = fa
     user: null,
     accounts: new Map(), // account id -> { snapshot, events, lastChange, activeEvents, shop, pvp, … } (state/<id>.json)
     scan: { lastScan: null, lastError: null, lastErrorLog: null, gameBuild: null, scanning: false },
-    // The last data-pack check. newVersion is a newer app release, latestApp the checksums for downloading it.
-    dataPack: { url: '', lastCheck: null, result: null, error: null, badSignatures: 0, needsAppUpdate: false,
-      newVersion: null, latestApp: null },
-    // An app update in progress. Its state is null, 'downloading', 'restarting' or 'failed'.
-    appUpdate: { state: null, error: null, later: null, done: 0, total: 0 },
+    // Reading the game data from the game install (gamedata.mjs): whether this tracker can, whether a read runs in
+    // the background now, and why the last one failed.
+    gameData: { canBuild: false, reading: false, error: null },
+    // A newer version of the tracker (update/checker.mjs): newVersion, and latestApp with the checksums for
+    // downloading it. An update in progress has a state: null, 'downloading', 'restarting' or 'failed'.
+    appUpdate: { newVersion: null, latestApp: null, lastCheck: null, checkError: null,
+      state: null, error: null, later: null, done: 0, total: 0 },
+    official: false, // a released exe, which may replace itself with a newer release
     // Whether Warcraft Rumble runs, or null while that isn't known.
     game: { running: () => null },
     /** Reads one of the player's files. A damaged file is moved aside and reported instead of stopping the tracker. */

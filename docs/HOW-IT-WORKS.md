@@ -55,14 +55,30 @@ last good one.
 
 ## Game data updates
 
-The tracker reads its game data from the Warcraft Rumble installed on this PC: the first time it starts, and again at
-the first start after a game patch (it compares the game files' names, sizes and dates with the last read). The window
-shows a loading bar meanwhile. The game's files are only read. Nothing is downloaded. If the game isn't installed, the
-window says so and tries again every 15 seconds.
+The tracker reads its game data from the Warcraft Rumble installed on this PC. The game's files are only read, and
+nothing is downloaded.
+
+- **The first time it starts**, there is nothing to show yet, so the window has a loading bar until the data is read
+  (about a minute). If the game isn't found, the window asks for its folder.
+- **After a game patch**, the tracker sees that the installed game is another version than the one its data was read
+  from, and reads the data again in the background, at low priority. It looks at start, when the game closes and
+  every half hour. The tracker stays usable on the old data meanwhile; the new data replaces it only once it is
+  complete, and an open window loads it by itself. If the read fails, the old data stays and the tracker tries again
+  within the hour.
 
 ## App updates
 
-This tracker does not update itself. A new version is a new exe: download or build it, and your data is kept.
+At start and once a day the tracker asks GitHub for the latest release of its repository. The request carries nothing
+about you, and the check can be turned off in **⚙ Settings**. When there's a newer version, a pop-up offers:
+
+- **Download now**: the tracker downloads the release from GitHub, checks the zip and the exe against the checksums
+  published with that release, and has the exe replaced and restarted. If the new version fails to start, the previous
+  one is put back. The checksums show the download arrived whole; who published it is taken on trust from GitHub, as
+  when you download the zip there yourself.
+- **Later**: hides the pop-up until the tracker restarts.
+
+An exe you built yourself gets the pop-up without *Download now*: it opens GitHub Releases instead, and the exe is
+never replaced by a released one.
 
 ## Notifications
 

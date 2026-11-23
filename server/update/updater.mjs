@@ -1,5 +1,6 @@
-// "Download now" in the update pop-up, in the exe only. It downloads and checks the release the signed data pack names
-// (appupdate.mjs), has the launcher install it, then stops so the new version can start.
+// "Download now" in the update pop-up, in a released exe only (one built by hand is told of a new version and left as
+// it is). It downloads and checks the latest release (appupdate.mjs), has the launcher install it, then stops so the
+// new version can start.
 import { downloadUpdate } from './appupdate.mjs';
 import { host } from '../host.mjs';
 
@@ -14,8 +15,8 @@ export function createUpdater(ctx, { shutdown, download = downloadUpdate, applyD
   };
 
   return async function start() {
-    const app = ctx.dataPack.latestApp;
-    if (!app || app.version !== ctx.dataPack.newVersion) return [409, { error: 'No update to install.' }];
+    const app = ctx.official ? u.latestApp : null;
+    if (!app || app.version !== u.newVersion) return [409, { error: 'No update to install.' }];
     if (u.state === 'downloading' || u.state === 'restarting') return [200, { ok: true }];
     Object.assign(u, { state: 'downloading', error: null, done: 0, total: 0 });
     ctx.bump();

@@ -75,8 +75,12 @@ jobs:
       - name: Python for the exe
         run: npm run fetch-python
 
+      # three.js and vgmstream for the additional data, in pinned versions
+      - name: Tools for the additional data
+        run: npm run fetch-rdmodule-tools
+
       - name: Build
-        run: npm run build-selfbuilt
+        run: npm run build-release
 
       # the version's section of CHANGELOG.md becomes the top of the release notes; a tag needs one
       - name: Changes in this version
@@ -141,12 +145,12 @@ jobs:
               echo "## Download"
               echo
             fi
-            echo "Already have the tracker with its own window? It offers the update itself. Otherwise:"
+            echo "Already have the tracker? It offers the update itself. Otherwise:"
             echo
             # one paragraph: release notes show a line break for each newline
             printf '%s' "Download **RumbleTracker-${version}-win-x64.zip**, extract it anywhere and run **RumbleTracker.exe** "
             printf '%s' "(Windows 10/11, 64-bit). Windows may show \"Windows protected your PC\" the first time: click **More info**, "
-            echo "then **Run anyway**. The first start downloads the game data (about 5 MB)."
+            echo "then **Run anyway**. The first start reads the game data from your game install, which takes about a minute."
             echo
             echo "See the [player guide](https://github.com/razingo/rumble-tracker-ind/blob/main/docs/INSTRUCTIONS.md)."
             echo

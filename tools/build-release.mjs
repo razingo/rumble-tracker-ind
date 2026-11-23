@@ -6,17 +6,15 @@
 //                                         in THIRD-PARTY-NOTICES
 //   SHA256SUMS.txt                        checksums of the zip and the exe
 //
-// Only what APP_FILES lists is bundled. With --self-build the game-data builder (tools/gamedata) goes in too, with its
-// own Python (npm run fetch-python): that exe reads its game data from the game install at its start and never
-// downloads the published data pack.
+// Only what APP_FILES lists is bundled. No game data is: the exe reads it from the game install, with the builder in
+// tools/gamedata and its own Python (npm run fetch-python).
 import { readFile, writeFile, mkdir, rm, readdir, stat, copyFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { deflateRawSync, deflateSync, crc32 } from 'node:zlib';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { sha256 } from '../server/datapack/datapack.mjs';
+import { sha256 } from '../server/update/appupdate.mjs';
 import { POWERSHELL } from '../server/system.mjs';
-import { PACK_PUBLIC_KEYS } from '../server/datapack/pack-keys.mjs';
 import { APP_NAME, EXE_NAME, REPO } from '../web/scripts/lib/constants.js';
 import { megabytes } from '../web/scripts/lib/format.js';
 
@@ -36,9 +34,6 @@ const fail = (msg) => {
 if (process.platform !== 'win32') fail('build on Windows (the exe is made from this Node.js binary).');
 const [major, minor] = process.versions.node.split('.').map(Number);
 if (major < 25 || (major === 25 && minor < 5)) fail(`needs Node.js 25.5 or newer for --build-sea (this is ${process.versions.node}).`);
-if (!PACK_PUBLIC_KEYS.some((k) => k.includes('BEGIN PUBLIC KEY'))) {
-  fail('server/datapack/pack-keys.mjs has no data pack key, so the release would never accept a data pack.');
-}
 // In GitHub Actions, players' issues and updates must point at the repository that builds the release.
 if (process.env.GITHUB_REPOSITORY && process.env.GITHUB_REPOSITORY !== REPO) {
   fail(`REPO in web/scripts/lib/constants.js is ${REPO}, but this build runs in ${process.env.GITHUB_REPOSITORY}.`);
@@ -61,7 +56,7 @@ for (const file of [...WEBVIEW2_LIBS, 'LICENSE.txt', 'NOTICE.txt']) {
 }
 
 // The app's files
-// [folder, allowed extensions (null: every file)]. Game data isn't bundled, as the exe downloads it on first start.
+// [folder, allowed extensions (null: every file)]
 const APP_FILES = [
   ['server', ['.mjs']],
   ['web', ['.html', '.js', '.css', '.ico', '.woff2', '.txt']],
@@ -71,8 +66,9 @@ const APP_FILES = [
   ['desktop/uninstall.ps1', []],
   ...WEBVIEW2_LIBS.map((lib) => [`desktop/webview2/${lib}`, []]),
 ];
-// (its working folder, tools/gamedata/work, has no place in the exe; of its Python every file goes in)
-if (process.argv.includes('--self-build')) {
+// The game-data builder (its working folder, tools/gamedata/work, has no place in the exe; of its Python every file
+// goes in)
+{
   try {
     await stat(path.join(ROOT, 'tools', 'gamedata', 'python', 'python.exe'));
   } catch {
@@ -82,6 +78,13 @@ if (process.argv.includes('--self-build')) {
     if (e.name === 'python') APP_FILES.push(['tools/gamedata/python', null]);
     else if (e.name !== 'work') APP_FILES.push([`tools/gamedata/${e.name}`, ['.mjs', '.py', '.json']]);
   }
+  // the rdmodule, and what extracts its additional data (three.js, vgmstream: npm run fetch-rdmodule-tools)
+  try {
+    await stat(path.join(ROOT, 'tools', 'rdmodule', 'vendor', 'vgmstream', 'vgmstream-cli.exe'));
+  } catch {
+    fail('tools/rdmodule/vendor is missing: run  npm run fetch-rdmodule-tools  first.');
+  }
+  APP_FILES.push(['rdmodule', null], ['tools/rdmodule', null], ['desktop/render.ps1', []]);
 }
 async function walk(rel, exts) {
   const abs = path.join(ROOT, rel);
@@ -89,6 +92,7 @@ async function walk(rel, exts) {
   const out = [];
   for (const e of await readdir(abs, { withFileTypes: true })) {
     const r = `${rel}/${e.name}`;
+    if (e.name === '__pycache__') continue; // Python's own leftovers
     if (e.isDirectory()) out.push(...await walk(r, exts));
     else if (!exts || exts.includes(path.extname(e.name).toLowerCase())) out.push(r);
     else console.log(`  left out: ${r}`);
@@ -99,7 +103,11 @@ const files = [];
 for (const [rel, exts] of APP_FILES) for (const r of await walk(rel, exts)) files.push([r, await readFile(path.join(ROOT, r))]);
 files.sort((a, b) => a[0].localeCompare(b[0]));
 // Minimal package.json (version) and the launcher's import helper.
-files.push(['package.json', Buffer.from(JSON.stringify({ name: pkg.name, version, private: true, type: 'module' }, null, 2) + '\n')]);
+// (official: built by this repository's release workflow. Only such an exe replaces itself with a newer release; one
+// built by hand is told about it and left as it is.)
+const official = process.env.GITHUB_ACTIONS === 'true' && process.env.GITHUB_REPOSITORY === REPO;
+files.push(['package.json', Buffer.from(JSON.stringify({ name: pkg.name, version, private: true, type: 'module',
+  ...(official ? { official: true } : {}) }, null, 2) + '\n')]);
 files.push(['import.cjs', Buffer.from("// Loaded by the exe's launcher: a single executable can only import ES "
   + "modules through a file on disk.\nmodule.exports = (url) => import(url);\n")]);
 

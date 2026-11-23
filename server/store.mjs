@@ -6,7 +6,7 @@ import path from 'node:path';
 const queues = new Map(); // path -> promise of the last queued write
 
 /** The current time for a file name, as in 2026-11-20T01-30-00-000Z. */
-export const fileTimestamp = () => new Date().toISOString().replace(/[:.]/g, '-');
+const fileTimestamp = () => new Date().toISOString().replace(/[:.]/g, '-');
 let tmpCounter = 0;
 
 /**

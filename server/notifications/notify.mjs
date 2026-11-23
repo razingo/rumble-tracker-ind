@@ -86,12 +86,9 @@ const isNew = (c, t) => c.now >= t && c.now - t < GRACE;
 // notification is about (a mini, an event, an account) when several are combined into one.
 
 function appUpdate(c, add) {
-  if (c.appUpdateNeeded) {
-    add('appUpdate', 'app-update-needed', 'Tracker update needed',
-      `New game data needs a newer version of ${APP_NAME}. Download it from GitHub Releases.`);
-  } else if (c.newVersion) {
+  if (c.newVersion) {
     add('appUpdate', `app-version-${c.newVersion}`, 'Tracker update available',
-      `${APP_NAME} ${c.newVersion} is available. Open the tracker to install it.`);
+      `${APP_NAME} ${c.newVersion} is available. Open the tracker to get it.`);
   }
 }
 
@@ -209,7 +206,7 @@ const CHECKS = { appUpdate, freeGift, gridRefresh, dailyReset, events, rotation,
 /**
  * Notifications due now: [{ type, key, title, body, about? }]. The keys make each one go out once.
  * ctx = { now, accounts: [{ id, label, shop, currencies, units, pvp }], events, store, rules, pvp, plans, settings,
- *   multi, appUpdateNeeded, newVersion }.
+ *   multi, newVersion }.
  */
 export function dueNotifications(ctx) {
   const { settings } = ctx;

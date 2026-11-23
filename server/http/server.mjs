@@ -9,7 +9,7 @@ import { createRoutes } from './routes.mjs';
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon',
-  '.woff2': 'font/woff2', '.txt': 'text/plain; charset=utf-8',
+  '.woff2': 'font/woff2', '.txt': 'text/plain; charset=utf-8', '.wav': 'audio/wav',
 };
 
 // The content security policy allows only the page's own scripts (no inline scripts, handlers or eval), and
@@ -33,13 +33,16 @@ function send(res, status, body, headers = {}) {
   res.end(typeof body === 'string' ? body : JSON.stringify(body));
 }
 
-async function serveFile(res, base, rel) {
+// The rdmodule plays its sounds from memory (blob: addresses), which the tracker's own page never does.
+const GAME_HEADERS = { 'content-security-policy': `${SECURITY_HEADERS['content-security-policy']}; media-src 'self' blob:` };
+
+async function serveFile(res, base, rel, headers = {}) {
   const file = path.resolve(base, `.${rel}`);
   if (!file.startsWith(base + path.sep)) return send(res, 403, { error: 'That file is outside the tracker\'s folders.' });
   try {
     const body = await readFile(file);
     res.writeHead(200, { ...SECURITY_HEADERS, 'content-type': TYPES[path.extname(file)] || 'application/octet-stream',
-      'cache-control': 'no-cache' });
+      'cache-control': 'no-cache', ...headers });
     res.end(body);
   } catch {
     send(res, 404, { error: 'The tracker has no such file.' });
@@ -66,16 +69,25 @@ export function createHttpServer(ctx, deps) {
         return send(res, status, body, headers);
       }
       if (req.method !== 'GET') return send(res, 405, { error: 'The tracker doesn\'t accept this kind of request here.' });
+      // The rdmodule (server/rdmodule.mjs): its code, and what was extracted for it. Its menu art is asked for
+      // beside the game data, as /static/ui/.
+      const game = deps.rdmodule?.folders;
+      if (game && p.startsWith('/rdmodule/')) {
+        const rel = p.slice('/rdmodule'.length);
+        if (/^\/(sprites|sounds)\//.test(rel)) return serveFile(res, game.extracted, rel, GAME_HEADERS);
+        return serveFile(res, game.game, rel === '/' ? '/index.html' : rel, GAME_HEADERS);
+      }
+      if (game && p.startsWith('/static/ui/')) return serveFile(res, game.extracted, p.slice('/static'.length), GAME_HEADERS);
       if (p.startsWith('/static/')) {
-        // An installed data pack takes precedence.
+        // What the tracker read from the game comes first, then what npm run build-gamedata left in gamedata/.
         const rel = p.slice('/static'.length);
-        const inPack = path.resolve(GAMEDATA, `.${rel}`);
-        if (inPack.startsWith(GAMEDATA + path.sep)) {
+        const read = path.resolve(GAMEDATA, `.${rel}`);
+        if (read.startsWith(GAMEDATA + path.sep)) {
           try {
-            await stat(inPack);
+            await stat(read);
             return serveFile(res, GAMEDATA, rel);
           } catch {
-            // not in the pack
+            // not there
           }
         }
         return serveFile(res, STATIC, rel);

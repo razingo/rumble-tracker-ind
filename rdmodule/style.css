@@ -1,0 +1,32 @@
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #1b1f2e;
+  overflow: hidden;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: Nunito, system-ui, "Segoe UI", sans-serif;
+}
+
+canvas {
+  display: block;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+
+.foot {
+  margin: 2px 0 0;
+  line-height: 16px;
+  text-align: center;
+  font-size: 11px;
+  color: #6b7390;
+  pointer-events: none;
+}

@@ -4,7 +4,7 @@ import path from 'node:path';
 import { writeFile, readdir } from 'node:fs/promises';
 import { createUpdater } from '../server/update/updater.mjs';
 import { host } from '../server/host.mjs';
-import { createPackChecker } from '../server/datapack/checker.mjs';
+import { createUpdateChecker } from '../server/update/checker.mjs';
 import { testContext } from './helpers.mjs';
 
 const app = { version: '9.9.9', zip: 'RumbleTracker-9.9.9-win-x64.zip', zipSha256: 'a'.repeat(64), exeSha256: 'b'.repeat(64) };
@@ -12,7 +12,8 @@ const until = async (fn) => { for (let i = 0; i < 100 && !fn(); i++) await new P
 
 test('the updater downloads, has the launcher install, then stops', async () => {
   const { ctx, cleanup } = await testContext({ standalone: true });
-  Object.assign(ctx.dataPack, { newVersion: '9.9.9', latestApp: app });
+  ctx.official = true;
+  Object.assign(ctx.appUpdate, { newVersion: '9.9.9', latestApp: app });
   const stops = [];
   const download = async (a, dir, { onProgress }) => {
     onProgress(5, 10);
@@ -35,7 +36,9 @@ test('the updater shows a failed install and refuses when there is nothing to in
   const { ctx, cleanup } = await testContext({ standalone: true });
   const start = createUpdater(ctx, { shutdown: () => assert.fail('must not stop'), download: async () => 'x.exe', applyDelay: 0 });
   assert.equal((await start())[0], 409);
-  Object.assign(ctx.dataPack, { newVersion: '9.9.9', latestApp: app });
+  Object.assign(ctx.appUpdate, { newVersion: '9.9.9', latestApp: app });
+  assert.equal((await start())[0], 409, 'an exe built by hand does not replace itself');
+  ctx.official = true;
   host.attach({ options: {}, applyUpdate: async () => { throw new Error('The program file could not be replaced (EPERM).'); } });
   await start();
   await until(() => ctx.appUpdate.state === 'failed');
@@ -44,24 +47,44 @@ test('the updater shows a failed install and refuses when there is nothing to in
   await cleanup();
 });
 
-test('data pack checks run one at a time and announce a newer app', async () => {
+test('checks for a new version run one at a time and announce a newer one once', async () => {
   const { ctx, cleanup } = await testContext();
-  ctx.dataPack.url = 'https://example.invalid/';
-  let calls = 0, news = 0;
-  const update = async () => {
+  let calls = 0, news = 0, found = { version: '9.9.9', app };
+  const latest = async () => {
     calls++;
     await new Promise((r) => setTimeout(r, 30));
-    return { updated: false, reason: 'up to date', latestAppVersion: '9.9.9', latestApp: app };
+    return found;
   };
-  const check = createPackChecker(ctx, { update, onNews: () => news++ });
+  const check = createUpdateChecker(ctx, { latest, onNews: () => news++ });
   await Promise.all([check(), check(), check()]);
   assert.equal(calls, 1);
-  assert.equal(ctx.dataPack.newVersion, '9.9.9');
-  assert.deepEqual(ctx.dataPack.latestApp, app);
+  assert.equal(ctx.appUpdate.newVersion, '9.9.9');
+  assert.deepEqual(ctx.appUpdate.latestApp, app);
   assert.equal(news, 1);
   await check();
   assert.equal(calls, 2);
   assert.equal(news, 1); // already announced
+  // this version or an older one is no news
+  found = { version: ctx.appVersion, app: null };
+  await check();
+  assert.equal(ctx.appUpdate.newVersion, null);
+  await cleanup();
+});
+
+test('no check for a new version when that is turned off, or GitHub does not answer', async () => {
+  const { ctx, cleanup } = await testContext();
+  ctx.appUpdate.newVersion = '9.9.9';
+  ctx.user.appSettings.checkUpdates = false;
+  let calls = 0;
+  const check = createUpdateChecker(ctx, { latest: async () => { calls++; throw new Error('offline'); } });
+  await check();
+  assert.equal(calls, 0);
+  assert.equal(ctx.appUpdate.newVersion, null, 'what was found before is forgotten');
+  ctx.user.appSettings.checkUpdates = true;
+  await check();
+  assert.equal(calls, 1);
+  assert.equal(ctx.appUpdate.checkError, 'offline');
+  assert.equal(ctx.errorLog.list().length, 0, 'being offline is not a problem to report');
   await cleanup();
 });
 
@@ -75,7 +98,7 @@ test('a damaged user file is moved aside and reported; the rest loads', async ()
   await cleanup();
 });
 
-test('damaged game tables throw, so the caller can set the pack aside', async () => {
+test('damaged game tables throw, so the caller can have them read again', async () => {
   const { ctx, cleanup } = await testContext();
   await writeFile(path.join(ctx.paths.STATIC, 'rules.json'), '{nope');
   await assert.rejects(ctx.tables.load(), /rules\.json is not valid JSON/);

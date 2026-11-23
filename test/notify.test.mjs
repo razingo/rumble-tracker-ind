@@ -10,17 +10,13 @@ test('a new tracker version is announced once', () => {
   assert.deepEqual(keys(ctx({ newVersion: '0.2.0' })), ['app-version-0.2.0']);
 });
 
-test('"update needed" replaces "version available"', () => {
-  assert.deepEqual(keys(ctx({ newVersion: '0.2.0', appUpdateNeeded: true })), ['app-update-needed']);
-});
-
 test('no update notifications when the type or all notifications are off', () => {
   const s = defaultSettings();
   s.types.appUpdate.on = false;
   assert.deepEqual(keys(ctx({ newVersion: '0.2.0', settings: s })), []);
   const all = defaultSettings();
   all.enabled = false;
-  assert.deepEqual(keys(ctx({ appUpdateNeeded: true, settings: all })), []);
+  assert.deepEqual(keys(ctx({ newVersion: '0.2.0', settings: all })), []);
 });
 
 test('notification settings drop unknown types and fill in missing ones', () => {

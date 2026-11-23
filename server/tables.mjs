@@ -1,14 +1,14 @@
-// The game tables: rules, minis, events, shop and PvP data. An installed data pack (<data>/gamedata) is used before
-// gamedata/, which npm run fetch-gamedata fills when running from source.
-import { stat, rename } from 'node:fs/promises';
+// The game tables: rules, minis, events, shop and PvP data, read from the game install (gamedata.mjs) into
+// <data>/gamedata, or by npm run build-gamedata into gamedata/, which is used where the first has no copy.
+import { stat } from 'node:fs/promises';
 import path from 'node:path';
-import { readJson, fileTimestamp } from './store.mjs';
+import { readJson } from './store.mjs';
 
 export function createTables({ GAMEDATA, STATIC }) {
   const t = {
     rules: null, minis: [], slugs: new Set(), builtinUnits: {}, gameData: null, events: null, store: null, pvp: null,
 
-    /** The file to use for a game-data path: the pack's copy if it has one. */
+    /** The file to use for a game-data path. */
     async staticPath(rel) {
       const p = path.join(GAMEDATA, rel);
       try {
@@ -19,7 +19,7 @@ export function createTables({ GAMEDATA, STATIC }) {
       }
     },
 
-    /** Whether any game data is installed, from npm run fetch-gamedata or the exe's first start. */
+    /** Whether there is any game data. */
     async hasGameData() {
       for (const dir of [GAMEDATA, STATIC]) {
         try {
@@ -31,9 +31,6 @@ export function createTables({ GAMEDATA, STATIC }) {
       }
       return false;
     },
-
-    /** Whether the tables come from an installed pack. */
-    async fromPack() { return (await t.staticPath('gamedata.json')).startsWith(GAMEDATA); },
 
     /** (Re)loads every table. Throws on missing or damaged required files. */
     async load() {
@@ -50,15 +47,6 @@ export function createTables({ GAMEDATA, STATIC }) {
       };
       Object.assign(t, next, { slugs: new Set(next.minis.map((m) => m.slug)) });
     },
-
-    /** Moves a damaged installed pack aside (to <dir>.damaged-<time>); returns the folder name it was moved to. */
-    async setPackAside() {
-      const moved = `${GAMEDATA}.damaged-${fileTimestamp()}`;
-      await rename(GAMEDATA, moved);
-      return path.basename(moved);
-    },
-
-    async packInstalled() { return !!(await stat(path.join(GAMEDATA, 'gamedata.json')).catch(() => null)); },
   };
   return t;
 }

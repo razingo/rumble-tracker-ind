@@ -63,9 +63,8 @@ export function diagnostics({ appVersion, gameBuild, data, accounts, errors, pag
   const lines = [
     `App version: ${appVersion || 'unknown'}`,
     `Game build (from the save): ${gameBuild || 'unknown'}`,
-    `Game data: build ${data?.dataBuild || 'unknown'}, version ${data?.dataVersion || 'unknown'}${data?.pack
-      ? ' (downloaded pack)' : ' (from gamedata/)'}${data?.stale ? ', older than the game' : ''}`,
-    `Data pack check: ${data?.packResult || data?.packError || 'not configured'}`,
+    `Game data: build ${data?.dataBuild || 'unknown'}, read ${data?.dataVersion || 'unknown'}${data?.stale
+      ? ', older than the game' : ''}${data?.readError ? ` (last read failed: ${clean(data.readError)})` : ''}`,
     `Accounts found: ${accounts ?? 'unknown'}`,
     `System: ${os.type()} ${os.release()} ${os.arch()}, Node ${process.versions.node}${host.attached ? ' (standalone exe)' : ''}`,
     ...(page ? [`Page: ${clean(page).slice(0, 200)}`] : []),

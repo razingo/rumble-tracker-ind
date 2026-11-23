@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Effects viewer</title>
+<style>
+  body { margin: 0; background: #16171b; color: #ddd; font: 13px system-ui, sans-serif; overflow: hidden; }
+  #ui { position: fixed; top: 8px; left: 8px; right: 8px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; z-index: 1; }
+  select, button, label { font: inherit; background: #2a2c33; color: #ddd; border: 1px solid #444; border-radius: 4px; padding: 3px 6px; }
+  select#effect { max-width: 560px; }
+  #info { position: fixed; bottom: 8px; left: 8px; right: 8px; opacity: .75; white-space: pre-wrap; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="ui">
+  <select id="unit"></select><select id="effect"></select>
+  <button id="play">Play</button>
+  <label><input type="checkbox" id="loop" checked> Loop</label>
+  <label><input type="checkbox" id="sound"> Sound</label>
+  <select id="speed"><option value="0.25">0.25x</option><option value="0.5">0.5x</option><option value="1" selected>1x</option></select>
+</div>
+<div id="info"></div>
+<script type="module">
+// Plays the effects exported by gamedata/export_effects.py (research/effects): each prefab's particle systems are
+// simulated from their extracted settings, its animation clips and Timeline start times are applied, and the ability's
+// sounds play with it. An approximation of the game's VFX shader: a grey texture coloured through the material's
+// ramp (_MatColor1-5), masked by _MaskTex, additive unless the material blends by alpha.
+// ?unit=<key>&prefab=<name>&t=<seconds> shows one moment (paused) for checks.
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+
+const params = new URLSearchParams(location.search);
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(devicePixelRatio); renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x202228);
+scene.add(new THREE.GridHelper(20, 20, 0x4a4f5a, 0x30343c));
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.05, 500);
+camera.position.set(7, 6, 10);
+const controls = new OrbitControls(camera, renderer.domElement); controls.target.set(0, 1, 0); controls.update();
+const ui = (id) => document.getElementById(id);
+
+const index = await (await fetch('index.json')).json();
+for (const k of Object.keys(index.units)) ui('unit').add(new Option(k, k));
+
+// ---- curves ----------------------------------------------------------------------------------------------------
+function curveAt(keys, t) {
+  if (!keys || !keys.length) return 1;
+  if (t <= keys[0][0]) return keys[0][1];
+  for (let i = 1; i < keys.length; i++) if (t <= keys[i][0]) {
+    const [t0, v0] = keys[i - 1], [t1, v1] = keys[i];
+    return v0 + (v1 - v0) * ((t - t0) / Math.max(t1 - t0, 1e-6));
+  }
+  return keys[keys.length - 1][1];
+}
+// MinMaxCurve: {const} | {curve, mul} | {minCurve, maxCurve, mul} | {min, max}; t = normalized time, r = random 0..1
+function mm(v, t = 0, r = Math.random()) {
+  if (!v) return 0;
+  if ('const' in v) return v.const;
+  if ('curve' in v) return curveAt(v.curve, t) * v.mul;
+  if ('minCurve' in v) return (curveAt(v.minCurve, t) + (curveAt(v.maxCurve, t) - curveAt(v.minCurve, t)) * r) * v.mul;
+  if ('min' in v) return v.min + (v.max - v.min) * r;
+  return 0;
+}
+function gradAt(g, t) {
+  const c = [1, 1, 1], a = g.alphas?.length ? curveAt(g.alphas.map((k) => [k[0], k[1]]), t) : 1;
+  if (g.colors?.length) for (let i = 0; i < 3; i++) c[i] = curveAt(g.colors.map((k) => [k[0], k[i + 1]]), t);
+  return [...c, a];
+}
+// MinMaxGradient: {color} | {gradient} | {min, max} | {minGradient, maxGradient} | {randomColor}
+function mmColor(v, t, r = Math.random()) {
+  if (!v) return [1, 1, 1, 1];
+  if (v.color) return v.color;
+  if (v.gradient) return gradAt(v.gradient, t);
+  if (v.min) return v.min.map((x, i) => x + (v.max[i] - x) * r);
+  if (v.minGradient) { const a = gradAt(v.minGradient, t), b = gradAt(v.maxGradient, t); return a.map((x, i) => x + (b[i] - x) * r); }
+  if (v.randomColor) return gradAt(v.randomColor, r);
+  return [1, 1, 1, 1];
+}
+
+// ---- materials --------------------------------------------------------------------------------------------------
+const texLoader = new THREE.TextureLoader(), texCache = {};
+const white = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1); white.needsUpdate = true;
+function tex(name) {
+  if (!name) return white;
+  if (!texCache[name]) { const t = texLoader.load('textures/' + name); t.wrapS = t.wrapT = THREE.RepeatWrapping; texCache[name] = t; }
+  return texCache[name];
+}
+const VERT_COMMON = /* glsl */`
+  attribute vec3 iOffset; attribute vec3 iSize; attribute vec3 iRot; attribute vec4 iColor; attribute float iFrame; attribute vec3 iVel;
+  uniform vec2 uTiles; uniform int uMode;
+  varying vec2 vUv; varying vec4 vColor;
+  mat3 rotXYZ(vec3 r) {
+    float cx = cos(r.x), sx = sin(r.x), cy = cos(r.y), sy = sin(r.y), cz = cos(r.z), sz = sin(r.z);
+    return mat3(cy*cz, cy*sz, -sy,  sx*sy*cz - cx*sz, sx*sy*sz + cx*cz, sx*cy,  cx*sy*cz + sx*sz, cx*sy*sz - sx*cz, cx*cy);
+  }
+  vec2 flip(vec2 uv) {
+    float f = floor(iFrame + 0.5), col = mod(f, uTiles.x), row = uTiles.y - 1.0 - floor(f / uTiles.x);
+    return (uv + vec2(col, row)) / uTiles;
+  }`;
+const PARTICLE_VERT = VERT_COMMON + /* glsl */`
+  void main() {
+    vUv = flip(uv); vColor = iColor;
+    vec2 c = position.xy; float s = sin(iRot.z), co = cos(iRot.z);
+    if (uMode == 4) {  // mesh
+      vec3 p = rotXYZ(iRot) * (position * iSize);
+      gl_Position = projectionMatrix * viewMatrix * vec4(iOffset + p, 1.0); return;
+    }
+    vec2 rc = vec2(c.x * co - c.y * s, c.x * s + c.y * co) * iSize.xy;
+    if (uMode == 2) {  // horizontal: flat on the ground
+      gl_Position = projectionMatrix * viewMatrix * vec4(iOffset + vec3(rc.x, 0.0, rc.y), 1.0); return;
+    }
+    if (uMode == 3) {  // vertical: faces the camera, stays upright
+      vec3 right = normalize(vec3(viewMatrix[0][0], 0.0, viewMatrix[2][0]));
+      gl_Position = projectionMatrix * viewMatrix * vec4(iOffset + right * rc.x + vec3(0.0, rc.y, 0.0), 1.0); return;
+    }
+    vec4 mv = viewMatrix * vec4(iOffset, 1.0);
+    if (uMode == 1 && length(iVel) > 1e-4) {  // stretched along the velocity
+      vec3 v = (viewMatrix * vec4(iVel, 0.0)).xyz; vec2 d = normalize(v.xy + 1e-5);
+      float len = iSize.x * (1.0 + length(iVel) * 0.15);
+      mv.xy += d * c.y * len + vec2(-d.y, d.x) * c.x * iSize.x;
+    } else mv.xy += rc;
+    gl_Position = projectionMatrix * mv;
+  }`;
+const FRAG = /* glsl */`
+  uniform sampler2D uTex; uniform sampler2D uMask; uniform vec3 uRamp[5]; uniform float uRampOn; uniform float uAlpha; uniform float uDissolve;
+  uniform sampler2D uDissolveTex;
+  varying vec2 vUv; varying vec4 vColor;
+  vec3 ramp(float g) {
+    float x = clamp(1.0 - g, 0.0, 1.0) * 4.0; int i = int(min(floor(x), 3.0)); float f = x - float(i);
+    return mix(uRamp[i], uRamp[i + 1], f);
+  }
+  void main() {
+    vec4 t = texture2D(uTex, vUv); float g = max(t.r, max(t.g, t.b)) * t.a;
+    float m = texture2D(uMask, vUv).r;
+    float a = g * m * vColor.a * uAlpha;
+    // _MaterialDissolve: 1 = fully shown, 0 = gone; pixels go by the dissolve texture (meshes only: -1 = off)
+    if (uDissolve >= 0.0) a *= smoothstep(1.0 - uDissolve - 0.05, 1.0 - uDissolve + 0.05, texture2D(uDissolveTex, vUv).r);
+    vec3 col = (uRampOn > 0.5 ? ramp(g) : t.rgb) * vColor.rgb;
+    gl_FragColor = vec4(col * a, a);
+  }`;
+function vfxMaterial(mat, mode, tiles = [1, 1]) {
+  const m = mat || { textures: {}, colors: {}, floats: {} };
+  const ramp = [1, 2, 3, 4, 5].map((i) => new THREE.Color(...(m.colors['_MatColor' + i] || [1, 1, 1]).slice(0, 3)));
+  const rampOn = m.colors._MatColor1 && ramp.some((c) => c.r + c.g + c.b < 2.9) ? 1 : 0;
+  const alphaBlend = m.floats._BlendMode === 1 || m.shader === 'Gryphon/VFXOpaque';
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uTex: { value: tex(m.textures._EmissiveTex || m.textures._BaseMap || m.textures._MainTex) },
+      uMask: { value: tex(m.textures._MaskTex) }, uDissolveTex: { value: tex(m.textures._DissolveTex) },
+      uRamp: { value: ramp }, uRampOn: { value: rampOn }, uAlpha: { value: m.floats._DissolveAlphaMult ?? 1 },
+      uDissolve: { value: mode === 5 ? (m.floats._MaterialDissolve ?? 1) : -1 },
+      uTiles: { value: new THREE.Vector2(...tiles) }, uMode: { value: mode },
+    },
+    vertexShader: PARTICLE_VERT, fragmentShader: FRAG, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+    blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: alphaBlend ? THREE.OneMinusSrcAlphaFactor : THREE.OneFactor,
+  });
+}
+
+// ---- Unity -> three (x mirrored, like the other exports) -----------------------------------------------------------
+const v3 = (p) => new THREE.Vector3(-p[0], p[1], p[2]);
+const qt = (q) => new THREE.Quaternion(q[0], -q[1], -q[2], q[3]);
+const eulerQ = (e) => {  // Unity euler degrees, applied Z, X, Y
+  const r = THREE.MathUtils.degToRad, q = new THREE.Quaternion();
+  q.setFromEuler(new THREE.Euler(r(e[0]), r(-e[1]), r(-e[2]), 'YXZ')); return q;
+};
+
+// ---- particle systems -------------------------------------------------------------------------------------------
+const objLoader = new OBJLoader(), meshCache = {};
+async function meshGeometry(name) {
+  if (!meshCache[name]) meshCache[name] = objLoader.loadAsync('meshes/' + name).then((o) => {
+    let g = null; o.traverse((c) => { if (c.isMesh && !g) g = c.geometry; }); return g;
+  }).catch(() => null);
+  return meshCache[name];
+}
+const MODES = { billboard: 0, stretched: 1, horizontal: 2, vertical: 3, mesh: 4 };
+
+class Emitter {
+  constructor(node, obj, startAt) {
+    this.ps = node.particles; this.obj = obj; this.startAt = startAt;
+    const r = node.renderer || {}; this.mode = MODES[r.mode] ?? 0;
+    const uv = this.ps.UVModule; this.tiles = uv ? [uv.tilesX || 1, uv.tilesY || 1] : [1, 1];
+    this.max = Math.min(this.ps.InitialModule.maxNumParticles || 1000, 2000);
+    this.parts = []; this.emitAcc = 0; this.burstsDone = new Set(); this.ready = this.build(r);
+  }
+  async build(r) {
+    let geo = new THREE.PlaneGeometry(1, 1);
+    if (this.mode === 4) geo = (r.mesh && await meshGeometry(r.mesh)) || new THREE.SphereGeometry(0.5, 8, 6);
+    const ig = new THREE.InstancedBufferGeometry().copy(geo); ig.instanceCount = 0;
+    const attr = (name, n) => { const a = new THREE.InstancedBufferAttribute(new Float32Array(this.max * n), n); a.setUsage(THREE.DynamicDrawUsage); ig.setAttribute(name, a); return a; };
+    this.a = { off: attr('iOffset', 3), size: attr('iSize', 3), rot: attr('iRot', 3), color: attr('iColor', 4), frame: attr('iFrame', 1), vel: attr('iVel', 3) };
+    this.mesh = new THREE.Mesh(ig, vfxMaterial(r.materials?.[0], this.mode, this.tiles)); this.mesh.frustumCulled = false;
+    scene.add(this.mesh);
+  }
+  reset() { this.parts = []; this.emitAcc = 0; this.burstsDone.clear(); }
+  spawn(n, sysT) {
+    const ps = this.ps, init = ps.InitialModule, shape = ps.ShapeModule, L = ps.length || 1, nt = (sysT % L) / L;
+    const world = this.obj.matrixWorld;
+    for (let i = 0; i < n && this.parts.length < this.max; i++) {
+      const p = new THREE.Vector3(), d = new THREE.Vector3(0, 0, 1);
+      if (shape) shapePoint(shape, p, d);
+      const speed = mm(init.startSpeed, nt);
+      const vel = d.multiplyScalar(speed);
+      const local = !ps.space;  // 0 = local simulation space
+      const pos = new THREE.Vector3(-p.x, p.y, p.z), v = new THREE.Vector3(-vel.x, vel.y, vel.z);
+      if (!local) { pos.applyMatrix4(world); v.transformDirection(world).multiplyScalar(vel.length()); }
+      const size = mm(init.startSize, nt), r = Math.random();
+      this.parts.push({
+        pos, vel: v, local, age: 0, life: Math.max(mm(init.startLifetime, nt), 0.01), r, r2: Math.random(),
+        size: init.size3D ? [mm(init.startSize, nt, r), mm(init.startSizeY, nt, r), mm(init.startSizeZ, nt, r)] : [size, size, size],
+        rot: [init.rotation3D ? mm(init.startRotationX, nt) : 0, init.rotation3D ? mm(init.startRotationY, nt) : 0, -mm(init.startRotation, nt)],
+        color: mmColor(init.startColor, nt),
+        frame0: ps.UVModule ? mm(ps.UVModule.startFrame, 0) : 0,
+      });
+    }
+  }
+  update(t, dt) {
+    if (!this.mesh) return;
+    const ps = this.ps, L = ps.length || 1, sysT = t - this.startAt;
+    if (sysT >= 0 && (ps.looping || sysT <= L) && this.obj.visible) {
+      const nt = (sysT % L) / L, em = ps.EmissionModule;
+      if (em) {
+        this.emitAcc += mm(em.rateOverTime, nt) * dt;
+        const n = Math.floor(this.emitAcc); this.emitAcc -= n; if (n) this.spawn(n, sysT);
+        const cycleT = ps.looping ? sysT % L : sysT, cycle = ps.looping ? Math.floor(sysT / L) : 0;
+        (em.m_Bursts || []).forEach((b, bi) => {
+          const reps = b.cycleCount || 1;
+          for (let k = 0; k < reps; k++) {
+            const bt = b.time + k * (b.repeatInterval || 0), key = `${cycle}:${bi}:${k}`;
+            if (cycleT >= bt && !this.burstsDone.has(key) && Math.random() <= (b.probability ?? 1)) {
+              this.burstsDone.add(key); this.spawn(Math.round(mm(b.countCurve, 0)), sysT);
+            }
+          }
+        });
+      }
+    }
+    const g = (ps.InitialModule.gravityModifier ? mm(ps.InitialModule.gravityModifier, 0) : 0) * 9.81;
+    const out = []; const a = this.a; let n = 0;
+    const world = this.obj.matrixWorld, wp = new THREE.Vector3(), wv = new THREE.Vector3();
+    for (const p of this.parts) {
+      p.age += dt; if (p.age >= p.life) continue;
+      const u = p.age / p.life;
+      const vm = ps.VelocityModule;
+      const extra = vm ? new THREE.Vector3(-mm(vm.x, u, p.r), mm(vm.y, u, p.r), mm(vm.z, u, p.r)) : null;
+      p.vel.y -= g * dt;
+      if (ps.ForceModule) p.vel.add(new THREE.Vector3(-mm(ps.ForceModule.x, u), mm(ps.ForceModule.y, u), mm(ps.ForceModule.z, u)).multiplyScalar(dt));
+      const cl = ps.ClampVelocityModule;
+      if (cl && cl.magnitude) {
+        const lim = mm(cl.magnitude, u, p.r), sp = p.vel.length();
+        if (sp > lim) p.vel.multiplyScalar(1 - (1 - lim / sp) * Math.min(1, (cl.dampen ?? 1) * dt * 30));
+      }
+      if (cl && cl.drag) p.vel.multiplyScalar(Math.max(0, 1 - mm(cl.drag, u) * dt));
+      const step = p.vel.clone(); if (extra) step.add(extra.multiplyScalar(vm.speedModifier ? mm(vm.speedModifier, u) : 1));
+      p.pos.addScaledVector(step, dt);
+      if (ps.RotationModule) p.rot[2] -= mm(ps.RotationModule.curve, u, p.r2) * dt;
+      out.push(p);
+      wp.copy(p.pos); wv.copy(step);
+      if (p.local) { wp.applyMatrix4(world); wv.transformDirection(world).multiplyScalar(step.length()); }
+      const sm = ps.SizeModule ? mm(ps.SizeModule.curve, u, p.r) : 1;
+      const smy = ps.SizeModule?.separateAxes ? mm(ps.SizeModule.y, u, p.r) : sm;
+      const c = ps.ColorModule ? mmColor(ps.ColorModule.gradient, u, p.r) : [1, 1, 1, 1];
+      let frame = 0;
+      if (ps.UVModule) {
+        const total = this.tiles[0] * this.tiles[1], f = mm(ps.UVModule.frameOverTime, (u * (ps.UVModule.cycles || 1)) % 1, p.r);
+        frame = (Math.floor((f <= 1 ? f * total : f) + p.frame0) % total + total) % total;
+      }
+      a.off.setXYZ(n, wp.x, wp.y, wp.z); a.vel.setXYZ(n, wv.x, wv.y, wv.z);
+      a.size.setXYZ(n, p.size[0] * sm, p.size[1] * smy, p.size[2] * sm);
+      a.rot.setXYZ(n, p.rot[0], p.rot[1], p.rot[2]);
+      a.color.setXYZW(n, p.color[0] * c[0], p.color[1] * c[1], p.color[2] * c[2], p.color[3] * c[3]);
+      a.frame.setX(n, frame); n++;
+    }
+    this.parts = out;
+    this.mesh.geometry.instanceCount = n;
+    for (const k in a) a[k].needsUpdate = true;
+  }
+}
+const xyz = (v, def) => (v == null ? def : Array.isArray(v) ? v : [v.x, v.y, v.z]);
+// emit position and direction in the shape's own space (Unity: +Z forward), shape transform applied after
+function shapePoint(s, p, d) {
+  const R = s.radius?.value ?? 1, thick = s.radiusThickness ?? 1, arc = THREE.MathUtils.degToRad(s.arc?.value ?? 360);
+  const rr = () => R * (1 - thick * Math.random()), ang = () => Math.random() * arc;
+  switch (s.type) {
+    case 0: case 1: { d.randomDirection(); p.copy(d).multiplyScalar(s.type === 1 ? R : rr()); break; }
+    case 2: case 3: { d.randomDirection(); d.z = Math.abs(d.z); p.copy(d).multiplyScalar(s.type === 3 ? R : rr()); break; }
+    case 4: case 7: case 8: case 9: {  // cone along +Z
+      const a = ang(), r = rr(), cone = THREE.MathUtils.degToRad(s.angle ?? 25);
+      p.set(Math.cos(a) * r, Math.sin(a) * r, 0);
+      const spread = R > 0 ? r / R : Math.random();
+      d.set(Math.cos(a) * Math.sin(cone) * spread, Math.sin(a) * Math.sin(cone) * spread, Math.cos(cone * spread)).normalize();
+      if (s.type >= 8) p.addScaledVector(d, Math.random() * (s.length ?? 1));
+      break;
+    }
+    case 5: case 15: case 16: { const sc = xyz(s.m_Scale, [1, 1, 1]); p.set((Math.random() - .5) * sc[0], (Math.random() - .5) * sc[1], (Math.random() - .5) * sc[2]); d.set(0, 0, 1); break; }
+    case 10: case 11: { const a = ang(), r = s.type === 11 ? R : rr(); p.set(Math.cos(a) * r, Math.sin(a) * r, 0); d.set(Math.cos(a), Math.sin(a), 0); break; }
+    case 12: { p.set((Math.random() - .5) * 2 * R, 0, 0); d.set(0, 1, 0); break; }
+    case 17: {  // donut
+      const a = ang(), b = Math.random() * Math.PI * 2, dr = (s.donutRadius ?? 0.2) * Math.random();
+      const c = new THREE.Vector3(Math.cos(a) * R, Math.sin(a) * R, 0);
+      d.set(Math.cos(a) * Math.cos(b), Math.sin(a) * Math.cos(b), Math.sin(b)); p.copy(c).addScaledVector(d, dr); break;
+    }
+    case 18: { const sc = xyz(s.m_Scale, [1, 1, 1]); p.set((Math.random() - .5) * sc[0], (Math.random() - .5) * sc[1], 0); d.set(0, 0, 1); break; }
+    default: d.set(0, 0, 1);
+  }
+  if (s.randomDirectionAmount) d.lerp(new THREE.Vector3().randomDirection(), s.randomDirectionAmount).normalize();
+  if (s.sphericalDirectionAmount) d.lerp(p.clone().normalize(), s.sphericalDirectionAmount).normalize();
+  const rot = xyz(s.m_Rotation), pos = xyz(s.m_Position);
+  if (rot && (rot[0] || rot[1] || rot[2])) {
+    const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(...rot.map(THREE.MathUtils.degToRad), 'YXZ'));
+    p.applyQuaternion(q); d.applyQuaternion(q);
+  }
+  if (pos) p.add(new THREE.Vector3(...pos));
+}
+
+// ---- effect -----------------------------------------------------------------------------------------------------
+let effect = null, t = 0, paused = false, playing = true;
+async function loadEffect(row) {
+  if (effect) { effect.root.removeFromParent(); for (const e of effect.emitters) { e.mesh?.removeFromParent(); } }
+  const pf = await (await fetch(row.file)).json();
+  const nodes = {}, emitters = [], meshes = [];
+  const starts = {};  // Timeline ControlTrack clip name -> start time
+  let duration = 0;
+  const build = (n, path) => {
+    const o = new THREE.Object3D(); o.name = n.name;
+    if (n.position) o.position.copy(v3(n.position));
+    if (n.rotation) o.quaternion.copy(qt(n.rotation));
+    if (n.scale) o.scale.set(...n.scale);
+    nodes[path] = o; o.userData.base = { p: o.position.clone(), q: o.quaternion.clone(), s: o.scale.clone() };
+    if (n.timeline) for (const tr of n.timeline.tracks || []) for (const c of tr.clips || []) {
+      if (tr.type === 'ControlTrack' && c.name) starts[c.name] = Math.min(starts[c.name] ?? 1e9, c.start);
+      duration = Math.max(duration, c.start + c.duration);
+    }
+    for (const c of n.children || []) o.add(build(c, path ? path + '/' + c.name : c.name));
+    o.userData.node = n;
+    return o;
+  };
+  const root = build(pf.root, '');
+  scene.add(root);
+  root.traverse((o) => {
+    const n = o.userData.node;
+    if (n.particles) {
+      const e = new Emitter(n, o, (starts[n.name] ?? 0) + mm(n.particles.startDelay));
+      emitters.push(e);
+      duration = Math.max(duration, e.startAt + n.particles.length + 1.5);
+    }
+    // (disabled objects and the artists' test meshes are not drawn; a renderer without an exported mesh uses Unity's
+    // built-in quad)
+    // (preview ground planes use the URP Lit material; placeholders are editor aids)
+    const mat0 = n.meshRenderer?.materials?.[0];
+    if ((n.active === false && !(n.name in starts)) || n.enabled === false || /test/i.test(n.name)
+        || /Universal Render Pipeline\/Lit/.test(mat0?.shader || '') || /placeholder/i.test(mat0?.name || '')) o.visible = false;
+    o.userData.base.visible = o.visible;
+    if (n.meshRenderer && !n.meshRenderer.skinned) meshes.push([o, n.meshRenderer]);
+  });
+  for (const [o, mr] of meshes) {
+    const g = mr.mesh ? await meshGeometry(mr.mesh) : new THREE.PlaneGeometry(1, 1); if (!g) continue;
+    const mat = vfxMaterial(mr.materials[0], 5); mat.uniforms.uMode.value = 4;  // (5 = a mesh renderer: dissolve on)
+    mat.userData.defaults = { d: mat.uniforms.uDissolve.value, a: mat.uniforms.uAlpha.value };
+    const ig = new THREE.InstancedBufferGeometry().copy(g); ig.instanceCount = 1;
+    const one = (name, vals) => ig.setAttribute(name, new THREE.InstancedBufferAttribute(new Float32Array(vals), vals.length));
+    one('iOffset', [0, 0, 0]); one('iSize', [1, 1, 1]); one('iRot', [0, 0, 0]); one('iColor', [1, 1, 1, 1]); one('iFrame', [0]); one('iVel', [0, 0, 0]);
+    mat.vertexShader = mat.vertexShader.replace('gl_Position = projectionMatrix * viewMatrix * vec4(iOffset + p, 1.0); return;',
+      'gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); return;');
+    const m = new THREE.Mesh(ig, mat); m.frustumCulled = false; o.add(m); o.userData.mat = mat;
+  }
+  await Promise.all(emitters.map((e) => e.ready));
+  for (const c of pf.clips || []) duration = Math.max(duration, (c.timelineStart ?? 0) + c.duration);
+  effect = { pf, row, root, nodes, emitters, clips: pf.clips || [], duration: Math.max(duration, 1), fitted: false };
+  window.__effect = effect;
+  ui('info').textContent = `${row.prefab} (${row.bundle})  ${row.role}${row.ability ? ' · ' + row.ability : ''} · ${emitters.length} particle systems, ` +
+    `${effect.clips.length} clips, ${effect.duration.toFixed(2)} s` + (row.skinned ? '  (body copies are not drawn)' : '');
+  restart();
+}
+function findNode(path) {
+  if (!effect) return null;
+  if (path === '' || typeof path === 'number') return path === '' ? effect.root : null;
+  if (effect.nodes[path]) return effect.nodes[path];
+  for (const k in effect.nodes) if (k.endsWith('/' + path)) return effect.nodes[k];
+  return null;
+}
+function applyClips(time) {
+  for (const c of effect.clips) {
+    if (!c.curves) continue;
+    const local = c.timelineStart == null ? time % Math.max(c.duration, 0.01) : time - c.timelineStart;
+    if (local < 0 || local > c.duration + 0.001) continue;
+    const i = Math.min(Math.round(local * c.rate), 1e9);
+    for (const cv of c.curves) {
+      const o = findNode(cv.path); if (!o) continue;
+      const v = 'const' in cv ? cv.const : cv.values?.[Math.min(i, cv.values.length - 1)];
+      if (v == null) continue;
+      if (cv.component === 'Transform') {
+        if (cv.property === 'position') o.position.copy(v3(v));
+        else if (cv.property === 'rotation') o.quaternion.copy(qt(v)).normalize();
+        else if (cv.property === 'euler') o.quaternion.copy(eulerQ(v));
+        else if (cv.property === 'scale') o.scale.set(...v);
+      } else if (cv.property === 'm_IsActive') o.visible = v > 0.5;
+      else if (typeof cv.property === 'string' && cv.property.startsWith('material.')) {
+        const mats = [o.userData.mat, ...effect.emitters.filter((e) => e.obj === o).map((e) => e.mesh?.material)].filter(Boolean);
+        for (const m of mats) {
+          if (cv.property === 'material._MaterialDissolve') m.uniforms.uDissolve.value = v;
+          if (cv.property === 'material._DissolveAlphaMult') m.uniforms.uAlpha.value = v;
+        }
+      }
+    }
+  }
+}
+
+// ---- sounds -----------------------------------------------------------------------------------------------------
+function soundsFor(row) {
+  const rows = index.sounds?.[ui('unit').value] || [];
+  return rows.filter((s) => row.ability ? s.ability === row.ability : false);
+}
+function playSounds(row) {
+  if (!ui('sound').checked) return;
+  for (const s of soundsFor(row)) {
+    const files = s.files?.sfx?.length ? s.files.sfx : s.files?.['en-US'] || [];
+    if (!files.length) continue;
+    const late = s.activity === 'Detached' || s.trigger === 'ImpactSound';
+    setTimeout(() => { const a = new Audio('sounds/' + files[Math.floor(Math.random() * files.length)]); a.volume = 0.6; a.play().catch(() => {}); },
+      (late ? 400 : 0) / Number(ui('speed').value));
+  }
+}
+
+// frame the effect once it has spread out: its particles and meshes
+function fitCamera() {
+  effect.fitted = true;
+  const box = new THREE.Box3(), v = new THREE.Vector3();
+  for (const e of effect.emitters) {
+    const a = e.a?.off; if (!a) continue;
+    for (let i = 0; i < e.mesh.geometry.instanceCount; i++) box.expandByPoint(v.fromBufferAttribute(a, i));
+  }
+  const shown = (o) => { for (let p = o; p; p = p.parent) if (!p.visible) return false; return true; };
+  effect.root.traverse((o) => { if (o.isMesh && shown(o)) box.expandByObject(o); });
+  if (box.isEmpty()) box.setFromCenterAndSize(new THREE.Vector3(0, 1, 0), new THREE.Vector3(3, 3, 3));
+  const mid = box.getCenter(new THREE.Vector3()), r = Math.max(box.getSize(new THREE.Vector3()).length() * 0.6, 2);
+  controls.target.copy(mid); camera.position.set(mid.x + r * 1.1, mid.y + r * 0.8, mid.z + r * 1.6); controls.update();
+}
+
+// ---- ui / loop --------------------------------------------------------------------------------------------------
+function restart() {
+  t = 0; playing = true;
+  for (const e of effect.emitters) e.reset();
+  effect.root.traverse((o) => { const b = o.userData.base; if (b) { o.position.copy(b.p); o.quaternion.copy(b.q); o.scale.copy(b.s); o.visible = b.visible ?? true; }
+    const d = o.userData.mat?.userData.defaults; if (d) { o.userData.mat.uniforms.uDissolve.value = d.d; o.userData.mat.uniforms.uAlpha.value = d.a; } });
+  playSounds(effect.row);
+}
+function fillEffects() {
+  const rows = index.units[ui('unit').value].filter((r) => r.file && (r.particles || r.clips || (!r.skinned && r.meshes)));
+  ui('effect').innerHTML = '';
+  const seen = new Set();
+  for (const r of rows) {
+    if (seen.has(r.prefab)) continue; seen.add(r.prefab);
+    ui('effect').add(new Option(`${r.ability || '-'} · ${r.role} · ${r.prefab}`, r.prefab));
+  }
+}
+const rowFor = (prefab) => index.units[ui('unit').value].find((r) => r.prefab === prefab);
+ui('unit').onchange = () => { fillEffects(); loadEffect(rowFor(ui('effect').value)); };
+ui('effect').onchange = () => loadEffect(rowFor(ui('effect').value));
+ui('play').onclick = () => effect && restart();
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+
+const clock = new THREE.Clock();
+function step(dt) {
+  if (!effect || !playing) return;
+  t += dt;
+  applyClips(t);
+  effect.root.updateMatrixWorld(true);
+  for (const e of effect.emitters) e.update(t, dt);
+  if (!effect.fitted && t > Math.min(0.4, effect.duration * 0.4)) fitCamera();
+  if (t > effect.duration) { if (ui('loop').checked) restart(); else playing = false; }
+}
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 0.05) * Number(ui('speed').value);
+  if (!paused) step(dt);
+  controls.update(); renderer.render(scene, camera);
+});
+
+ui('unit').value = params.get('unit') && index.units[params.get('unit')] ? params.get('unit') : 'priestess';
+fillEffects();
+if (params.get('prefab') && rowFor(params.get('prefab'))) ui('effect').value = params.get('prefab');
+await loadEffect(rowFor(ui('effect').value));
+if (params.has('t')) { paused = true; ui('loop').checked = false; const T = Number(params.get('t')); for (let x = 0; x < T; x += 1 / 60) step(1 / 60); }
+window.__ready = true;
+</script>
+</body>
+</html>

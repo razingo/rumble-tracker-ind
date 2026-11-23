@@ -8,13 +8,13 @@
 # From the launcher, one line each on standard input: "show" (open the window, or bring it to the front).
 # With the page: the close button sends it "close?", and the window closes when it answers "close". It answers "asking"
 # while it asks what closing should do, and "stay" when that was cancelled. A page that doesn't answer (still loading)
-# lets the window close after CLOSE_WAIT. The page sends "minigame" to open the small game (RT_MINIGAME) in a window of
+# lets the window close after CLOSE_WAIT. The page sends "rdmodule" to open the rdmodule (RT_RDMODULE) in a window of
 # its own.
 # Environment: RT_TITLE, RT_AUMID (app ID for the taskbar), RT_PAGE (the page's address), RT_DATA (data folder), RT_EXE
 # (icon), RT_PARENT (tracker process id), RT_GAME (the game's process name), RT_LIB (folder with the WebView2
 # libraries), RT_PROFILE (WebView2's data folder), RT_CACHE (where to keep the compiled helpers below), RT_SHOW
 # ("1": open the window right away), RT_CHECK
-# (build everything without showing it, for the tests), RT_MINIGAME (the game's address), RT_MINIGAME_PROFILE (the game
+# (build everything without showing it, for the tests), RT_RDMODULE (the game's address), RT_RDMODULE_PROFILE (the game
 # window's WebView2 data folder).
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
@@ -240,7 +240,7 @@ function New-TrackerWindow {
         'asking' { $script:closeAsked = $null }
         'stay' { $script:closeAsked = $null }
         # opened by the timer, not inside WebView2's own event
-        'minigame' { $script:minigameAsked = $true }
+        'rdmodule' { $script:rdmoduleAsked = $true }
       }
     })
   })
@@ -291,43 +291,43 @@ function Show-Front($f) {
   [RtWin]::Front($f.Handle)
 }
 
-# The game window: the page's hidden key sequence opens it (web/scripts/minigame.js). It shows only the game's site,
+# The game window: the page's hidden key sequence opens it (web/scripts/rdmodule.js). It shows only the game's site,
 # with a WebView2 data folder of its own, and takes no messages from it. Closing it leaves the tracker as it is.
-$script:minigame = $null
-$script:minigameAsked = $false
-$minigameBackground = [System.Drawing.ColorTranslator]::FromHtml('#1b1f2e')
+$script:rdmodule = $null
+$script:rdmoduleAsked = $false
+$rdmoduleBackground = [System.Drawing.ColorTranslator]::FromHtml('#1b1f2e')
 
-function Test-MinigamePage($uri) {
-  try { return ([Uri]$uri).AbsoluteUri.StartsWith(([Uri]$env:RT_MINIGAME).AbsoluteUri) } catch { return $false }
+function Test-RdmodulePage($uri) {
+  try { return ([Uri]$uri).AbsoluteUri.StartsWith(([Uri]$env:RT_RDMODULE).AbsoluteUri) } catch { return $false }
 }
 
 # shown instead of WebView2's own error page, e.g. when offline
-$MINIGAME_ERROR = @'
+$RDMODULE_ERROR = @'
 <!doctype html><meta charset="utf-8"><title>Rumble Dash</title>
 <body style="margin:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
 background:#1b1f2e;color:#f3ead6;font:16px 'Segoe UI',sans-serif">
-<p>Couldn't load the game. Check your connection.</p>
+<p>Couldn't load the game.</p>
 <a href="{0}" style="padding:6px 18px;border-radius:6px;background:#f2b33d;color:#3a2208;font-weight:600;
 text-decoration:none">Retry</a></body>
 '@
 
-function New-MinigameWindow {
+function New-RdmoduleWindow {
   $f = New-Object System.Windows.Forms.Form
   $f.Text = 'Rumble Dash'
   $f.Icon = $icon
   $f.ClientSize = New-Object System.Drawing.Size(1280, 620)
   $f.MinimumSize = New-Object System.Drawing.Size(640, 400)
   $f.StartPosition = 'CenterScreen'
-  $f.BackColor = $minigameBackground
+  $f.BackColor = $rdmoduleBackground
   $view = New-Object Microsoft.Web.WebView2.WinForms.WebView2
   $view.Dock = 'Fill'
-  $view.DefaultBackgroundColor = $minigameBackground
+  $view.DefaultBackgroundColor = $rdmoduleBackground
   $view.CreationProperties = New-Object Microsoft.Web.WebView2.WinForms.CoreWebView2CreationProperties
-  $view.CreationProperties.UserDataFolder = $env:RT_MINIGAME_PROFILE
+  $view.CreationProperties.UserDataFolder = $env:RT_RDMODULE_PROFILE
   $f.Controls.Add($view)
   $view.add_CoreWebView2InitializationCompleted({
     param($s, $e)
-    if (-not $e.IsSuccess) { $script:minigame.Close(); return }
+    if (-not $e.IsSuccess) { $script:rdmodule.Close(); return }
     $core = $s.CoreWebView2
     $core.Settings.IsStatusBarEnabled = $false
     $core.Settings.AreDevToolsEnabled = $false
@@ -335,26 +335,26 @@ function New-MinigameWindow {
     $core.add_NewWindowRequested({ param($c, $r) $r.Handled = $true; Open-WebLink $r.Uri })
     $core.add_NavigationStarting({
       param($c, $n)
-      if (-not (Test-MinigamePage $n.Uri) -and -not $n.Uri.StartsWith('data:')) { $n.Cancel = $true; Open-WebLink $n.Uri }
+      if (-not (Test-RdmodulePage $n.Uri) -and -not $n.Uri.StartsWith('data:')) { $n.Cancel = $true; Open-WebLink $n.Uri }
     })
     $core.add_NavigationCompleted({
       param($c, $n)
       if (-not $n.IsSuccess -and $n.WebErrorStatus -ne 'OperationCanceled') {
-        $c.NavigateToString(($MINIGAME_ERROR -f [System.Net.WebUtility]::HtmlEncode($env:RT_MINIGAME)))
+        $c.NavigateToString(($RDMODULE_ERROR -f [System.Net.WebUtility]::HtmlEncode($env:RT_RDMODULE)))
       }
     })
   })
   $f.add_HandleCreated({ param($s) [RtWin]::DarkTitle($s.Handle) })
-  $f.add_Shown({ param($s) $s.Controls[0].Source = [Uri]$env:RT_MINIGAME })
-  $f.add_FormClosed({ param($s) $script:minigame = $null; $s.Dispose() })
+  $f.add_Shown({ param($s) $s.Controls[0].Source = [Uri]$env:RT_RDMODULE })
+  $f.add_FormClosed({ param($s) $script:rdmodule = $null; $s.Dispose() })
   $f
 }
 
-function Show-MinigameWindow {
-  if ($script:minigame) { Show-Front $script:minigame; return }
-  if (-not $env:RT_MINIGAME -or -not (Test-WebView)) { return }
-  $script:minigame = New-MinigameWindow
-  Show-Form $script:minigame
+function Show-RdmoduleWindow {
+  if ($script:rdmodule) { Show-Front $script:rdmodule; return }
+  if (-not $env:RT_RDMODULE -or -not (Test-WebView)) { return }
+  $script:rdmodule = New-RdmoduleWindow
+  Show-Form $script:rdmodule
 }
 
 # Without WebView2 there's no window, and the tracker doesn't open the page in a browser or stay in the tray: this
@@ -495,7 +495,7 @@ $timer.Interval = 100
 $timer.add_Tick({
   $line = $null
   while ([RtInput]::Lines.TryDequeue([ref]$line)) { if ($line -eq 'show') { Show-TrackerWindow } }
-  if ($script:minigameAsked) { $script:minigameAsked = $false; Show-MinigameWindow }
+  if ($script:rdmoduleAsked) { $script:rdmoduleAsked = $false; Show-RdmoduleWindow }
   if ($script:closeNow -or ($script:closeAsked -and ([DateTime]::UtcNow - $script:closeAsked).TotalMilliseconds -gt $CLOSE_WAIT)) {
     Close-TrackerWindow
   }
