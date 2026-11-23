@@ -1,10 +1,10 @@
 // Collection tab: currencies, summary, what's needed next, the upgrade planner, filters, the mini grid and recent
 // changes.
-import { $, store, RULES, MINIS, TAG_ICONS, state, GRID_CURRENCY_IDS, ANKH_ID } from './core.js';
+import { $, store, RULES, MINIS, TAG_ICONS, FAMILIES, state } from './core.js';
 import { iconImage } from './drawer.js';
 import { esc, fmt, ago } from './lib/format.js';
 import { traitPicker, bindTraitPicker } from './trait-picker.js';
-import { rarityName, rarityColor, FAMILIES, miniOf, unitName, balance, currencyName, coreName, nextUpgrade,
+import { rarityName, rarityColor, miniOf, unitName, balance, currencyName, coreName, nextUpgrade,
   talentSlots, effectivePicks, isLeader, armyOf, hasBoost, totalLevel, armyTotals, remainingToLegendary, familiesOf } from './units.js';
 
 // The earlier tracker, whose data this one uses, saved these without the tab's name.
@@ -30,8 +30,10 @@ export function currencyChip(c) {
 }
 
 export function renderCurrencies() {
-  // Event tickets, Ankh and G.R.I.D. currencies are on other tabs.
-  const named = state.currencies.filter((c) => c.name && !c.slot && !GRID_CURRENCY_IDS.includes(c.id) && c.id !== ANKH_ID);
+  // Event tickets, the Ankh (the Calendar's Dungeon card) and the G.R.I.D. currencies are on other tabs.
+  // (game data read by an earlier version of the tracker doesn't say which those are)
+  const elsewhere = [...(RULES.gridCurrencyIds || []), RULES.ankhId];
+  const named = state.currencies.filter((c) => c.name && !c.slot && !elsewhere.includes(c.id));
   const order = ['coins', 'arcEnergy', 'rareCore', 'epicCore', 'legendaryCore', 'valor'].map((r) => RULES.currencyIds[r]);
   named.sort((a, b) => (order.indexOf(a.id) + 1 || 99) - (order.indexOf(b.id) + 1 || 99));
   $('#currencies').innerHTML = named.map(currencyChip).join('');

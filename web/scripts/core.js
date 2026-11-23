@@ -90,6 +90,7 @@ export function openExternal(url) {
 
 // Only this module assigns these (setTables, setState, setDirty); the other modules see the current values.
 export let RULES, MINIS, BY_SLUG, TAG_ICONS;
+export let FAMILIES = []; // the factions minis are filed under, in the order their filters are shown
 export let FAMILY_PAIRS = []; // faction pairs with a combined icon (icons/fam), such as 'AllianceHorde'
 export let ALWAYS_OWNED = []; // minis every player owns, which the save doesn't list
 export let state = null; // the server's state for the selected account (/api/state)
@@ -101,6 +102,7 @@ export function setTables(rules, minisFile) {
   MINIS = minisFile.minis;
   // Wildcard and Leader icons are not in minis.json.
   TAG_ICONS = { Wildcard: 'icons/Wildcard.png', Leader: 'icons/Leader.png', ...(minisFile.tagIcons || {}) };
+  FAMILIES = minisFile.families || [];
   FAMILY_PAIRS = minisFile.familyPairs || [];
   ALWAYS_OWNED = MINIS.filter((m) => m.alwaysOwned);
   BY_SLUG = new Map(MINIS.map((m) => [m.slug, m]));
@@ -120,14 +122,3 @@ export const ui = {
     ? h : store.get('tab', 'collection')))(globalThis.location?.hash.slice(1)),
 };
 
-// The G.R.I.D. currencies, shown on the G.R.I.D. tab instead of the Collection.
-export const GRID_CURRENCY_IDS = [
-  '44b7dad7dfaa4aae8eb69b8dbf6968b8', // Big Red Buttons
-  'e1f4dd57cf836abed7875b0b33bb87e8', // Rare-O-Matics
-  '38547868a0830bd6fa60ffc4440983a8', // Modest Tinker's Gems
-  '74c4595e80588d652ab5bc38691b79c9', // Major Tinker's Gems
-  '97b4103c5c0740da8488d67801c30c2b', // Mega Tinker's Gems
-];
-
-// The Ankh, which continues a failed dungeon, shown on the Calendar's Dungeon card instead of the Collection.
-export const ANKH_ID = '32141a9ef28487c729b80616d70185ba';

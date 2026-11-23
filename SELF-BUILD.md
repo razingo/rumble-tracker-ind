@@ -38,7 +38,7 @@ It needs Warcraft Rumble for PC installed, and nothing else: no Python, and no i
 - **After a game patch:** the tracker sees that the installed game is a newer version than its data and reads the data
   again in the background, while it stays usable. It looks at start, when the game closes and every half hour.
 - **After a tracker update:** if the new version reads something more or differently, only that part is read again,
-  in the background.
+  in the background; all of it when the tracker's own starting tables changed.
 - **Otherwise:** it starts straight away.
 
 Reading goes easy on the PC: the programs it starts run at low priority, and only a few steps run at a time. A step
@@ -71,14 +71,16 @@ icons, the page's own card frames, army boards and backgrounds, and the tables b
 shows is extracted, and a step that runs again first clears what it wrote before, so nothing unused stays behind.
 
 `tools\gamedata\seed\` holds the tracker's own few tables: the key it files each mini under (by the mini's save ID),
-which family a two-family mini is filed under, the order it keeps talents in, and the colors and names of rarities and
-army slots. A mini added by a game patch needs no new exe: it gets its key from its name when the game data is read.
+which family a two-family mini is filed under, the order it keeps talents in, the colors and names of rarities and
+army slots, and which of the save's currencies is which. A mini added by a game patch needs no new exe: it gets its
+key from its name when the game data is read. A faction the tracker doesn't know yet is filed under Neutral until a
+new version of the tracker names it.
 The level and upgrade rules and the army code numbers are read from the game too.
 
 Each step of the reading has a version, made of its own script, its inputs, its settings (an image size, for
 example) and the versions of the tools it uses (Python and its packages). After a new version of the tracker, only
 the steps that changed run again, with the steps that use what they make; the rest of the data stays as it is. A
-new version of the game runs all of them.
+new version of the game runs all of them, and so does a change to the starting tables.
 
 ## From source
 

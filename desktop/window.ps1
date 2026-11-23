@@ -12,10 +12,9 @@
 # its own.
 # Environment: RT_TITLE, RT_AUMID (app ID for the taskbar), RT_PAGE (the page's address), RT_DATA (data folder), RT_EXE
 # (icon), RT_PARENT (tracker process id), RT_GAME (the game's process name), RT_LIB (folder with the WebView2
-# libraries), RT_PROFILE (WebView2's data folder), RT_CACHE (where to keep the compiled helpers below), RT_SHOW
-# ("1": open the window right away), RT_CHECK
-# (build everything without showing it, for the tests), RT_RDMODULE (the rdmodule's address), RT_RDMODULE_PROFILE (its
-# window's WebView2 data folder).
+# libraries), RT_PROFILE (WebView2's data folder), RT_CACHE (where to keep the compiled helpers below), RT_SHOW ("1":
+# open the window right away), RT_CHECK (build everything without showing it, for the tests), RT_RDMODULE (the
+# rdmodule's address), RT_RDMODULE_PROFILE (its window's WebView2 data folder).
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.Windows.Forms, System.Drawing

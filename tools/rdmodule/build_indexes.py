@@ -3,7 +3,7 @@
   asset_index.json  asset GUID -> [bundle, type, name]
   ext_index.json    bundle -> the bundles its files refer to
 Run: python -I build_indexes.py <i>/<n>   every n-th bundle, its part left in index_parts/<i>.json
-     python -I build_indexes.py merge     after them: the two files, in the working folder (RUMBLE_WORK)
+     python -I build_indexes.py merge     after them: the three files, in the working folder (RUMBLE_WORK)
 Each bundle is opened once for all three."""
 import os, sys, json, glob, UnityPy
 

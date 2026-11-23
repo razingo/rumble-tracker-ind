@@ -110,6 +110,7 @@ async function updateSavedArmy(id, change, card) {
   const msg = card?.querySelector('.armory-message');
   try {
     await persistArmies(list);
+    syncDraft(id, change);
     // Redraw at once; the focus is restored.
     renderArmory();
     const m2 = $(`#tab-armory [data-armory-id="${CSS.escape(id)}"] .armory-message`);
@@ -117,7 +118,6 @@ async function updateSavedArmy(id, change, card) {
   } catch (err) {
     showMessage(msg, `Not saved. ${err.message}`, 'warn');
   }
-  syncDraft(id, change);
 }
 
 /** The card an element is in, and its saved army. */

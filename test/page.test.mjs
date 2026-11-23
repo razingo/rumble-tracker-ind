@@ -7,7 +7,7 @@ import { DAY, HOUR, MINUTE } from '../web/scripts/lib/constants.js';
 import { fmt, esc, span, spanWords, ago, localDay, when, dayOnly, titleCase, plural, megabytes } from '../web/scripts/lib/format.js';
 import { seasonAt, rankOf, nextRank, setAt, record, streak, matchesWithMods, modifierStats, withModifiers,
   winRateSeries } from '../web/scripts/lib/pvp-season.js';
-import { setTables, setState, getJson, post } from '../web/scripts/core.js';
+import { setTables, setState, getJson, post, FAMILIES } from '../web/scripts/core.js';
 import { nextUpgrade, xpToMax, armyOf, totalLevel, armyTotals, remainingToLegendary, effectivePicks,
   unitName, gridRarityOf, familiesOf } from '../web/scripts/units.js';
 
@@ -17,7 +17,7 @@ test('schedules handle the n-th weekday of a month, fixed days and one-off event
   const runs = occurrences(ev, Date.UTC(2026, 10, 1), Date.UTC(2026, 11, 31));
   assert.deepEqual(runs.map((r) => new Date(r.start).toISOString()), ['2026-11-11T18:00:00.000Z', '2026-12-09T18:00:00.000Z']);
   assert.equal(runs[0].end - runs[0].start, 7 * DAY);
-  const yearly = { schedule: { kind: 'day', every: 'year', month: 12, day: 15, hourUtc: 10, days: 3, fromYear: 2025 } };
+  const yearly = { schedule: { kind: 'dayOfMonth', every: 'year', month: 12, day: 15, hourUtc: 10, days: 3, fromYear: 2025 } };
   assert.equal(occurrences(yearly, Date.UTC(2026, 11, 16), Date.UTC(2026, 11, 17)).length, 1); // still running
   const once = { schedule: { kind: 'once', start: '2026-05-01T00:00:00Z', end: '2026-05-03T00:00:00Z' } };
   assert.equal(occurrences(once, Date.UTC(2026, 4, 2), Date.UTC(2026, 4, 2, 1)).length, 1);
@@ -246,4 +246,15 @@ test('a dual-faction mini has both families from the game data, others their one
   // fixed army slots no longer count: the game data names a dual faction itself
   assert.deepEqual(familiesOf({ family: 'Horde', category: 'Leader', fixedArmySlots: ['Horde', 'Alliance', 'Melee'] }), ['Horde']);
   assert.deepEqual(familiesOf({ family: 'Undead', category: 'Unit' }), ['Undead']);
+});
+
+test('the faction filters are the game data\'s list, and game data without one gives none', () => {
+  try {
+    setTables(RULES, { ...MINIS, families: ['Alliance', 'Horde', 'Neutral'] });
+    assert.deepEqual(FAMILIES, ['Alliance', 'Horde', 'Neutral']);
+    setTables(RULES, MINIS); // read by an earlier version of the tracker
+    assert.deepEqual(FAMILIES, []);
+  } finally {
+    setTables(RULES, MINIS);
+  }
 });

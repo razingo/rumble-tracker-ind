@@ -61,7 +61,7 @@ function fakeBuilder(game) {
 test('game data is read again in the background when the game is another version', async () => {
   const { ctx, cleanup } = await testContext();
   try {
-    const builder = fakeBuilder('C:\game');
+    const builder = fakeBuilder('C:\\game');
     const gameData = await createGameData(ctx, { builder });
     assert.equal(ctx.gameData.canBuild, true);
     await gameData.firstRead(); // there is data already (the test's own): nothing to do
@@ -100,7 +100,7 @@ test('game data is read again in the background when the game is another version
 test('a failed read in the background leaves the game data as it was, and is not tried again at once', async () => {
   const { ctx, cleanup } = await testContext();
   try {
-    const builder = fakeBuilder('C:\game');
+    const builder = fakeBuilder('C:\\game');
     builder.fail = 'The game is being updated.';
     const gameData = await createGameData(ctx, { builder });
     await gameData.check();

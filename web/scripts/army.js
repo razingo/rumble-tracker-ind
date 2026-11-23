@@ -106,10 +106,11 @@ window.addEventListener('pagehide', () => {
   navigator.sendBeacon?.('/api/draft', new Blob([JSON.stringify(draftPending)], { type: 'application/json' }));
 });
 
-/** The unit in slot i of the draft; slot 0 is the leader. */
+/** The mini in slot i of the draft, by its key; slot 0 is the leader. */
+const draftSlug = (i) => (i === 0 ? builder.draft.leader : builder.draft.minis[i - 1]);
+/** The player's unit in slot i of the draft, or nothing for an empty slot or a mini the account doesn't own. */
 export function draftUnit(i) {
-  const d = builder.draft;
-  return ownedUnit(i === 0 ? d.leader : d.minis[i - 1]);
+  return ownedUnit(draftSlug(i));
 }
 
 const equippedTalent = (u) => talentIndex(builder.draft, miniOf(u), u);
@@ -155,7 +156,7 @@ function armyToolbar(d) {
         suggestions: tagsInUse() })}
     </div>
     <span class="code-box">
-      <input id="armyCode" class="mono" placeholder="Paste a rumblo: army code" aria-label="Army code"
+      <input id="armyCode" class="mono" placeholder="Paste an army code" aria-label="Army code"
         value="${esc(builder.codeText || '')}">
       <button class="chip" data-army-action="import">Import code</button>
       <button class="chip" data-army-action="export">Copy code</button>
@@ -191,8 +192,9 @@ function armySlot(i, s, leader) {
       ${typeIcon ? `<span class="medal">${iconImage(typeIcon, typeLabel)}</span>` : ''}<span
         class="army-slot-label">${esc(typeLabel)}</span>${slot.boost ? '<span class="boost-mark">⚡</span>' : ''}
     </div>
-    <button class="army-slot-body" data-army-slot="${i}" ${u && i > 0 ? `draggable="true" data-army-drag-slot="${i}"` : ''}
-      aria-label="${u ? `Remove ${esc(m.name)}` : 'Empty slot'}" title="${u ? 'Click to remove it, right-click for details' : ''}">
+    <button class="army-slot-body" data-army-slot="${i}" ${m && i > 0 ? `draggable="true" data-army-drag-slot="${i}"` : ''}
+      aria-label="${m ? `Remove ${esc(m.name)}` : 'Empty slot'}" title="${m
+      ? `Click to remove it${u ? ', right-click for details' : ''}` : ''}">
       ${m ? familyFlag(m) : ''}
       ${m ? `<img class="portrait" src="/static/${m.art}" alt="" draggable="false">` : '<span class="add">+</span>'}
       ${m ? `<span class="cost">${m.cost}</span>` : ''}
@@ -443,7 +445,7 @@ function boardClick(t) {
   } else if (t.dataset.armySlot != null) {
     // Clicking a filled slot empties it.
     const i = Number(t.dataset.armySlot);
-    if (!draftUnit(i)) return;
+    if (!draftSlug(i)) return;
     if (i > 0) return removeSlot(i);
     builder.draft.leader = null;
     saveDraftLocal();
@@ -533,7 +535,7 @@ function bindDragAndDrop(page) {
 // What a click on the Army tab can act on: the board, the talent pop-up, the pools and the tags.
 const CLICKABLE = [
   'data-army-slot', 'data-army-talent', 'data-army-talent-pick', 'data-army-action', 'data-pool-slug', 'data-pool-family', 'data-pool-type',
-  'data-pool-trait', 'data-pool-clear', 'data-army-tag-remove',
+  'data-pool-clear', 'data-army-tag-remove',
 ].map((a) => `[${a}]`).join(',');
 
 export function bindArmy() {

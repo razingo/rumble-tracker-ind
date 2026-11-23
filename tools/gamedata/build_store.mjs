@@ -1,4 +1,4 @@
-// Build gamedata/store.json from the game's bundles: store offers (English title, coin price, refresh rule),
+// Build gamedata/store.json from the game's bundles: store offers (English title and price),
 // G.R.I.D. prices per rarity and XP-boost items, and the G.R.I.D. rules from StoreSettings.
 // usage: node build_store.mjs [out.json]
 import { writeFileSync } from 'node:fs';
@@ -16,7 +16,7 @@ const BUNDLES = new RegExp('^(' + [
   'feature_store',
 ].join('|') + ')\\.bundle$');
 const WANT = new RegExp('^(' + [
-  'StoreOffer', 'CommerceProduct', 'CommercePrice', 'SharedInt', 'StoreGridXpBoost', 'Rarity',
+  'StoreOffer', 'StoreGrant', 'CommerceProduct', 'CommercePrice', 'SharedInt', 'StoreGridXpBoost', 'Rarity',
   'StoreSettings', 'TomeProgression', 'L10N\\.UserFacingString\\w*',
 ].join('|') + ')$');
 
@@ -46,18 +46,30 @@ const COINS = 'e9c433015c337934c9890eb4e13ff3d3';
 const pretty = (n) => n.replace(/_StoreOffer.*$/, '').replace(/^(Daily|Special|Persistent|FreeGift)_/,
   '').replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').trim();
 
+// An offer's title. The page fills in "{mini}" and "{tome}" from the save. Any other placeholder ("{cores}",
+// "{energy}") stands for what the offer holds: the product's name, else the currency it grants ("2,000 Arc Energy").
+function titleOf(o, product) {
+  const title = clean(str[o.m_offerTitle]), named = clean(str[product?.m_name]);
+  if (!title || !/{(?!mini}|tome})/.test(title)) return title || named || pretty(o.name);
+  const grant = (o.m_grantedItems || []).map((g) => objs[g]).find((g) => CURRENCY_NAMES[g?.m_currencyType]);
+  return named || (grant ? `${grant.m_currencyAmount.toLocaleString('en-US')} ${CURRENCY_NAMES[grant.m_currencyType]}`
+    : pretty(o.name));
+}
+
 const offers = {};
 for (const o of Object.values(objs)) {
   if (o.type !== 'StoreOffer') continue;
   const product = objs[o.m_product?.m_nonAbGroupValue];
   const price = objs[product?.m_price];
-  const vc = (price?.m_virtualCurrencyPrices || [])[0];
+  // the price is the product's, or the offer's own where it has no product
+  const vc = (price?.m_virtualCurrencyPrices || [])[0]
+    || (o.m_currencyType && { m_currencyType: o.m_currencyType, m_priceAmount: o.m_currencyCost });
   const banner = String(o.m_bannerImage || '').split(',')[1] || null;
   offers[saveIdOf(o.guid)] = {
     name: o.name,
     // art: the offer's own banner; the free gift (unit XP) has none, so it gets the XP gem pile
     icon: banner || (/^FreeGift_Dynamic/.test(o.name) ? 'Store_Tex_XP_Gem_Pile' : undefined),
-    title: clean(str[o.m_offerTitle]) || clean(str[product?.m_name]) || pretty(o.name),
+    title: titleOf(o, product),
     cost: vc ? { coins: vc.m_currencyType === COINS, currency: CURRENCY_NAMES[vc.m_currencyType] || vc.m_currencyType,
       amount: int(vc.m_priceAmount) } : null,
     realMoney: o.m_costType === 'RealMoney' || undefined,

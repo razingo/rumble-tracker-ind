@@ -45,7 +45,7 @@
     get(k, d) { try { const v = localStorage.getItem(`rdmodule.${k}`); return v == null ? d : JSON.parse(v); } catch { return d; } },
     set(k, v) { try { localStorage.setItem(`rdmodule.${k}`, JSON.stringify(v)); } catch { /* storage off */ } },
   };
-  // Images from the data site, loaded on first use; null until loaded.
+  // Images from the tracker's game data, loaded on first use; null until loaded.
   const images = {};
   function img(path, base = DATA) {
     let i = images[path];
@@ -132,7 +132,7 @@
   const clip = (id, anim) => sheets[id]?.anims[anim]?.[2] || 0;
   const ONCE = ['attack', 'death', 'deploy', 'cast']; // played once from start to end; the others loop
   // Sounds from the game's own audio: sounds/<key>-<take>.wav next to the page (on this PC only, like the sprites);
-  // sounds/index.json lists how many takes each key has. Without the folder the game is silent. S turns sound off and on.
+  // sounds/index.json lists how many takes each key has. Without the folder the rdmodule is silent. S turns sound off and on.
   // Each file is fetched once and kept in memory, and played from there: an <audio> on a file of its own keeps a
   // connection to the server open, and a handful of those leave none for the pictures.
   const VOLUME = 0.75; // every sound is turned down by this much
@@ -315,7 +315,7 @@
   const POOL = Object.keys(MINIS);
   const DEFAULT_DECK = ['footmen', 'darkspear-troll', 'gryphon-rider', 'ghoul', 'goblin-sapper', 'arcane-blast'];
   // Minis that leaders and modifiers bring in, not in decks. face: the pictures that stand for it where it has no portrait, the first that
-  // is there: a file next to the page (with a folder) or a portrait on the data site.
+  // is there: a file next to the page (with a folder) or a portrait in the tracker's game data.
   const SUMMONS = {
     scarab: { name: 'Scarab', family: 'Undead', kind: 'melee', hp: 1, dmg: 1, rate: 0.6, size: 26, art: null },
     skeleton: { name: 'Skeleton', family: 'Undead', kind: 'melee', hp: 1, dmg: 1, rate: 0.6, size: 34, art: 'skeletons', unbound: true },
@@ -345,7 +345,7 @@
     'molten-giant': { hp: 5, walk: 18, size: 160, dmg: 2, hit: 2, rate: 1.4 },
     tower: { hp: 5, walk: 0, w: 84, h: 160, dmg: 1, tower: true },
   };
-  // Every leader: the in-game Leader Ability as a passive, put into this game's terms.
+  // Every leader: the in-game Leader Ability as a passive, put into the rdmodule's terms.
   const LEADERS = [
     ['anub-arak', "Anub'arak", 'Undead', 'melee', 'Carrion Feast',
       'Your Undead and Beast minis bring a Scarab when they arrive and when they fall (12 at most).'],
@@ -395,14 +395,14 @@
       'Every 8 s, your minis regain 1 heart.'],
     ['ysera', 'Ysera the Dreamer', 'Cenarion', 'flying', 'Stuck in the Emerald Dream',
       "Ysera's card is a different dream each time: Emerald Whelps, Innervate, Emerald Drake, Hibernate."],
-    // hidden until "youtakenocandle" is typed on the menu; its talents are this game's own, the mini has none
+    // hidden until "youtakenocandle" is typed on the menu; its talents are the rdmodule's own, the mini has none
     ['kobold-miner', 'Kobold Miner', 'Neutral', 'melee', 'Miner',
       'Every 8 s, the Miner digs up 1 Gold.', true],
   ].map(([id, name, family, role, passive, passiveText, hidden]) => ({ id, name, family, role, passive, passiveText, hidden }));
   // Each leader's three talents, as in Warcraft Rumble (names and icons from the game's data). The leader's card is its
   // own move (Arthas's Remorseless Winter, Orgrim's Mak'gora), and the talent you pick changes it the way that talent
   // changes the leader in Warcraft Rumble; some talents also work all run long, as theirs do while the leader is in
-  // play. [name, icon (talents/<icon>.webp on the data site, or a path there), the card's Gold cost, what it does].
+  // play. [name, icon (talents/<icon>.webp in the tracker's game data, or a path there), the card's Gold cost, what it does].
   const TALENTS = {
     'anub-arak': [
       ['Regenerate', 'talent_regenerate', 4,
@@ -612,7 +612,7 @@
   // Ysera's card is a different one each time she plays it, in this order.
   const DREAMS = ['Emerald Whelps', 'Innervate', 'Emerald Drake', 'Hibernate'];
 
-  // What each PvP modifier does here; anything not listed has no effect in this game.
+  // What each PvP modifier does here; anything not listed has no effect here.
   const TWISTS = {
     PvpModifier_Tower_Dragon: { tower: 'dragon', text: 'Towers breathe fire along the ground.' },
     PvpModifier_Tower_Rocket: { tower: 'rocket', text: 'Towers lob rockets that hit everything where they land.' },
@@ -652,7 +652,7 @@
       today.mods = rot.sets[((k % n) + n) % n].map((id) => ({ id,
         name: pvp.modifiers?.[id]?.name || id.replace(/^PvpModifier_/, ''),
         icon: pvp.modifiers?.[id]?.icon ? `pvp/${pvp.modifiers[id].icon}.webp` : null,
-        text: TWISTS[id]?.text || 'No effect in this game.' }));
+        text: TWISTS[id]?.text || 'No effect here.' }));
       today.state = 'ready';
     } catch {
       today.mods = [];
@@ -1304,7 +1304,6 @@
       const gap = tower.x - front;
       if (gap <= spd * dt) spd = Math.max(0, gap / dt);
     }
-    const atTower = tower && tower.x - (p.x + p.w) < 2;
     if (p.deploy > 0) { p.deploy -= dt; spd = 0; } // the leader arrives first
     r.stalled = spd < 1;
     r.spd = spd;
@@ -1354,7 +1353,6 @@
       if (r.owedT >= 2.5) { r.owedT -= 2.5; r.owed--; r.gold = Math.min(10, r.gold + 1); float(46, 500, '+1 Gold', '#ffe28a'); }
     } else r.owedT = 0;
 
-    if (r.unhurtKind === 'spin' && atTower && Math.floor(r.time * 4) !== Math.floor((r.time - dt) * 4)) damage(tower, 1, {});
 
     // spawning
     if (!tower && r.traveled >= r.nextTower) {
@@ -1406,7 +1404,7 @@
       if (!d.tower && overlap(e, p)) {
         const k = r.unhurtKind;
         if (k === 'burrow' || k === 'stealth') continue;
-        if (k === 'spin' || k === 'shield') { damage(e, k === 'spin' ? 3 : 99, {}); continue; }
+        if (k === 'shield') { damage(e, 99, {}); continue; }
         if (hurtPlayer(d.dmg)) {
           e.hp = 0; // (it got through: gone without counting as a kill)
           puff(e.x + e.w / 2, e.y - e.h / 2, '#d9d2bf', 8);
@@ -1804,7 +1802,6 @@
     if (k === 'burrow') { ctx.globalAlpha = 0.25; }
     if (k === 'stealth') { ctx.globalAlpha = 0.35; }
     if (p.inv > 0 && !k && Math.floor(r.time * 12) % 2) ctx.globalAlpha = 0.4;
-    if (k === 'spin') { ctx.translate(cx, cy); ctx.rotate(r.time * 20); ctx.translate(-cx, -cy); }
     const pose = p.deploy > 0 ? { anim: 'deploy', p: 1 - p.deploy / Math.min(DEPLOY_MAX, clip(l.id, 'deploy')) }
       : p.lunge > 0 ? { ...attackPose(p), anim: p.act || 'attack' } : { anim: r.stalled ? 'idle' : 'move', t: r.time };
     if (drawSprite(l.id, p.x + p.w / 2, p.y - (l.role === 'flying' ? 14 : 0), dims(l.id, 66).tall, pose)) {
@@ -2030,7 +2027,7 @@
     }
   }
 
-  // One of the game's small white icons (icons/<name> on the data site) in a box of side s; false until it has loaded.
+  // One of the game's small white icons (icons/<name> in the tracker's game data) in a box of side s; false until it has loaded.
   function icon(name, x, y, s) {
     const image = img(`icons/${name}${name === 'Leader' ? '.png' : '.webp'}`);
     if (!image) return false;
@@ -2247,7 +2244,7 @@
     if (r.time < 4) {
       ctx.globalAlpha = clamp(4 - r.time, 0, 1);
       panel(W / 2 - 280, 110, 560, 64);
-      text('Play cards with 1 2 3, or tap them', W / 2, 136, 15, '#fff', 'center');
+      text('Play cards with 1 2 3, or click them', W / 2, 136, 15, '#fff', 'center');
       text('Your minis fight for you: keep some between you and the enemy.', W / 2, 160, 12, '#ccc', 'center', 500);
       ctx.globalAlpha = 1;
     }
@@ -2332,7 +2329,7 @@
     text(`Best today  ${fmt(bestToday(l.id))}`, 878, 404, 15, '#fff', 'left', 600);
     text(`Best ever  ${fmt(best[l.id] || 0)}`, 878, 432, 15, '#bbb', 'left', 600);
     button(runBtn, 'Run  (Enter)', true);
-    text(`Pick a leader (← →) and one of its talents (1 2 3). Same course for everyone today; scores stay in this browser. S: sound ${muted ? 'off' : 'on'}.`, 40, 580, 13, '#ccc', 'left', 500);
+    text(`Pick a leader (← →) and one of its talents (1 2 3). Same course for everyone today; scores stay on this PC. S: sound ${muted ? 'off' : 'on'}.`, 40, 580, 13, '#ccc', 'left', 500);
   }
 
   // deck editor layout
@@ -2371,7 +2368,7 @@
     text(`${fmt(r.traveled / M)} m · ${r.kills} kills · ${r.leader.name}`, W / 2, 290, 14, '#ddd', 'center', 500);
     const msg = r.saved?.ever ? 'New best ever!' : r.saved?.today ? 'New best today!' : `Best today ${fmt(bestToday(r.leader.id))}`;
     text(msg, W / 2, 320, 16, r.saved?.ever || r.saved?.today ? '#7fe08a' : '#bbb', 'center', 700);
-    text('Enter or tap: run again · M: menu', W / 2, 356, 14, '#fff', 'center', 600);
+    text('Enter or click: run again · M: menu', W / 2, 356, 14, '#fff', 'center', 600);
   }
 
   // The loading screen: it waits for the lists, today's twist, the menu's pictures and its music, then for a key or a
@@ -2403,7 +2400,7 @@
     drawPlay();
     ctx.fillStyle = 'rgba(10,12,20,0.5)'; ctx.fillRect(0, 0, W, H);
     text('Paused', W / 2, H / 2 - 10, 34, '#fff', 'center', 800);
-    text('P, Esc or tap to go on · M: menu', W / 2, H / 2 + 22, 14, '#ddd', 'center', 500);
+    text('P, Esc or click to go on · M: menu', W / 2, H / 2 + 22, 14, '#ddd', 'center', 500);
   }
 
   // ---------- input ----------
@@ -2536,4 +2533,5 @@
     requestAnimationFrame(frame);
   }
   loadToday();
-  requestAnimationFrame(frame);})();
+  requestAnimationFrame(frame);
+})();

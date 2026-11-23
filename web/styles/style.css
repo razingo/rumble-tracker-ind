@@ -31,6 +31,7 @@
   --family-beast: #b48650;
   --family-blackrock: #5d6576;
   --family-cenarion: #2f9568;
+  --family-neutral: #8a8478;
 }
 
 * { box-sizing: border-box; scrollbar-color: var(--trim) #151933; }
@@ -1301,6 +1302,7 @@ select:focus, input:focus, textarea:focus { outline: 2px solid var(--gold-2); ou
 .family-beast     { --family-color: var(--family-beast); }
 .family-blackrock { --family-color: var(--family-blackrock); }
 .family-cenarion  { --family-color: var(--family-cenarion); }
+.family-neutral   { --family-color: var(--family-neutral); }
 /* leaders of two families get a diagonal split with the combined icon */
 .family-flag.family-split {
   background:

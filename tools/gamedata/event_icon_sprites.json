@@ -1,0 +1,16 @@
+{
+ "anniversary": ["seasonalevent_anniversary.bundle", "SeasonalEvents_Tex_TicketIcon_Anniversary"],
+ "arthas": ["seasonalevent_arthas.bundle", "SeasonalEvents_Tex_TicketIcon_Arthas"],
+ "cenarionfestival": ["seasonalevent_cenarion.bundle", "SeasonalEvents_Tex_TicketIcon"],
+ "darkmoon": ["seasonalevent_darkmoon.bundle", "SeasonalEvents_Tex_TicketIcon_Darkmoon"],
+ "family": ["seasonalevent_familyevents_horde.bundle", "SeasonalEvents_Tex_TicketIcon_HordeEvent"],
+ "generic": ["seasonalevent_genericticket.bundle", "SeasonalEvents_Tex_Ticket_GenericPurple"],
+ "hallow": ["seasonalevent_hallow.bundle", "SeasonalEvents_Tex_TicketIcon_Hallow"],
+ "love": ["seasonalevent_login_love.bundle", "SeasonalEvents_Tex_TicketIcon_Love_Login"],
+ "newyear": ["seasonalevent_newyearlogin.bundle", "SeasonalEvents_Tex_TicketIcon_NewYear_Login"],
+ "pc": ["seasonalevent_pclaunch.bundle", "SeasonalEvents_Tex_CurrencyIcon_PC_Launch"],
+ "pilgrim": ["seasonalevent_pilgrimsbounty.bundle", "SeasonalEvents_Tex_TicketIcon"],
+ "solo": ["seasonalevent_solo.bundle", "SeasonalEvents_Tex_CurrencyIcon_Solo"],
+ "windsofchange": ["seasonalevent_windsofchange.bundle", "SeasonalEvents_Tex_TicketIcon_WindsofChange"],
+ "winterveil": ["seasonalevent_winterveil.bundle", "SeasonalEvents_Tex_TicketIcon_Winterveil"]
+}

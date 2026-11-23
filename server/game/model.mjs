@@ -1,5 +1,4 @@
-// Decodes save records into units, currencies and shop data; detects changes between scans and learns the XP table
-// and purchase costs.
+// Decodes save records into units, currencies and shop data, and detects changes between scans.
 import { parseMessage, fieldsOf, findField, numberOf, readId, textOf } from '../../web/scripts/lib/protobuf.js';
 
 /**
@@ -107,12 +106,12 @@ export function parseStore(buf) {
   const top = parseMessage(buf);
   const rows = top.filter((f) => f.fn === 2 && f.wt === 2).map((row) =>
     fieldsOf(buf, row).filter((s) => s.fn === 1 && s.wt === 2).map((s) => {
-    const p = fieldsOf(buf, s);
-    const mini = readId(buf, findField(p, 1)) || null;
-    const xpBoost = readId(buf, findField(p, 2)) || null;
-    const rarity = readId(buf, findField(p, 13)) || null;
-    return mini || xpBoost ? { mini, xpBoost, rarity } : { bought: true };
-  })).reverse(); // top row first
+      const p = fieldsOf(buf, s);
+      const mini = readId(buf, findField(p, 1)) || null;
+      const xpBoost = readId(buf, findField(p, 2)) || null;
+      const rarity = readId(buf, findField(p, 13)) || null;
+      return mini || xpBoost ? { mini, xpBoost, rarity } : { bought: true };
+    })).reverse(); // top row first
   const offers = top.filter((f) => f.fn === 5 && f.wt === 2).map((f) => {
     const p = fieldsOf(buf, f);
     const inner = findField(p, 7) && fieldsOf(buf, findField(p, 7));

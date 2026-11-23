@@ -68,9 +68,10 @@ to one JSON file, which *Import backup…* restores, also on another PC.
 
 When its window opens, and once a day, the tracker asks GitHub whether a newer version is out, and offers it in a
 pop-up. *Download now* fetches the release, checks it against the checksums published with it, replaces
-`RumbleTracker.exe` and restarts; if the new version fails to start, the previous one is put back. An exe you built yourself is only told about the new version,
-and is left as it is. You can also download the release and replace the exe by hand. Either way your data stays where
-it is. The check can be turned off in **⚙ Settings**. The [changelog](CHANGELOG.md) lists what changed.
+`RumbleTracker.exe` and restarts; if the new version fails to start, the previous one is put back. An exe you built
+yourself is only told about the new version, and is left as it is. You can also download the release and replace the
+exe by hand. Either way your data stays where it is. The check can be turned off in **⚙ Settings**. The
+[changelog](CHANGELOG.md) lists what changed.
 
 ### Uninstalling
 

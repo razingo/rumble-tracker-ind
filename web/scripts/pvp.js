@@ -1,7 +1,6 @@
 // PvP tab: the season, rank, Victory Road, season-end rewards and modifiers (gamedata/pvp.json), and the wins and
 // losses the server works out from honor and Victory Point changes. The calculations are in lib/pvp-season.js.
 import { poll } from './app.js';
-import { loadEvents } from './calendar.js';
 import { chartFrame, yLabel, linePath, timeScale } from './chart.js';
 import { $, store, imageUrl, getJson, post, state, onTablesReload, ui } from './core.js';
 import { alertDialog } from './dialogs.js';
@@ -272,7 +271,6 @@ export async function renderPvp() {
   const page = $('#tab-pvp');
   try {
     await loadPvp();
-    await loadEvents();
   } catch (err) {
     page.innerHTML = `<div class="panel muted">${esc(err.message)}</div>`;
     return;

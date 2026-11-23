@@ -27,6 +27,14 @@
     "epicCore": "d4c2be6ba93da5dc2f185c484aca18aa",
     "legendaryCore": "74a7d9e0deb049297b2e20b6b87514a9"
   },
+  "gridCurrencyIds": [
+    "44b7dad7dfaa4aae8eb69b8dbf6968b8",
+    "e1f4dd57cf836abed7875b0b33bb87e8",
+    "38547868a0830bd6fa60ffc4440983a8",
+    "74c4595e80588d652ab5bc38691b79c9",
+    "97b4103c5c0740da8488d67801c30c2b"
+  ],
+  "ankhId": "32141a9ef28487c729b80616d70185ba",
   "currencyIcons": {
     "9bc48c339b00c337561a0dfddd42d47b": "currency/valor.png",
     "94c293ba0152633a5a74a8dae8dab0ba": "currency/eventTokens.png",

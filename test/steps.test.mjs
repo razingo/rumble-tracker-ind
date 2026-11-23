@@ -3,8 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { writeFile } from 'node:fs/promises';
-import { readFile } from 'node:fs/promises';
+import { writeFile, readFile } from 'node:fs/promises';
 import { runSteps, runProgram, versionsOf, withTools, stepsDue, stepVersions, checkTables } from '../tools/gamedata/build.mjs';
 import { slugOf } from '../tools/gamedata/unityfs.mjs';
 import { testContext, fakeGame } from './helpers.mjs';

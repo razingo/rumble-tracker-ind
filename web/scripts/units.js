@@ -19,7 +19,6 @@ export function gridRarityOf(name) {
   if (!m) return { index: -1, label: '' };
   return { index: RULES.rarities.findIndex((r) => r.name === m[1]), label: `${m[1]}${m[2] === 'Leader' ? ' leader' : ''}` };
 }
-export const FAMILIES = ['Alliance', 'Horde', 'Undead', 'Beast', 'Blackrock', 'Cenarion'];
 export const miniOf = (u) => (u && u.slug ? BY_SLUG.get(u.slug) : null);
 // A mini the game data doesn't have yet, usually one added by a patch.
 export const unitName = (u) => miniOf(u)?.name ?? `New mini ${u.id.slice(0, 8)}`;

@@ -24,8 +24,10 @@ export function bindRdmodule() {
     else at = 0;
     if (at === SEQUENCE.length) {
       at = 0;
-      getJson('/api/rdmodule', 'the rdmodule')
-        .then((status) => { if (status.state === 'ready') webview.postMessage('rdmodule'); }, () => {});
+      // (what was extracted stays when a later extraction fails, so it opens then too)
+      getJson('/api/rdmodule', 'the rdmodule').then((status) => {
+        if (status.extracted && status.state !== 'running') webview.postMessage('rdmodule');
+      }, () => {});
     }
   });
 }

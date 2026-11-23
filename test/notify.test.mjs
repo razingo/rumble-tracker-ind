@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { dueNotifications, defaultSettings, cleanSettings, inQuietHours, combined } from '../server/notifications/notify.mjs';
+import { createNotifier } from '../server/notifications/runner.mjs';
 
 const ctx = (extra = {}) => ({ now: Date.UTC(2026, 4, 6, 12), accounts: [], events: null, store: null, rules: null,
   plans: {}, settings: defaultSettings(), multi: false, ...extra });
@@ -74,4 +75,23 @@ test('an upgrade notification says which mini it is about', () => {
   const [n] = dueNotifications(ctx({ rules, accounts }));
   assert.equal(n.body, 'Drake can be upgraded to Rare.');
   assert.equal(n.about, 'Drake');
+});
+
+test('the first run notifies about nothing, and the run after it does, even when nothing was due at first', async () => {
+  const user = { notifySettings: defaultSettings(), sentLog: { sent: {}, pending: [], log: [] }, notifyBaseline: true,
+    plans: {}, names: { accounts: {}, units: {} }, save: async () => {} };
+  const app = { user, tables: { minis: [], builtinUnits: {}, events: null, store: null, rules: null, pvp: null },
+    accounts: new Map(), appUpdate: { newVersion: null } };
+  const shown = [];
+  const notifier = createNotifier(app, { gameRunning: async () => false, toast: async (title) => shown.push(title) });
+  await notifier.tick(); // no account read yet: the first run is still to come
+  assert.equal(user.notifyBaseline, true);
+  // (notifications are for another account, one this PC has not read: the first run still ends)
+  user.notifySettings.account = 'b'.repeat(32);
+  app.accounts.set('a'.repeat(32), { snapshot: { currencies: [], units: [] }, shop: null });
+  await notifier.tick(); // the first run, with nothing due
+  assert.equal(user.notifyBaseline, false);
+  app.appUpdate.newVersion = '9.9.9';
+  await notifier.tick();
+  assert.deepEqual(shown, ['Tracker update available']);
 });

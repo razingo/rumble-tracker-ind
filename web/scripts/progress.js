@@ -84,14 +84,14 @@ function legendaryProjection() {
     for (const [k, v] of Object.entries(r.cores)) need.cores[k] = (need.cores[k] || 0) + v;
   }
   const rows = [];
-  const add = (label, remaining, rate, unit) => {
+  const add = (label, remaining, rate) => {
     const left = Math.max(0, remaining);
     const days = left === 0 ? 0 : rate > 0 ? left / rate : Infinity;
-    rows.push({ label, left, rate, days, unit });
+    rows.push({ label, left, rate, days });
   };
-  add(currencyName('arcEnergy'), need.arcEnergy - balance('arcEnergy'), rateOf((p) => lifetimeOf(p, 'arcEnergy')), '');
-  add('Stars', need.stars, rateOf((p) => p.stars), '');
-  for (const [role, n] of Object.entries(need.cores)) add(currencyName(role), n - balance(role), rateOf((p) => lifetimeOf(p, role)), '');
+  add(currencyName('arcEnergy'), need.arcEnergy - balance('arcEnergy'), rateOf((p) => lifetimeOf(p, 'arcEnergy')));
+  add('Stars', need.stars, rateOf((p) => p.stars));
+  for (const [role, n] of Object.entries(need.cores)) add(currencyName(role), n - balance(role), rateOf((p) => lifetimeOf(p, role)));
   return rows;
 }
 const whenText = (days) => (days === 0 ? 'done' : !isFinite(days) ? 'no income yet' : days > 3650 ? '10+ years'

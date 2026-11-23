@@ -6,7 +6,7 @@ import { alertDialog } from './dialogs.js';
 import { esc, fmt, plural } from './lib/format.js';
 import { rarityName, rarityColor, miniOf, unitName, balance, currencyName, coreName, nextUpgrade, talentSlots,
   allTalentsOwned, effectivePicks, xpToMax, isLeader, fixedSlot, slotLocked, bottomSlotOptions, armyOf,
-  leaderSlotBonus, totalLevel, armyTotals } from './units.js';
+  leaderSlotBonus, totalLevel, armyTotals, familiesOf } from './units.js';
 
 // The item shown in the side panel ({ kind: 'unit', id } or { kind: 'mini', slug }) and the level its stats preview.
 export const panel = { open: null, previewLevel: null };
@@ -85,7 +85,7 @@ function drawerHead(u, m) {
     ${m ? `<img src="/static/${m.art}" alt="">` : '<div class="art unknown">?</div>'}
     <div><h2 id="drawerTitle">${esc(m ? m.name : unitName(u))}</h2>
     <div class="muted">${m ? `${m.category} · ${m.cost} gold` : 'Not identified yet'}</div>
-    ${m ? `<div class="tags">${[m.family, ...String(m.role).split(',')].map(tag).join('')}</div>` : ''}
+    ${m ? `<div class="tags">${[...familiesOf(m), ...String(m.role).split(',')].map(tag).join('')}</div>` : ''}
     ${u && !u.synthetic ? `<div class="muted">${rarityName(u.rarity)} · level ${totalLevel(u)}</div>` : ''}</div></div>`;
 }
 

@@ -1,8 +1,11 @@
 """Extract each event family's ticket/currency icon to gamedata/events/<family>.webp (read-only on the game files).
 
 usage: python -I extract_event_icons.py [out_dir]
-Names repeat across bundles (e.g. SeasonalEvents_Tex_TicketIcon), so each icon is taken from a specific bundle.
+event_icon_sprites.json lists them: family -> [bundle file, texture name]. Names repeat across bundles
+(e.g. SeasonalEvents_Tex_TicketIcon), so each icon is taken from a specific bundle. build_events.mjs reads the same
+list to name each event's icon.
 """
+import json
 import os
 import sys
 
@@ -13,19 +16,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "..", "..", "gamedata", "events")
 SIZE = 96
 
-# family -> (bundle file, texture name)
-WANT = {
-    "darkmoon": ("seasonalevent_darkmoon.bundle", "SeasonalEvents_Tex_TicketIcon_Darkmoon"),
-    "pilgrim": ("seasonalevent_pilgrimsbounty.bundle", "SeasonalEvents_Tex_TicketIcon"),
-    "solo": ("seasonalevent_solo.bundle", "SeasonalEvents_Tex_CurrencyIcon_Solo"),
-    "winterveil": ("seasonalevent_winterveil.bundle", "SeasonalEvents_Tex_TicketIcon_Winterveil"),
-    "hallow": ("seasonalevent_hallow.bundle", "SeasonalEvents_Tex_TicketIcon_Hallow"),
-    "arthas": ("seasonalevent_arthas.bundle", "SeasonalEvents_Tex_TicketIcon_Arthas"),
-    "family": ("seasonalevent_familyevents_horde.bundle", "SeasonalEvents_Tex_TicketIcon_HordeEvent"),
-    "love": ("seasonalevent_login_love.bundle", "SeasonalEvents_Tex_TicketIcon_Love_Login"),
-    "newyear": ("seasonalevent_newyearlogin.bundle", "SeasonalEvents_Tex_TicketIcon_NewYear_Login"),
-    "generic": ("seasonalevent_genericticket.bundle", "SeasonalEvents_Tex_Ticket_GenericPurple"),
-}
+with open(os.path.join(HERE, "event_icon_sprites.json"), encoding="utf-8") as f:
+    WANT = json.load(f)  # family -> [bundle file, texture name]
 
 
 def find(bundle):

@@ -1,8 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readVarint, parseMessage } from '../web/scripts/lib/protobuf.js';
+import { readVarint, parseMessage, varint, int, embedded, string, fixed64, double } from '../web/scripts/lib/protobuf.js';
 import { parseUnits, parseCurrencies, parseGameBuild, parseOwnedAvatars, compareVersions, diffSnapshots } from '../server/game/model.mjs';
-import { varint, int, embedded, string, fixed64, double } from '../web/scripts/lib/protobuf.js';
 import { id, hexId } from './helpers.mjs';
 
 test('varints', () => {

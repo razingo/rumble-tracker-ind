@@ -17,6 +17,8 @@ const WORK = process.env.RUMBLE_WORK || HERE; // working files passed between th
 const OUT = process.argv[2] || join(DATA, 'events.json');
 const DIR = process.env.RUMBLE_BUNDLES;
 const all = bundleFiles(DIR);
+// the event families with a ticket icon of their own (extract_event_icons.py makes them)
+const ICONS = JSON.parse(readFileSync(join(HERE, 'event_icon_sprites.json'), 'utf8'));
 
 // every JSON data object from the event bundles, plus schedules/strings that live elsewhere
 const objs = {};
@@ -107,6 +109,7 @@ for (const d of Object.values(objs)) {
     saveId: saveIdOf(d.guid),   // how the registry refers to this event (StoreState active-event list)
     name: clean(str[d.m_eventName]) || null,
     family: family(d.name),
+    icon: ICONS[family(d.name)] ? family(d.name) : undefined, // (the page shows the generic ticket without one)
     currency: CUR[d.m_currencyType] || null,
     schedule: sc,
   });
@@ -127,8 +130,11 @@ function rewardOf(r) {
   out.label = clean(str[g.m_rewardName]) || g.name.replace(/^EventReward_/, '');
   let icon = spriteOf(g.m_sprite);
   const tome = /^EventReward_(Modest|Major|Mega|Mythic)(\w*?)Tome/.exec(g.name || '');
-  // a reward's own sprite wins; tomes without one get the matching tome icon
-  if (tome && !icon) icon = `Shared_Tex_Tome${tome[1]}_${tome[2].replace(/^_/, '') || 'Generic'}`;
+  // a reward's own sprite wins; tomes without one get the matching tome icon (a tome of no faction is the game's
+  // "Generic" one, but for the Modest size, whose picture it calls "Star")
+  if (tome && !icon) {
+    icon = `Shared_Tex_Tome${tome[1]}_${tome[2].replace(/^_/, '') || (tome[1] === 'Modest' ? 'Star' : 'Generic')}`;
+  }
   else if (g.m_grantType === 'Mini' && g.m_mini) {
     // the page shows the mini's own art (minis.json) instead of a game sprite
     out.mini = UNIT_SLUGS[saveIdOf(g.m_mini)] || null;

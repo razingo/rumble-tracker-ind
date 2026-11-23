@@ -1,5 +1,5 @@
 // Calendar tab: the event schedules from gamedata/events.json and the events the save reports as running.
-import { $, imageUrl, getJson, post, RULES, BY_SLUG, TAG_ICONS, state, onTablesReload, ui, ANKH_ID } from './core.js';
+import { $, imageUrl, getJson, post, RULES, BY_SLUG, TAG_ICONS, state, onTablesReload, ui } from './core.js';
 import { STORE, loadStore } from './grid.js';
 import { SECOND, MINUTE, DAY } from './lib/constants.js';
 import { esc, fmt, plural, when, dayOnly, dayWithYear, longDay, timeOnly, span, ago, titleCase } from './lib/format.js';
@@ -61,8 +61,8 @@ const rotationIcon = (rot, item) => (rot.id === 'dungeonFamily' && TAG_ICONS?.[i
 
 /** The account's Ankh, which continues a failed dungeon, for the Dungeon card. */
 function ankhLine() {
-  const c = state?.currencies?.find((x) => x.id === ANKH_ID);
-  const icon = RULES.currencyIcons?.[ANKH_ID];
+  const c = state?.currencies?.find((x) => x.id === RULES.ankhId);
+  const icon = RULES.currencyIcons?.[RULES.ankhId];
   const img = icon ? `<img class="currency-icon" src="/static/${icon}" alt="">` : '';
   return `<div class="rotation-ankh" title="Used to continue failed dungeons">${img}${esc(c?.name || 'Ankh')}
     <b>${fmt(c?.balance ?? 0)}</b> <small class="muted">continues a failed dungeon</small></div>`;

@@ -1,11 +1,11 @@
 // The Army tab's two pools, Leaders and Units & Spells: their filters, sorting and cards.
 import { builder, draftUnit, addFromPool } from './army.js';
 import { allTraits, toggleIn } from './collection.js';
-import { $, store, TAG_ICONS, state } from './core.js';
+import { $, store, TAG_ICONS, FAMILIES, state } from './core.js';
 import { iconImage } from './drawer.js';
 import { esc } from './lib/format.js';
 import { traitPicker } from './trait-picker.js';
-import { rarityColor, FAMILIES, miniOf, armyOf, totalLevel, slotMatches, familiesOf } from './units.js';
+import { rarityColor, miniOf, armyOf, totalLevel, slotMatches, familiesOf } from './units.js';
 
 const POOL_DEFAULT = { leaders: { q: '', fam: [], traits: [], traitMode: 'all', sort: 'level' },
   units: { q: '', fam: [], type: [], traits: [], traitMode: 'all', sort: 'level' } };
@@ -139,7 +139,6 @@ export function poolClick(t) {
   if (t.dataset.poolSlug) addFromPool(t.dataset.poolSlug, t.dataset.poolKind);
   else if (t.dataset.poolFamily) updatePool(kind, (p) => toggleIn(p.fam, t.dataset.poolFamily));
   else if (t.dataset.poolType) updatePool(kind, (p) => toggleIn(p.type, t.dataset.poolType));
-  else if (t.dataset.poolTrait) updatePool(kind, (p) => toggleIn(p.traits, t.dataset.poolTrait));
   // Clear filters keeps the sort and the trait match mode.
   else if (t.dataset.poolClear) updatePool(t.dataset.poolClear,
     (p) => Object.assign(p, { q: '', fam: [], traits: [], ...(p.type ? { type: [] } : {}) }));

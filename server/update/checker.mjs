@@ -1,6 +1,7 @@
-// Looks for a newer version of the tracker: the latest release of its repository on GitHub, asked for at start and
-// once a day, unless that is turned off in Settings. The only thing sent is the request itself. A newer version shows
-// the update pop-up (and one notification); what it found is kept in ctx.appUpdate as newVersion and latestApp.
+// Looks for a newer version of the tracker: the latest release of its repository on GitHub, asked for at start,
+// when the window opens and once a day, unless that is turned off in Settings. The only thing sent is the request
+// itself. A newer version shows the update pop-up (and one notification); what it found is kept in ctx.appUpdate as
+// newVersion and latestApp.
 import { latestRelease } from './appupdate.mjs';
 import { compareVersions } from '../game/model.mjs';
 

@@ -157,11 +157,12 @@ for (const [saveId, slug] of Object.entries(unitIds)) {
   // split families (Arthas: Alliance + Undead) list their parts in m_subFamilies; the primary stays the tracker's
   // earlier choice when it is one of them (frame color), else the first part
   const famObj = objs[m.m_family];
-  const famName = (f) => FAMILY[f?.name] || text(f?.m_displayNameRef) || shortName(f, 'Family').replace(/^Family/, '') || 'Neutral';
+  // (no faction is Neutral, and so is one the tracker doesn't know yet: it has no color or board for it)
+  const famName = (f) => FAMILY[f?.name] || 'Neutral';
   const parts = (famObj?.m_subFamilies || []).map((g) => objs[typeof g === 'string' ? g : g?.m_family || g?.guid]).filter(Boolean);
   const families = parts.length ? parts.map(famName) : [famName(famObj)];
   const family = families.includes(prev.family) ? prev.family : families[0];
-  for (const f of parts.length ? parts : [famObj]) if (f) tagIcons[famName(f)] ??= iconPath(sprite(f.m_icon),
+  for (const f of parts.length ? parts : [famObj]) if (FAMILY[f?.name]) tagIcons[famName(f)] ??= iconPath(sprite(f.m_icon),
     famName(f).replace(/\W/g, ''));
   const roles = (m.m_balanceRoles || []).map((g) => objs[g]).filter(Boolean);
   const role = roles.map((r) => text(r.m_displayNameRef) || text(r.m_infoNameRef) || shortName(r, 'BalanceRole')).join(',');
@@ -247,11 +248,15 @@ writeFileSync(OUT, JSON.stringify({
   source: 'Warcraft Rumble game files. Game data © Blizzard Entertainment.',
   stats: { format: 'single value = same at all levels; array = levels 1..31 (index 0 = level 1)',
     scaling: `stats with a growth type: round(level 1 value x ${GROWTH}^(level-1))` },
+  // the factions the game's minis are of, in the order the page shows their filters; Neutral comes last
+  families: [...new Set(Object.values(FAMILY)), 'Neutral']
+    .filter((f) => minis.some((m) => (m.families || [m.family]).includes(f))),
   // the faction pairs that have a combined icon (icons/fam/<pair>.png), from the list those icons are read by
   familyPairs: Object.keys(JSON.parse(readFileSync(join(HERE, 'family_pair_sprites.json'), 'utf8'))).map((f) => f.replace(/\.png$/, '')),
   tagIcons: { Wildcard: 'icons/Wildcard.png', Leader: 'icons/Leader.png',
     ...Object.fromEntries(Object.entries(tagIcons).filter(([, v]) => v)),
-    'Siege Damage': tagIcons.Siege || tagIcons['Siege Damage'], 'Siege Specialist': tagIcons.Siege || tagIcons['Siege Specialist'] },
+    'Siege Damage': tagIcons.Siege || tagIcons['Siege Damage'], 'Siege Specialist': tagIcons.Siege || tagIcons['Siege Specialist'],
+    Neutral: tagIcons.Miner }, // (the game has no icon for no faction: the Kobold Miner's pickaxe stands for it)
   minis,
 }, null, 2) + '\n');
 // sprite lists for extract_reward_icons.py (one list per output folder: file name -> sprite)

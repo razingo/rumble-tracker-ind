@@ -2,7 +2,7 @@
 // a number of other minis have been: 12, 16 for leaders, 20 for special leaders. The cooldowns come from the grids the
 // tracker has seen (grid_history.json).
 import { currencyChip } from './collection.js';
-import { $, imageUrl, getJson, MINIS, BY_SLUG, state, onTablesReload, ui, GRID_CURRENCY_IDS } from './core.js';
+import { $, imageUrl, getJson, RULES, MINIS, BY_SLUG, state, onTablesReload, ui } from './core.js';
 import { SECOND, HOUR, DAY } from './lib/constants.js';
 import { esc, fmt, plural, dateTime, dayWithYear, weekdayTime, span } from './lib/format.js';
 import { rarityColor, ownedUnit, gridRarityOf } from './units.js';
@@ -157,7 +157,7 @@ export async function renderGridTab() {
     return;
   }
   // The G.R.I.D. currencies the account has.
-  const currencies = GRID_CURRENCY_IDS.map((id) => state.currencies.find((c) => c.id === id && c.name)).filter(Boolean);
+  const currencies = (RULES.gridCurrencyIds || []).map((id) => state.currencies.find((c) => c.id === id && c.name)).filter(Boolean);
   const history = state.gridHistory || [];
   page.innerHTML = `${gridHeader(shop, currencies)}
     <div class="grid-layout">

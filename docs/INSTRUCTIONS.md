@@ -53,7 +53,8 @@ slots need. **Closest to next step** picks the minis nearest to their next level
 still missing.
 
 Further down, filter the grid of minis by type (units, leaders, spells), faction and traits, and use *Show* (owned, or
-owned + not owned) and *Sort*. Click a mini for its details: level, XP, stars and rarity, the next upgrade and its cost,
+owned + not owned) and *Sort*. *Neutral* holds the minis of no faction, and those of a faction the tracker doesn't
+know yet. Click a mini for its details: level, XP, stars and rarity, the next upgrade and its cost,
 traits and talents, and its stats, which the slider shows at any level.
 
 A leader's details also hold its **Army slots**. Copy each slot's type and tier (Bronze to Diamond) and the Boost from
@@ -73,17 +74,18 @@ Two things need you now and then:
 
 Build an army of a leader and six minis from your collection, and see each mini at the level it would play at in its
 slot. Click a leader or a mini in the lists below the board, or drag it onto a slot. Drag a mini from one slot to
-another to swap them, or back to the lists to take it out. Search the lists, filter them by type, faction and trait,
-and sort them.
+another to swap them; click it on the board, or drag it back to the lists, to take it out. Search the lists, filter
+them by type, faction and trait, and sort them.
 
 Each slot shows the mini's level, its talent and the slot's type, from the leader's army slots (see
 [Collection](#collection)); click the talent to choose another. The **Boost** slot gives the mini there full XP level.
 The average gold cost and average level sit at the top of the board.
 
 Save the army with *Save as new* (*Save* once it has been saved) or *Save as copy*, start over with *New*, empty the
-board with *Clear army* and remove a saved army with *Delete*. Give it a description and tags such as "pvp" or "event". *Copy code* gives the game's army
-code to paste into Warcraft Rumble, and *Import code* loads one, for example from a friend or a guide. The army you're
-editing is kept automatically, even if you close the window.
+board with *Clear army* and remove a saved army with *Delete*. Give it a description and tags such as "pvp" or
+"event". *Copy code* gives the game's army code to paste into Warcraft Rumble, and *Import code* loads one, for
+example from a friend or a guide. An imported army may hold minis you don't own: they are listed under the board
+and have no level. The army you're editing is kept automatically, even if you close the window.
 
 ## Armory
 
