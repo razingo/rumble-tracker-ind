@@ -9,10 +9,11 @@
 // A build goes into a folder beside the data and replaces it at the end, so a failed one leaves the data as it was.
 import http from 'node:http';
 import path from 'node:path';
-import { rm, rename, cp, stat } from 'node:fs/promises';
+import { rm, cp, stat } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { ISSUES_REPO, briefError } from './report.mjs';
+import { replaceFolder } from './store.mjs';
 import { givenGameFolder, setGameFolder } from './game/folder.mjs';
 import { esc } from '../web/scripts/lib/format.js';
 import { APP_NAME, SECOND, HOUR } from '../web/scripts/lib/constants.js';
@@ -22,7 +23,7 @@ const AFTER_FAILURE_MS = HOUR; // a background read that failed is not tried aga
 // What a failed read tells the player, where the reason is not one they can fix themselves: after a game patch, the
 // game's files may be in a form this version of the tracker does not know yet.
 const unread = (e) => `The game data could not be read (${briefError(e)}). If this started with a game patch, a newer `
-  + 'version of the tracker may be able to read it.';
+  + 'version of the tracker may be able to read it.'; // (the first start's page; the banner has its own words)
 
 /**
  * The game data's part of the tracker: firstRead() before the tables are loaded, check() whenever a newer game may be
@@ -47,8 +48,7 @@ export async function createGameData(ctx, { builder } = {}) {
     if (due !== 'all' && await stat(path.join(out, 'gamedata.json')).catch(() => null)) await cp(out, stage, { recursive: true });
     else due = 'all';
     const r = await builder.buildGameData({ game, out: stage, work, due, log: console.log, onStep });
-    await rm(out, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
-    await rename(stage, out);
+    await replaceFolder(stage, out);
     console.log(`Game data read for ${r.gameBuild} (${r.steps.length} steps)`);
     return r;
   }
@@ -157,10 +157,19 @@ ${page.error ? `<p>${esc(page.error)}</p>${ask || '<p style="opacity:.7">Trying 
    * steps a new version of the tracker changed. One at a time: a check asked for while one runs joins it. Resolves
    * once the check, and the read it started, are over.
    */
-  let checking = null;
+  let checking = null, again = false;
   function check({ retry = false } = {}) {
-    if (retry) failedAt = 0; // something changed that a failed read may have wanted (the game's folder)
-    checking ??= run().finally(() => { checking = null; });
+    if (retry) {
+      failedAt = 0; // something changed that a failed read may have wanted (the game's folder)
+      again = !!checking; // (a check that runs now looked before the change: another follows it)
+    }
+    checking ??= run().finally(() => {
+      checking = null;
+      if (again) {
+        again = false;
+        check();
+      }
+    });
     return checking;
   }
   async function run() {
@@ -168,18 +177,25 @@ ${page.error ? `<p>${esc(page.error)}</p>${ask || '<p style="opacity:.7">Trying 
     const game = await findGame();
     const due = builder.stepsDue(game, ctx.tables.gameData);
     if (!due.length) return;
-    // (the same game as the data's: it is the tracker that changed, whether it reads some steps anew or all of them)
-    const sameGame = ctx.tables.gameData?.gameBuild === builder.gameVersion(game);
+    // (the same game as the data's: it is the tracker that changed, whether it reads some steps anew or all of them.
+    // Where the game is not found, there is no version to read: the build below says what is wrong.)
+    let version = null;
+    try {
+      version = builder.gameVersion(game);
+    } catch {
+      // no game here
+    }
+    const sameGame = version !== null && ctx.tables.gameData?.gameBuild === version;
     Object.assign(status, { reading: true, forTracker: sameGame, error: null });
     ctx.bump();
-    console.log(!sameGame ? `Game data: reading it for the game's version ${builder.gameVersion(game)}`
+    console.log(!sameGame ? `Game data: reading it for the game's version ${version ?? '(not found)'}`
       : `Game data: this version of the tracker reads ${due === 'all' ? 'all of it' : due.join(', ')} anew`);
     try {
       await ctx.oneAtATime(() => build(game, due));
       await ctx.tables.load();
     } catch (e) {
       failedAt = Date.now();
-      status.error = e instanceof builder.BuildError ? e.message : unread(e);
+      status.error = e instanceof builder.BuildError ? e.message : briefError(e);
       console.log(`Reading the game data failed: ${e.message}`);
       errorLog.add('game data', e.message);
     }

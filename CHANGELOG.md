@@ -3,6 +3,16 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.1.2
+
+- Fixed: when reading the game data failed, the banner repeated itself. It now gives the reason once.
+- Fixed: with the game not found, the tracker could log an error every half hour and show a red dot on Report a
+  problem.
+- If a game patch leaves the tracker with broken game data (no minis, no events), that read is refused and the data
+  you had stays.
+- New game data now takes the old data's place more safely: the old data is only removed once the new one is there.
+- A game folder changed in Settings while the game data is being read is picked up as soon as that read ends.
+
 ## 0.1.1
 
 - After this update the tracker reads its images again once, in the background; it takes under a minute.

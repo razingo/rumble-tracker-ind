@@ -61,11 +61,13 @@ export function createRdmodule(ctx) {
       const t = await load();
       if (!t?.canExtract()) return false;
       if (run.state === 'running') return true;
+      // (it counts as running from here on, so a second request that comes meanwhile starts nothing)
+      Object.assign(run, { state: 'running', waiting: true, done: 0, total: 0, label: '', error: null });
       const free = await freeSpace();
       if (free !== null && free < SPACE_NEEDED) {
+        Object.assign(run, { state: 'idle', waiting: false });
         throw new Error(`The disk is too full: this needs about ${gb(SPACE_NEEDED)} GB free, and ${gb(free)} GB is.`);
       }
-      Object.assign(run, { state: 'running', waiting: true, done: 0, total: 0, label: '', error: null });
       const gameFolder = await givenGameFolder(ctx);
       // (after a read of the game data that runs now: the PC never carries both)
       ctx.oneAtATime(async () => {

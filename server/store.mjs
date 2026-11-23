@@ -56,6 +56,34 @@ export function writeJson(p, value) {
 }
 
 /** Resolves once every queued write has finished (successfully or not). */
+/**
+ * Puts the folder `from` in the place of `to`. The old one is moved aside first and only deleted once the new one is
+ * there, so a failure leaves the old one where it was. A scanner or a closing window may hold a file for a moment:
+ * a move that is refused for that is tried again for a few seconds.
+ */
+export async function replaceFolder(from, to) {
+  const move = async (a, b) => {
+    for (let tries = 0; ; tries++) {
+      try {
+        return await rename(a, b);
+      } catch (e) {
+        if (tries >= 20 || !['EPERM', 'EBUSY', 'EACCES'].includes(e.code)) throw e;
+        await new Promise((r) => setTimeout(r, 250));
+      }
+    }
+  };
+  const old = `${to}-old`;
+  await rm(old, { recursive: true, force: true, maxRetries: 20, retryDelay: 250 });
+  const had = await move(to, old).then(() => true, (e) => { if (e.code === 'ENOENT') return false; throw e; });
+  try {
+    await move(from, to);
+  } catch (e) {
+    if (had) await move(old, to).catch(() => {});
+    throw e;
+  }
+  await rm(old, { recursive: true, force: true, maxRetries: 20, retryDelay: 250 }).catch(() => {});
+}
+
 export async function flushWrites() {
   while (queues.size) await Promise.allSettled([...queues.values()]);
 }

@@ -65,14 +65,16 @@ const rotateLog = () => {
 const MAX_LOG = 2 * 1024 * 1024;
 const MAX_LINE = 4000;
 // The log may be attached to a bug report, so its lines carry no Windows user name: the home folder is written as ~,
-// and the name elsewhere as <user>.
+// and the name as <user> where it is a folder of another path. Only whole folder names count, so a word that happens
+// to be the name, or a folder that only starts with it, stays as it is.
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const HOME_FOLDER = os.homedir();
 const USER_NAME = (() => { try { return os.userInfo().username; } catch { return ''; } })();
 function withoutUserName(line, home = HOME_FOLDER, user = USER_NAME) {
   let s = line;
-  for (const h of home ? [home, home.replace(/\\/g, '/')] : []) s = s.replace(new RegExp(escapeRe(h), 'gi'), '~');
-  if (user.length >= 3) s = s.replace(new RegExp(`\\b${escapeRe(user)}\\b`, 'gi'), '<user>');
+  const end = '(?=[\\\\/]|$|["\'\\s:;,)])'; // where a folder's name ends
+  for (const h of home ? [home, home.replace(/\\/g, '/')] : []) s = s.replace(new RegExp(escapeRe(h) + end, 'gi'), '~');
+  if (user) s = s.replace(new RegExp(`(?<=[\\\\/])${escapeRe(user)}${end}`, 'gi'), '<user>');
   return s;
 }
 let logBytes = null; // bytes in the current log; read from disk on the first write

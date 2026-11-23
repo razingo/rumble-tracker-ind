@@ -25,6 +25,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { Worker } from 'node:worker_threads';
 import { createHash } from 'node:crypto';
 import { availableParallelism, setPriority, constants as osConstants } from 'node:os';
+import { REG } from '../../server/system.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SEED = join(HERE, 'seed');
@@ -111,7 +112,7 @@ export function findGame(given) {
   if (dir) return dir;
   for (const key of ['HKLM\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Warcraft Rumble',
     'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Warcraft Rumble']) {
-    const r = spawnSync('reg', ['query', key, '/v', 'InstallLocation'], { encoding: 'utf8', windowsHide: true });
+    const r = spawnSync(REG, ['query', key, '/v', 'InstallLocation'], { encoding: 'utf8', windowsHide: true });
     const m = /InstallLocation\s+REG_SZ\s+(.+)/.exec(r.stdout || '');
     if (m) return m[1].trim();
   }
@@ -259,6 +260,32 @@ export function withDependents(steps, names) {
 }
 
 /**
+ * Throws when the tables in `dir` are plainly broken: a game patch may change the game's files so that a builder
+ * finds nothing and still ends well. Then the read fails, and the data the tracker had stays. Only what no patch
+ * does is refused: far fewer minis than the tracker knows IDs for (a few may be missing: the tracker can know a
+ * mini before the installed game has it), a mini without a name or portrait, an empty table.
+ */
+const MINIS_FOUND = 0.9; // the share of the known minis a read must find
+export function checkTables(dir) {
+  const read = (file) => JSON.parse(readFileSync(join(dir, file), 'utf8'));
+  const size = (x) => (Array.isArray(x) ? x.length : x && typeof x === 'object' ? Object.keys(x).length : 0);
+  const problems = [];
+  try {
+    const minis = read('minis.json').minis || [];
+    const known = new Set(Object.values(read('unit_ids.json').units || {})).size;
+    if (!minis.length || minis.length < MINIS_FOUND * known) problems.push(`${minis.length} minis, where ${known} are known`);
+    const bare = minis.filter((m) => !m.name || !m.art);
+    if (bare.length) problems.push(`${bare.length} minis without a name or portrait (${bare.slice(0, 3).map((m) => m.slug).join(', ')})`);
+    if (!size(read('events.json').events)) problems.push('no events');
+    if (!size(read('store.json').offers)) problems.push('no shop offers');
+    if (!size(read('pvp.json').ranks)) problems.push('no PvP ranks');
+  } catch (e) {
+    problems.push(e.message);
+  }
+  if (problems.length) throw new Error(`The tables read from the game are not usable: ${problems.join('; ')}.`);
+}
+
+/**
  * Builds the game data into `out`, with its working files (and Python's environment) in `work`. `due` is what to
  * build: 'all', or the names of steps (from stepsDue), which then run with everything that depends on them, on top
  * of the data `out` already holds.
@@ -353,6 +380,7 @@ export async function buildGameData({ game = findGame(), out, work, due = 'all',
   for (const dir of ['ui', 'icons', 'rewards']) mkdirSync(join(out, dir), { recursive: true });
   const missing = (await runSteps(steps, { onStep, log, only })).filter((l) => /NOT FOUND/.test(l)).map((l) => l.trim());
 
+  checkTables(out);
   // the stamp: what the tracker reads to know the data is whole, and what a later build goes by
   const dataVersion = new Date().toISOString();
   writeFileSync(stampFile, JSON.stringify({ format: 2, gameBuild: build, dataVersion, steps: stepVersions(), made }, null, 1) + '\n');

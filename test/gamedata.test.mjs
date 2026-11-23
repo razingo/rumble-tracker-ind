@@ -182,3 +182,37 @@ test('the first start shows a loading page, which asks for the game folder when 
     await cleanup();
   }
 });
+
+test('a check without the game fails as a read does, and a retry asked for during a check follows it', async () => {
+  const { ctx, cleanup } = await testContext();
+  try {
+    // data from before steps had versions, and the game gone: everything is due, and there is no version to read
+    const builder = fakeBuilder(null);
+    builder.stepsDue = () => 'all';
+    builder.gameVersion = () => { throw new TypeError('no folder to read the version from'); };
+    builder.fail = 'Warcraft Rumble was not found on this PC.';
+    const gameData = await createGameData(ctx, { builder });
+    await gameData.check(); // (does not throw)
+    assert.equal(ctx.gameData.error, 'Warcraft Rumble was not found on this PC.');
+    assert.deepEqual(ctx.gameData.reading, false);
+
+    // a retry asked for while a check runs: the running one looked before the change, so another follows
+    const slow = fakeBuilder('C:\\game');
+    let looked = 0;
+    const due = slow.stepsDue;
+    slow.stepsDue = (...a) => { looked++; return due(...a); };
+    const read = slow.buildGameData;
+    slow.buildGameData = async (o) => { await new Promise((r) => setTimeout(r, 30)); return read(o); };
+    const second = await createGameData(ctx, { builder: slow });
+    const running = second.check();
+    await new Promise((r) => setTimeout(r, 5));
+    second.check({ retry: true });
+    await running;
+    await new Promise((r) => setTimeout(r, 20));
+    await second.check();
+    assert.ok(looked >= 2, 'the game was looked at again after the running check');
+    assert.equal(slow.builds, 1, 'and nothing more was due');
+  } finally {
+    await cleanup();
+  }
+});

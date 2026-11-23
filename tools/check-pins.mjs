@@ -1,7 +1,7 @@
 // Lists the pinned software that has a newer version out: Node.js, Python and its packages, three.js, vgmstream and
 // the WebView2 libraries. The pins are read from the files that hold them, so there is nothing to keep in step here.
 // It changes nothing: a newer version is taken by editing the pin (and its checksum) and testing the result.
-//   npm run check-pins      (exit code 1 when something is behind; .github/workflows/pins.yml runs it monthly)
+//   npm run check-pins      (exit code 1 when something is behind or could not be checked; pins.yml runs it monthly)
 // The requests go to nodejs.org, python.org, pypi.org, registry.npmjs.org, api.github.com and api.nuget.org, and carry
 // nothing but the package's name.
 import { readFileSync } from 'node:fs';
@@ -70,4 +70,5 @@ for (const [what, file, pinned, latestOf] of pins) {
   }
 }
 console.log(behind ? `\n${behind} of ${pins.length} are behind.` : `\nAll ${pins.length - unknown} that could be checked are current.`);
-process.exit(behind ? 1 : 0);
+if (unknown) console.log(`${unknown} could not be checked.`);
+process.exit(behind || unknown ? 1 : 0); // (a check that could not look is not a pass)

@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { writeFile } from 'node:fs/promises';
-import { runSteps, runProgram, versionsOf, withTools, stepsDue, stepVersions } from '../tools/gamedata/build.mjs';
+import { runSteps, runProgram, versionsOf, withTools, stepsDue, stepVersions, checkTables } from '../tools/gamedata/build.mjs';
 import { testContext, fakeGame } from './helpers.mjs';
 
 test('runs steps side by side, each after the ones it waits for', async () => {
@@ -102,6 +102,38 @@ test('the tools a step uses count in its version, and only in that step', async 
     assert.equal(newDecoder.Icons, before.Icons);
     // without the private Python (a Python found on the PC), the settings stand alone
     assert.deepEqual(withTools({ Icons: ['64'] }, ['Icons'], null), { Icons: ['64'] });
+  } finally {
+    await cleanup();
+  }
+});
+
+test('tables a broken read left are refused, a normal patch\'s are not', async () => {
+  const { dir, cleanup } = await testContext();
+  try {
+    const mini = (slug) => ({ slug, name: slug, art: `art/${slug}.webp` });
+    const write = async (tables) => {
+      const all = { 'unit_ids.json': { units: { a1: 'footman', b2: 'ghoul' } }, 'minis.json': { minis: [mini('footman'), mini('ghoul')] },
+        'events.json': { events: [{ id: 'e' }] }, 'store.json': { offers: { daily: {} } }, 'pvp.json': { ranks: [{}] }, ...tables };
+      for (const [file, value] of Object.entries(all)) await writeFile(path.join(dir, file), JSON.stringify(value));
+    };
+    await write({});
+    checkTables(dir);
+    await write({ 'minis.json': { minis: [mini('footman'), mini('ghoul'), mini('new-mini')] } }); // a patch added one
+    checkTables(dir);
+    await write({ 'minis.json': { minis: [mini('footman')] } });
+    assert.throws(() => checkTables(dir), /1 minis, where 2 are known/);
+    // the tracker may know a mini before the installed game has it: one of ten missing is no broken read
+    const ten = Array.from({ length: 10 }, (_, i) => `mini-${i}`);
+    await write({ 'unit_ids.json': { units: Object.fromEntries(ten.map((s, i) => [`id${i}`, s])) },
+      'minis.json': { minis: ten.slice(0, 9).map(mini) } });
+    checkTables(dir);
+    await write({ 'unit_ids.json': { units: { a1: 'footman', b2: 'ghoul' } } });
+    await write({ 'minis.json': { minis: [mini('footman'), { slug: 'ghoul', name: 'Ghoul' }] } });
+    assert.throws(() => checkTables(dir), /1 minis without a name or portrait \(ghoul\)/);
+    await write({ 'events.json': { events: [] }, 'pvp.json': {} });
+    assert.throws(() => checkTables(dir), /no events; no PvP ranks/);
+    await writeFile(path.join(dir, 'store.json'), '{nope');
+    assert.throws(() => checkTables(dir), /not usable/);
   } finally {
     await cleanup();
   }

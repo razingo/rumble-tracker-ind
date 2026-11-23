@@ -352,7 +352,11 @@ async function loadEffect(row) {
   // Every mesh the effect names is loaded before anything is built from it: built as each arrives, the parts would
   // be drawn in the order their files came in, which is another on every run.
   const named = new Set();
-  root.traverse((o) => { for (const r of [o.userData.node.renderer, o.userData.node.meshRenderer]) if (r?.mesh) named.add(r.mesh); });
+  root.traverse((o) => {
+    const { renderer: r, meshRenderer: m } = o.userData.node;
+    if (r?.mesh) named.add(r.mesh);
+    if (m?.mesh && !m.skinned) named.add(m.mesh); // (a skinned one names a body, which has no file here)
+  });
   await Promise.all([...named].map(meshGeometry));
   root.traverse((o) => {
     const n = o.userData.node;

@@ -128,4 +128,8 @@ test('the log\'s lines carry no Windows user name', () => {
   assert.equal(withoutUserName('unpacked in c:/users/jo doe/AppData/Local'), 'unpacked in ~/AppData/Local');
   assert.equal(withoutUserName('D:\\Games\\Jo Doe\\Warcraft Rumble'), 'D:\\Games\\<user>\\Warcraft Rumble');
   assert.equal(withoutUserName('Warcraft Rumble started: reading the save'), 'Warcraft Rumble started: reading the save');
+  // only whole folder names: a folder that starts with the name, or a word that is the name, stays
+  assert.equal(withoutUserName('C:\\Users\\Jo Doe2\\x and the Jo Doe show'), 'C:\\Users\\Jo Doe2\\x and the Jo Doe show');
+  const data = new Function('HOME_FOLDER', 'USER_NAME', `${source}; return withoutUserName;`)('C:\\Users\\Data', 'Data');
+  assert.equal(data('Data folder: C:\\Users\\Data\\AppData, game data read'), 'Data folder: ~\\AppData, game data read');
 });

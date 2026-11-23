@@ -2,8 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import os from 'node:os';
 import path from 'node:path';
-import { mkdtemp, readFile, readdir, writeFile, rm } from 'node:fs/promises';
-import { readJson, writeJson, flushWrites } from '../server/store.mjs';
+import { mkdtemp, mkdir, readFile, readdir, writeFile, rm } from 'node:fs/promises';
+import { readJson, writeJson, flushWrites, replaceFolder } from '../server/store.mjs';
 
 test('overlapping writes to one file all succeed, in order, without temp files left', async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'rumble-store-'));
@@ -38,4 +38,28 @@ test('missing files give the fallback; damaged files are moved aside when allowe
   assert.match(seen[0], /^names\.json\.corrupt-/);
   assert.deepEqual(await readdir(dir), seen);
   await rm(dir, { recursive: true });
+});
+
+test('a finished folder takes the old one\'s place, and a failure leaves the old one where it was', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'rumble-swap-'));
+  const data = path.join(dir, 'gamedata'), fresh = path.join(dir, 'gamedata-new');
+  const fill = async (folder, text) => {
+    await mkdir(folder, { recursive: true });
+    await writeFile(path.join(folder, 'minis.json'), text);
+  };
+  try {
+    await fill(fresh, 'first');
+    await replaceFolder(fresh, data); // nothing there yet
+    assert.equal(await readFile(path.join(data, 'minis.json'), 'utf8'), 'first');
+    await fill(fresh, 'second');
+    await replaceFolder(fresh, data);
+    assert.equal(await readFile(path.join(data, 'minis.json'), 'utf8'), 'second');
+    assert.deepEqual(await readdir(dir), ['gamedata'], 'neither the new folder nor the old one is left beside it');
+    // the new folder is not there: the old data stays
+    await assert.rejects(replaceFolder(fresh, data), { code: 'ENOENT' });
+    assert.equal(await readFile(path.join(data, 'minis.json'), 'utf8'), 'second');
+    assert.deepEqual(await readdir(dir), ['gamedata']);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });

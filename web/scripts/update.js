@@ -21,7 +21,8 @@ export function renderDataBanner() {
     return;
   }
   const now = d.reading ? 'The tracker is reading the new game data from your game install now; this page picks it up when it is done.'
-    : d.readError ? `Reading the new game data did not work (${esc(d.readError)}); the tracker tries again within the hour.`
+    : d.readError ? `Reading the new game data did not work (${esc(d.readError)}); the tracker tries again within the hour. If it
+      keeps failing, a newer version of the tracker may be able to read it.`
       : d.canRead ? 'The tracker reads the new game data from your game install shortly.'
         : 'Run npm run build-gamedata to read the new game data.';
   el.innerHTML = `<b>The game was updated${d.stale ? ` to ${esc(d.gameBuild)}` : ''}.</b> The tracker's game data is from

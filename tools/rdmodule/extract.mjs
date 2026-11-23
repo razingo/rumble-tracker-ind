@@ -20,19 +20,20 @@
 // everything.
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
-import { readFile, writeFile, mkdir, rm, copyFile, rename, cp, readdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rm, copyFile, cp, readdir } from 'node:fs/promises';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, dirname, normalize, extname, sep } from 'node:path';
 import { availableParallelism, totalmem } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { BuildError, findGame, gameVersion, python, pythonVersions, runProgram, runScript, runSteps, versionsOf,
   withDependents, withTools } from '../gamedata/build.mjs';
+import { POWERSHELL } from '../../server/system.mjs';
+import { replaceFolder } from '../../server/store.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..', '..');
 const PAGES = join(HERE, 'render');
 const VENDOR = join(HERE, 'vendor');
-const POWERSHELL = join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
 const RENDER_MINUTES = 30; // a render page that hasn't finished by then has failed
 const READY = 'ready.json';
 // The animations and the effects are each split over a few processes (RUMBLE_SHARD in the scripts). A process holds
@@ -341,8 +342,7 @@ export async function extractRdmodule({ gameFolder = '', gamedata, out, work, al
   }
   await writeFile(join(stage, READY), JSON.stringify({ extracted: new Date().toISOString(), gameBuild: gameVersion(game),
     steps: stepVersions() }, null, 1) + '\n');
-  await rm(out, { recursive: true, force: true, maxRetries: 20, retryDelay: 500 });
-  await rename(stage, out);
+  await replaceFolder(stage, out);
   await prune(work).catch((e) => log(`  the working folder was not cleared: ${e.message}`));
   return steps.map((x) => x[0]).filter((n) => !only || only.has(n));
 }

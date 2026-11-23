@@ -21,10 +21,11 @@ if (!existsSync(join(gamedata, 'minis.json'))) {
 }
 // Rounding: at most this share of a picture's pixels differ, none by more than this much (of 255) in a channel.
 const ROUNDING = { pixels: 0.001, by: 32 };
-// Prints "same", "rounding" or "differs" for each pair of pictures named on its command line.
-const COMPARE = `import sys
+// Prints "same", "rounding" or "differs" for each pair of pictures in the list it is given (a file, as hundreds of
+// paths do not fit on a command line).
+const COMPARE = `import sys, json
 from PIL import Image, ImageChops
-for a, b in zip(sys.argv[3::2], sys.argv[4::2]):
+for a, b in json.load(open(sys.argv[3], encoding="utf8")):
     x, y = Image.open(a).convert("RGBA"), Image.open(b).convert("RGBA")
     if x.size != y.size: print("differs"); continue
     r, g, bl, al = ImageChops.difference(x, y).split()
@@ -67,8 +68,10 @@ try {
   if (pictures.length) {
     const script = join(dir, 'compare.py');
     await writeFile(script, COMPARE);
+    const pairs = join(dir, 'pairs.json');
+    await writeFile(pairs, JSON.stringify(pictures.map((f) => [join(dir, 'out-1', f), join(dir, 'out-2', f)])));
     const verdicts = await runProgram(await python(join(dir, 'work-1'), console.log), ['-I', script, String(ROUNDING.pixels),
-      String(ROUNDING.by), ...pictures.flatMap((f) => [join(dir, 'out-1', f), join(dir, 'out-2', f)])], process.env);
+      String(ROUNDING.by), pairs], process.env);
     rounded = pictures.filter((f, i) => verdicts[i] === 'rounding');
     differ = differ.filter((f) => !rounded.includes(f));
   }
