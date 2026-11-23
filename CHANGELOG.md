@@ -3,6 +3,19 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.2.0
+
+- A mini that a game patch adds now shows up by itself, with its name, art and stats, once the game's files have it.
+  It no longer waits for a new version of the tracker. Army codes with the new mini work too.
+- The level and upgrade rules (XP per level, what each rarity costs, talent slots and prices) are now read from your
+  game install like the rest of the game data, so they follow a patch.
+- After this update the tracker reads its game data again once, in the background; it takes about a minute.
+- Fixed: the G.R.I.D. tab could show "Refreshes in NaNm".
+- Fixed: restoring a backup with damaged notification settings could stop notifications until the next start.
+- Fixed: the Modest tome had no picture in shop offers and PvP rewards.
+- The PvP tab names its modifier change by the current season, and no longer guesses a rank when the game data has
+  no season-end rewards.
+
 ## 0.1.4
 
 - After this update the tracker reads its game data again once, in the background; it takes about a minute.
