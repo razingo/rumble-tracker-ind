@@ -76,7 +76,8 @@ function gridSlot(s) {
 
 function gridHeader(shop, currencies) {
   const refresh = shop.grid.refresh;
-  const timer = refresh && Date.parse(refresh) <= Date.now()
+  // (a save without a refresh time says nothing about when)
+  const timer = !refresh ? '' : Date.parse(refresh) <= Date.now()
     ? 'Refreshing now. <span class="muted small">Open the shop in the game to see the new grid.</span>'
     : `Refreshes in <b>${esc(span(Date.parse(refresh) - Date.now()))}</b>`;
   return `<section class="panel grid-head">

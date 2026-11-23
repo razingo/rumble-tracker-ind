@@ -124,7 +124,7 @@ export function stepsToRun(steps, due) {
 }
 
 const alt = (names) => `^(${[...new Set(names)].filter(Boolean).join('|')})$`;
-/** What to export, from the sprites the game has (render/sprites.json): regular expressions for each export. */
+/** What to export, from the list of sprites (render/sprites.json): regular expressions for each export. */
 function wanted(config) {
   const sprites = Object.values(config.sprites);
   const units = sprites.flatMap((s) => [s.unit, s.file?.split('__')[0]]);

@@ -16,8 +16,7 @@ ONLY = re.compile(sys.argv[1]) if len(sys.argv) > 1 else None
 _argv = sys.argv; sys.argv = sys.argv[:1]; sys.path.insert(0, HERE)  # (-I leaves the script folder off the path)
 import export_models as em
 sys.argv = _argv
-R = ROOT
-OUT = os.path.join(R, "unit_catalog.json")
+OUT = os.path.join(ROOT, "unit_catalog.json")
 ABILITY = re.compile(r"_((?:Ability|Talent)[A-Za-z0-9]+)")
 KINDS = [("deploy", r"Deploy|Spawn|Emerge|Birth|Entrance"), ("death", r"Death|Die"), ("celebration", r"Celebrat|Victory"),
          ("movement", r"Walk|Run|Move|Fly|Turn|Jump|Charge"), ("idle", r"Ready|Stand|Idle|Pose|Hover|Sleep|Statue"),
@@ -120,9 +119,9 @@ def ability_states(ctrl, param):
 # ---- catalog ----------------------------------------------------------------------------------------------------
 def main():
     assets = json.load(open(os.path.join(ROOT, "asset_index.json")))
-    anim = json.load(open(os.path.join(R, "animations", "index.json"), encoding="utf8"))
-    fx = json.load(open(os.path.join(R, "effects", "index.json"), encoding="utf8"))
-    models = json.load(open(os.path.join(R, "models", "index.json"), encoding="utf8"))
+    anim = json.load(open(os.path.join(ROOT, "animations", "index.json"), encoding="utf8"))
+    fx = json.load(open(os.path.join(ROOT, "effects", "index.json"), encoding="utf8"))
+    models = json.load(open(os.path.join(ROOT, "models", "index.json"), encoding="utf8"))
     recs, by_key = em.unit_records()
     talent_names = {}
     for r in recs.values():
@@ -167,7 +166,8 @@ def main():
             ability_clips = set()
             seen = set()
             for talent, a in abilities:
-                name = (ABILITY.search(a["name"]) or [None, None])[1] or a.get("m_animParamName")                     or re.sub(r"_AspectAbility$", "", re.sub(r"^[^_]+_", "", a["name"]))
+                name = (ABILITY.search(a["name"]) or [None, None])[1] or a.get("m_animParamName") \
+                    or re.sub(r"_AspectAbility$", "", re.sub(r"^[^_]+_", "", a["name"]))
                 if (name, talent) in seen: continue
                 seen.add((name, talent))
                 param = a.get("m_animParamName")
@@ -209,7 +209,7 @@ def main():
                        for s in snd_rows if bare(s["ability"]) not in used_abilities or not s["ability"]],
         }
     catalog["source"] = ("Warcraft Rumble game files: unit records (abilities, models, sounds), AnimatorControllers (ability -> "
-                         "states -> clips); files are relative to  (animations/, effects/, sounds/)")
+                         "states -> clips); files are relative to the working folder (animations/, effects/, sounds/)")
     catalog["units"] = dict(sorted(units.items()))
     json.dump(catalog, open(OUT, "w", encoding="utf8"), indent=1, ensure_ascii=False)
     n_ab = sum(len(b["abilities"]) for u in units.values() for b in u["bodies"])

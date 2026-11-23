@@ -245,8 +245,7 @@ function endRewardsPanel({ season, mine, stale }) {
     class="pvp-rewards">${row.rewards.map(pvpReward).join('')}</div></div>`;
   const current = rowFor(rank)
     ? line(`At your rank, <b>${esc(rank.name)}</b>`, rowFor(rank))
-    : `<p class="small">There are no season-end rewards below ${esc(lowest?.name || 'Platinum Prodigy I')}
-      (${fmt(lowest?.from ?? 9000)} honor).</p>`;
+    : lowest ? `<p class="small">There are no season-end rewards below ${esc(lowest.name)} (${fmt(lowest.from)} honor).</p>` : '';
   const more = mine && !stale && target ? ` <span class="muted">(${fmt(target.from - mine.honor)} more honor)</span>` : '';
   return `<section class="panel">
     <div class="section-head"><h2>Season-end rewards</h2><span class="muted small">By your rank when ${esc(season.name)}
@@ -262,8 +261,9 @@ function roadPanel({ season, mine, stale }) {
   const steps = season.victoryRoad.map((m) => `<div class="pvp-step${mine && !stale && mine.vp >= m.vp
     ? ' got' : ''}"><span class="pvp-step-vp">${fmt(m.vp)}</span>${pvpReward(m.reward)}</div>`);
   return `<section class="panel">
-    <div class="section-head"><h2>Victory Road</h2><span class="muted small">${esc(season.name)}. Every finished match
-      adds Victory Points: ${fmt(vp.base * vp.loss)} for a loss, ${fmt(vp.base * vp.win)} for a win, more on a win streak.</span></div>
+    <div class="section-head"><h2>Victory Road</h2><span class="muted small">${esc(season.name)}.${vp ? ` Every finished match
+      adds Victory Points: ${fmt(Math.round(vp.base * vp.loss))} for a loss, ${fmt(Math.round(vp.base * vp.win))} for a win, more on a
+      win streak.` : ''}</span></div>
     <div class="pvp-road">${steps.join('')}</div>
   </section>`;
 }

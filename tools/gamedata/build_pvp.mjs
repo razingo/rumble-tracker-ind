@@ -73,7 +73,9 @@ function reward(g) {
   if (r.type === 'RewardSet' || /StarPointTome/.test(r.name)) { out.kind = 'tome'; }
   else if (r.m_grantType === 'Tome' || tome) {
     out.kind = 'tome';
-    if (!icon && tome) icon = `Shared_Tex_Tome${tome[1]}_${tome[2] && !/^Generic$/.test(tome[2]) ? tome[2] : 'Generic'}`;
+    // (a tome of no faction is the game's "Generic" one, but for the Modest size, whose picture it calls "Star")
+    if (!icon && tome) icon = `Shared_Tex_Tome${tome[1]}_${tome[2] && !/^Generic$/.test(tome[2]) ? tome[2]
+      : tome[1] === 'Modest' ? 'Star' : 'Generic'}`;
     if (count) out.amount = Number(count[1]);
   } else if (r.m_grantType === 'ItemChoice' || /Choice/.test(r.name)) {
     out.kind = 'choice';
@@ -101,9 +103,6 @@ const ranks = settings.m_ranks.map((g) => objs[g]).filter(Boolean).map((r) => {
     frame: frame || undefined,
   };
 }).sort((a, b) => a.from - b.from);
-const rankName = (g) => ranks.find((r) => r.id === objs[g]?.name)?.name || clean(str[objs[g]?.m_name]) || pretty(objs[g]?.name);
-// Victory Road sections are labeled with each rank's "participation level" name
-const sectionName = (g) => clean(str[objs[g]?.m_participationLevel?.m_name]) || rankName(g);
 
 // modifiers and maps
 const modifiers = {};
@@ -139,7 +138,6 @@ settings.m_seasons.m_list.forEach((g, i) => {
   seasons.push({
     id: s.name,
     saveId: saveIdOf(s.guid),
-    number: s.m_seasonNumber ?? null,
     name: (clean(str[s.m_name]) || 'PvP Season {0}').replace('{0}', s.m_seasonNumber ?? ''),
     start: new Date(start).toISOString(),
     end: new Date(end).toISOString(),
@@ -150,7 +148,7 @@ settings.m_seasons.m_list.forEach((g, i) => {
       sets: (s.m_compositions.m_list || []).map((c) => (c.m_modifiers || []).map((m) => objs[m]?.name).filter(Boolean)),
     } : null,
     victoryRoad: (s.m_participationRewards || []).flatMap((p) => (p.m_rewardMilestones || []).map((m) => ({
-      vp: m.m_honor, section: sectionName(p.m_rank), reward: reward(m.m_reward),
+      vp: m.m_honor, reward: reward(m.m_reward),
     }))).sort((a, b) => a.vp - b.vp),
     endRewards: (s.m_placementRewards || []).map((p) => ({
       rank: (p.m_ranks || []).map((r) => objs[r]?.name).filter(Boolean)[0] || null,
@@ -163,7 +161,6 @@ settings.m_seasons.m_list.forEach((g, i) => {
 const num = (v) => (v == null ? undefined : Number(v));
 const out = {
   note: 'Built from the game files. Times in UTC.',
-  seasonDays,
   ranks,
   modifiers,
   // Victory Points per finished match: base x win/loss multiplier, x streak multiplier for the win streak's band
@@ -173,11 +170,6 @@ const out = {
     loss: num(settings.m_pvpLossParticipationMultiplier),
     streak: (settings.m_pvpWinStreakParticipationMultipliers
       || []).map((b) => ({ upTo: b.m_maxWinStreak, x: num(b.m_winStreakMultiplier) ?? 1 })),
-  },
-  honor: {
-    maxGain: settings.m_maxHonorGain, maxLoss: settings.m_maxHonorLoss, floors: settings.m_honorFloors,
-    seasonReset: { ceiling: settings.m_seasonalHonorResetData?.m_honorCeiling,
-      floor: settings.m_seasonalHonorResetData?.m_playerHonorFloor },
   },
   seasons,
 };

@@ -8,9 +8,9 @@ import { GIT } from './git.mjs';
 const MAX = 140;
 const MAX_COMMENT = 120;
 const CHECKED = /\.(m?js|cjs|css|html|ps1|ya?ml)$/;
-// a line that is only a comment: //, # (PowerShell, YAML), or a line of a /* */ or /** */ block
 // the rdmodule and what draws its pictures and picks its sounds were written in a denser style of their own
 const OTHERS = new RegExp('^(rdmodule/|tools/rdmodule/(render/|apply_catalog|pick_sounds))');
+// a line that is only a comment: //, # (PowerShell, YAML), or a line of a /* */ or /** */ block
 const COMMENT = /^\s*(\/\/|#|\/\*|\*)/;
 
 const files = execFileSync(GIT, ['ls-files', '-co', '--exclude-standard'], { encoding: 'utf8' })
@@ -24,7 +24,7 @@ for (const f of files) {
   } catch {
     continue;
   }
-  if (text.startsWith('﻿')) problems.push(`${f}: byte-order mark`);
+  if (text.startsWith('\uFEFF')) problems.push(`${f}: byte-order mark`);
   if (text.includes('\r')) problems.push(`${f}: CRLF line endings`);
   if (text && !text.endsWith('\n')) problems.push(`${f}: no newline at the end`);
   text.split('\n').forEach((line, i) => {

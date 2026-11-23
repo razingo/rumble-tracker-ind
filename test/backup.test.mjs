@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { mkdtemp, readdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { buildBackup, restoreBackup, writeDailyBackup, BACKUP_FORMAT } from '../server/backup.mjs';
+import { testContext } from './helpers.mjs';
 
 test('backup round trip replaces contents in place and skips missing or bad keys', () => {
   const names = { accounts: { a: 'Main' }, units: {} };
@@ -50,4 +51,20 @@ test('keeps one backup a day for 7 days', async () => {
   assert.equal(b.format, BACKUP_FORMAT);
   assert.equal(b.data.names.accounts.a, 'Renamed');
   await rm(dir, { recursive: true });
+});
+
+test('settings a restored backup left broken are made whole again', async () => {
+  const { ctx, cleanup } = await testContext();
+  try {
+    const u = ctx.user;
+    for (const k of Object.keys(u.notifySettings)) delete u.notifySettings[k]; // a hand-edited backup's "notifications": {}
+    u.appSettings.closeWindow = 'nonsense';
+    u.repair();
+    assert.equal(u.notifySettings.enabled, true);
+    assert.equal(typeof u.notifySettings.types.freeGift.on, 'boolean');
+    assert.equal(u.notifySettings.quiet.from, '23:00');
+    assert.equal(u.appSettings.closeWindow, 'ask');
+  } finally {
+    await cleanup();
+  }
 });

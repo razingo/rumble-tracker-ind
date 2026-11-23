@@ -14,32 +14,21 @@
 import os, re, sys, json, glob, math, struct, UnityPy
 from UnityPy.helpers.MeshHelper import MeshHandler
 
-HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.environ["RUMBLE_WORK"]  # the working folder: exports, indexes, the tables read
 B = os.environ["RUMBLE_BUNDLES"].replace("\\", "/")
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "maps")
 ONLY = re.compile(sys.argv[2]) if len(sys.argv) > 2 else None
-CABS = json.load(open(os.path.join(ROOT, "cab_index.json")))
 TEX_DIR = os.path.join(OUT, "textures")
 
-EXT = {}
-def externals(b):
-    if b not in EXT:
-        names = set()
-        for f in UnityPy.load(os.path.join(B, b)).files.values():
-            for sf in getattr(f, "files", {}).values():
-                for e in getattr(sf, "externals", []):
-                    cab = e.path.rsplit("/", 1)[-1].lower()
-                    if cab in CABS: names.add(CABS[cab])
-        EXT[b] = names
-    return EXT[b]
+# bundle -> the bundles it refers to (build_indexes.py)
+EXT = json.load(open(os.path.join(ROOT, "ext_index.json")))
 
 def closure(bundles, depth=4):
     seen, todo = set(bundles), list(bundles)
     for _ in range(depth):
         nxt = []
         for b in todo:
-            for e in externals(b):
+            for e in EXT.get(b, ()):
                 if e not in seen and not e.startswith(("shaders", "shared_shaders")): seen.add(e); nxt.append(e)
         todo = nxt
     return seen
@@ -56,12 +45,11 @@ def mat_trs(t, q, s):
 def mul(a, b): return [[sum(a[i][k]*b[k][j] for k in range(4)) for j in range(4)] for i in range(4)]
 IDENT = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
 
-def world(tr, cache):
-    key = id(tr)
+def world(tr):
     m = mat_trs(tr.m_LocalPosition, tr.m_LocalRotation, tr.m_LocalScale)
     f = tr.m_Father
     if f and f.path_id:
-        try: m = mul(world(f.read(), cache), m)
+        try: m = mul(world(f.read()), m)
         except Exception: pass
     return m
 
@@ -108,7 +96,7 @@ def save_lightmap(t):
     SAVED[key] = fn
     return fn
 
-COLOR_PROPS =("_BaseMap", "_MainTex", "_BaseColorMap", "_ColorMap", "_Albedo", "_Diffuse")
+COLOR_PROPS = ("_BaseMap", "_MainTex", "_BaseColorMap", "_ColorMap", "_Albedo", "_Diffuse")
 def material_info(mat):
     texs = {}
     for name, te in mat.m_SavedProperties.m_TexEnvs:
@@ -240,7 +228,7 @@ def export_version(base, version, propsets, out_glb):
         V, N, U0, U1, subs = mesh_data(mesh, (mesh.assets_file.name, mf.m_Mesh.path_id))
         sb = r.m_StaticBatchInfo
         if sb.subMeshCount > 0: sub_ids, M = list(range(sb.firstSubMesh, sb.firstSubMesh + sb.subMeshCount)), IDENT
-        else: sub_ids, M = list(range(len(subs))), world(tr, None)
+        else: sub_ids, M = list(range(len(subs))), world(tr)
         used = sorted({i for s in sub_ids if s < len(subs) for i in subs[s]})
         if not used: continue
         remap = {v: k for k, v in enumerate(used)}
@@ -310,7 +298,6 @@ def main():
             m["versions"][vname] = {"scene": f"scenes/{vname}.glb", "bundles": [b for b in (version, propsets)],
                                     "ground": f"textures/{res['ground']}" if res["ground"] else None,
                                     "lightmaps": [f"textures/{l}" for l in res["lightmaps"]],
-                                    "image": f"images/{vname}.png",
                                     "renderers": res["renderers"], "vertices": res["vertices"], "triangles": res["triangles"]}
         else: m["versions"].pop(vname, None)
     # ground textures of each map's own bundle (all versions' terrain art, also older ones)

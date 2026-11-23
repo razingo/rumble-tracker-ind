@@ -114,7 +114,6 @@ def mirror_mat(m):  # Unity Matrix4x4f (column fields eRC) -> glTF column-major 
 
 def comps(go): return [getattr(x, "component", x) for x in go.m_Component]
 
-
 def avatar_of(smr):
     """The Avatar of the nearest Animator above a renderer (riders and mounts share one)."""
     t = next(c.read() for c in comps(smr.m_GameObject.read()) if c.type.name == "Transform")

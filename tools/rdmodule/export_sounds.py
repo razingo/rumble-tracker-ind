@@ -11,7 +11,6 @@
 import os, re, sys, json, subprocess, xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
 
-HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.environ["RUMBLE_WORK"]  # the working folder: exports, indexes, the tables read
 AUDIO = os.environ["RUMBLE_AUDIO"].replace("\\", "/")
 VGM = os.environ["RUMBLE_VGMSTREAM"]

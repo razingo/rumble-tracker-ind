@@ -82,7 +82,7 @@ ${page.error ? `<p>${esc(page.error)}</p>${ask || '<p style="opacity:.7">Trying 
 <div style="height:16px;border-radius:8px;background:#2a3050;overflow:hidden">
 <div style="height:100%;width:${pct}%;border-radius:8px;background:#f2c14e"></div></div>
 <p style="opacity:.8">${steps()}</p>
-<p style="opacity:.6;font-size:13px">This is only needed the first time and takes a minute or two.</p>`}</main></body></html>`;
+<p style="opacity:.6;font-size:13px">This is only needed the first time and takes about a minute.</p>`}</main></body></html>`;
     };
     const hosts = new Set([`localhost:${ctx.port}`, `127.0.0.1:${ctx.port}`]);
     const boot = http.createServer((req, res) => {

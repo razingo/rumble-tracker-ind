@@ -10,7 +10,7 @@ const LABELS = {
   names: 'names', talents: 'talents', army: 'army slots', armies: 'saved armies', drafts: 'the army being edited',
   grid_history: 'G.R.I.D. history', pvp_history: 'PvP history',
   notifications: 'notification settings', plans: 'reward goals', progress: 'progress history',
-  settings: 'the close-window setting',
+  settings: 'the close-window and new-version settings',
 };
 
 /** Asks first, then restores a backup by calling restore(). `what` names it, as in "the backup from …". */

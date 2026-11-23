@@ -34,7 +34,7 @@ function send(res, status, body, headers = {}) {
 }
 
 // The rdmodule plays its sounds from memory (blob: addresses), which the tracker's own page never does.
-const GAME_HEADERS = { 'content-security-policy': `${SECURITY_HEADERS['content-security-policy']}; media-src 'self' blob:` };
+const RDMODULE_HEADERS = { 'content-security-policy': `${SECURITY_HEADERS['content-security-policy']}; media-src 'self' blob:` };
 
 async function serveFile(res, base, rel, headers = {}) {
   const file = path.resolve(base, `.${rel}`);
@@ -73,8 +73,8 @@ export function createHttpServer(ctx, deps) {
       const rd = deps.rdmodule?.folders;
       if (rd && p.startsWith('/rdmodule/')) {
         const rel = p.slice('/rdmodule'.length);
-        if (/^\/(sprites|sounds)\//.test(rel)) return serveFile(res, rd.extracted, rel, GAME_HEADERS);
-        return serveFile(res, rd.code, rel === '/' ? '/index.html' : rel, GAME_HEADERS);
+        if (/^\/(sprites|sounds)\//.test(rel)) return serveFile(res, rd.extracted, rel, RDMODULE_HEADERS);
+        return serveFile(res, rd.code, rel === '/' ? '/index.html' : rel, RDMODULE_HEADERS);
       }
       if (p.startsWith('/static/')) {
         // What the tracker read from the game comes first, then what npm run build-gamedata left in gamedata/.

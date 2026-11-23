@@ -4,7 +4,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { writeFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { runSteps, runProgram, versionsOf, withTools, stepsDue, stepVersions, checkTables } from '../tools/gamedata/build.mjs';
+import { slugOf } from '../tools/gamedata/unityfs.mjs';
 import { testContext, fakeGame } from './helpers.mjs';
 
 test('runs steps side by side, each after the ones it waits for', async () => {
@@ -113,7 +115,9 @@ test('tables a broken read left are refused, a normal patch\'s are not', async (
     const mini = (slug) => ({ slug, name: slug, art: `art/${slug}.webp` });
     const write = async (tables) => {
       const all = { 'unit_ids.json': { units: { a1: 'footman', b2: 'ghoul' } }, 'minis.json': { minis: [mini('footman'), mini('ghoul')] },
-        'events.json': { events: [{ id: 'e' }] }, 'store.json': { offers: { daily: {} } }, 'pvp.json': { ranks: [{}] }, ...tables };
+        'events.json': { events: [{ id: 'e' }] }, 'store.json': { offers: { daily: {} } }, 'pvp.json': { ranks: [{}] },
+        'rules.json': { xpToNext: { 1: 2 }, rarityUpgrade: [{ to: 1 }] }, 'army_code_minis.json': { shortIds: { 1: 'footman' } },
+        ...tables };
       for (const [file, value] of Object.entries(all)) await writeFile(path.join(dir, file), JSON.stringify(value));
     };
     await write({});
@@ -132,9 +136,26 @@ test('tables a broken read left are refused, a normal patch\'s are not', async (
     assert.throws(() => checkTables(dir), /1 minis without a name or portrait \(ghoul\)/);
     await write({ 'events.json': { events: [] }, 'pvp.json': {} });
     assert.throws(() => checkTables(dir), /no events; no PvP ranks/);
+    // the rules and the army code numbers are read from the game too
+    await write({ 'rules.json': { rarities: [] }, 'army_code_minis.json': { talentOrder: {} } });
+    assert.throws(() => checkTables(dir), /no level or upgrade rules; no army code numbers/);
     await writeFile(path.join(dir, 'store.json'), '{nope');
     assert.throws(() => checkTables(dir), /not usable/);
   } finally {
     await cleanup();
   }
+});
+
+test('a mini the game adds gets its key from its name', () => {
+  assert.equal(slugOf('Old Murk-Eye'), 'old-murk-eye');
+  assert.equal(slugOf("Anub'arak"), 'anub-arak');
+  assert.equal(slugOf('S.A.F.E. Pilot'), 's-a-f-e-pilot');
+  assert.equal(slugOf('  Écho  Isles '), 'echo-isles');
+  assert.equal(slugOf(null), '');
+});
+
+test('UnityPy is pinned to one version, from source and in the exe', async () => {
+  const pin = async (file) => /'UnityPy==([\d.]+)'/.exec(await readFile(new URL(file, import.meta.url), 'utf8'))?.[1];
+  assert.ok(await pin('../tools/fetch-python.mjs'));
+  assert.equal(await pin('../tools/gamedata/build.mjs'), await pin('../tools/fetch-python.mjs'));
 });

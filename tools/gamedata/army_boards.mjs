@@ -51,7 +51,7 @@ const list = Object.values(boards).sort((a, b) => a.board.localeCompare(b.board)
 for (const x of list) console.log(x.board.padEnd(30), '| fixed', [...x.families, ...x.fixedTraits].join(','),
   '| options', x.options.join(', '));
 
-// compare with minis.json (leaders matched by internal mini name -> slug through unit_ids? use name match on board)
+// compare with minis.json (a leader's board is found by its name: the mini's key and the board's name share it)
 const minis = JSON.parse(readFileSync(MINIS, 'utf8'));
 const norm = (s) => String(s).toLowerCase().replace(/[^a-z]/g, '');
 let changed = 0;

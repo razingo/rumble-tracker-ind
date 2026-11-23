@@ -133,3 +133,7 @@ export const CURRENCY_NAMES = {
   a0830bd678683854a8830944c4ff60fa: "Modest Tinker's Gem", '80588d65595e74c4c9791b6938bcb52a': "Major Tinker's Gem",
   '5c0740da103c97b42b0cc30178d68884': "Mega Tinker's Gem",
 };
+
+/** The tracker's key for a mini the game names: "Old Murk-Eye" gives "old-murk-eye". */
+export const slugOf = (name) => String(name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');

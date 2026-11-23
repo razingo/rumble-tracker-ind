@@ -19,7 +19,7 @@ import { esc, plural } from './lib/format.js';
   window.addEventListener('unhandledrejection', (e) => report(e.reason?.message || e.reason, e.reason?.stack));
 })();
 
-const REPORT = { data: null, title: '', what: '', steps: '', include: true };
+const REPORT = { data: null, title: '', what: '', steps: '', include: true, screenshot: false };
 const MAX_URL = 7500; // GitHub rejects longer URLs
 
 export function renderReportBadge() {

@@ -63,11 +63,12 @@ export async function loadUserData(ctx) {
     save: (key) => writeJson(path.join(dir, FILES[key]), u[key]),
     /** The files a backup holds, by backup key. */
     backupFiles: () => Object.fromEntries(Object.entries(BACKUP_KEYS).map(([k, prop]) => [k, u[prop]])),
-    /** After a restore, fills in keys that older or partial backups may lack. */
+    /** After a restore, fills in what older, partial or hand-edited backups may lack. */
     repair() {
       u.names.accounts ??= {};
       u.names.units ??= {};
       Object.assign(u.appSettings, cleanAppSettings(u.appSettings));
+      Object.assign(u.notifySettings, cleanSettings(u.notifySettings));
     },
   };
   u.repair();

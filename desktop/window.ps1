@@ -14,7 +14,7 @@
 # (icon), RT_PARENT (tracker process id), RT_GAME (the game's process name), RT_LIB (folder with the WebView2
 # libraries), RT_PROFILE (WebView2's data folder), RT_CACHE (where to keep the compiled helpers below), RT_SHOW
 # ("1": open the window right away), RT_CHECK
-# (build everything without showing it, for the tests), RT_RDMODULE (the game's address), RT_RDMODULE_PROFILE (the game
+# (build everything without showing it, for the tests), RT_RDMODULE (the rdmodule's address), RT_RDMODULE_PROFILE (its
 # window's WebView2 data folder).
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
@@ -291,7 +291,7 @@ function Show-Front($f) {
   [RtWin]::Front($f.Handle)
 }
 
-# The game window: the page's hidden key sequence opens it (web/scripts/rdmodule.js). It shows only the game's site,
+# The rdmodule's window: the page's hidden key sequence opens it (web/scripts/rdmodule.js). It shows only its page,
 # with a WebView2 data folder of its own, and takes no messages from it. Closing it leaves the tracker as it is.
 $script:rdmodule = $null
 $script:rdmoduleAsked = $false
@@ -301,7 +301,7 @@ function Test-RdmodulePage($uri) {
   try { return ([Uri]$uri).AbsoluteUri.StartsWith(([Uri]$env:RT_RDMODULE).AbsoluteUri) } catch { return $false }
 }
 
-# shown instead of WebView2's own error page, e.g. when offline
+# shown instead of WebView2's own error page, when the page does not load
 $RDMODULE_ERROR = @'
 <!doctype html><meta charset="utf-8"><title>rdmodule</title>
 <body style="margin:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;

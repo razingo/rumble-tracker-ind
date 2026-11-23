@@ -1,8 +1,10 @@
 // Build gamedata/minis.json from the game's files only: names, descriptions, cost, faction, role, damage type,
 // traits, talents, leader abilities, stats per level and portrait/icon sprite names (extracted by
-// extract_reward_icons.py). usage: node build_minis.mjs [--compare old.json]
+// extract_reward_icons.py). usage: node build_minis.mjs
 //
-// Which minis: every entry of gamedata/unit_ids.json (save id -> slug); the slug stays the tracker's key.
+// Which minis: every entry of gamedata/unit_ids.json (save id -> slug; the slug is the tracker's key), and the minis
+// the game lists for army codes that are not in it yet: those get their key from their name, and are written back
+// to unit_ids.json. The code numbers and the code's prefix go to army_code_minis.json.
 // Kept from the current minis.json: fixedArmySlots / armySlotUpgrades (army_boards.mjs) and alwaysOwned.
 // Talent order: the order the tracker has always stored picks in (army_code_minis.json talentOrder maps the game's
 // order onto it), so saved talent picks and armies stay valid.
@@ -10,7 +12,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readBundle, bundleFiles, jsonObjectAt, guidOfSaveId, englishStrings } from './unityfs.mjs';
+import { readBundle, bundleFiles, jsonObjectAt, saveIdOf, guidOfSaveId, englishStrings, slugOf } from './unityfs.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DATA = process.env.RUMBLE_GAMEDATA || join(HERE, '..', '..', 'gamedata'); // the game data being built
@@ -92,8 +94,6 @@ function evalSource(g, depth = 0) {
 
 function statsOf(collection) {
   const out = {};
-  const base = { health: 0, damage: 0, dps: 0 };
-  let attackSpeed = null, speed = '';
   for (const src of collection?.m_numericStatSources || []) {
     const sd = objs[src.m_stat];
     const v = evalSource(src.m_dataSource);
@@ -101,10 +101,6 @@ function statsOf(collection) {
     const label = text(sd.m_displayNameRef) || sd.m_type;
     const round = (x) => (sd.m_displayAsInt ? Math.round(x) : Math.round(x * 100) / 100);
     out[label] = sd.m_statGrowthType ? Array.from({ length: LEVELS }, (_, i) => round(v * GROWTH ** i)) : round(v);
-    if (sd.m_type === 'Health' && !base.health) base.health = Math.round(v);
-    if (sd.m_type === 'Damage' && !base.damage) base.damage = Math.round(v);
-    if (sd.m_type === 'DPS' && !base.dps) base.dps = Math.round(v * 10) / 10;
-    if (sd.m_type === 'AttackSpeed' && attackSpeed == null) attackSpeed = Math.round(v * 100) / 100;
   }
   for (const src of collection?.m_userFacingStringStatSources || []) {
     const sd = objs[src.m_stat];
@@ -112,16 +108,42 @@ function statsOf(collection) {
     const value = text(ds?.m_data?.m_value);
     if (!sd || !value) continue;
     out[text(sd.m_displayNameRef) || sd.m_type] = value;
-    if (sd.m_type === 'Speed') speed = value;
   }
-  return { stats: out, base, attackSpeed, speed };
+  return out;
 }
 
 // build
-const unitIds = JSON.parse(readFileSync(join(DATA, 'unit_ids.json'), 'utf8')).units; // save id -> slug
+const idsFile = join(DATA, 'unit_ids.json'), codesFile = join(DATA, 'army_code_minis.json');
+const ids = JSON.parse(readFileSync(idsFile, 'utf8'));
+const unitIds = ids.units; // save id -> slug
+// The game's list of the minis an army code can name (their code numbers). A mini on it that the tracker has no key
+// for yet is new: it gets one from its name. Entries without a definition (not released yet) and second forms of a
+// mini that is known already (they carry its name) are passed over.
+const army = Object.values(objs).find((o) => o.type === 'ArmyManagerSettings');
+if (!army?.m_shortIds?.length) throw new Error("The game's list of minis for army codes was not found");
+const nameOf = (guid) => (objs[guid]?.type === 'Mini' ? text(objs[guid].m_collectionNameRef) : null);
+const names = new Set(Object.keys(unitIds).map((id) => nameOf(guidOfSaveId(id))).filter(Boolean));
+const slugs = new Set(Object.values(unitIds));
+const added = [];
+for (const { m_miniGuid: guid } of army.m_shortIds) {
+  const id = saveIdOf(guid), name = nameOf(guid), slug = slugOf(name);
+  if (unitIds[id] || !slug || names.has(name) || slugs.has(slug)) continue;
+  unitIds[id] = slug;
+  names.add(name);
+  slugs.add(slug);
+  added.push(slug);
+}
+if (added.length) {
+  writeFileSync(idsFile, JSON.stringify(ids, null, 1) + '\n');
+  log(`new in the game: ${added.join(', ')}`);
+}
+const codes = JSON.parse(readFileSync(codesFile, 'utf8'));
+writeFileSync(codesFile, JSON.stringify({ ...codes, prefix: army.m_loadoutCodePrefix || 'rumblo:',
+  shortIds: Object.fromEntries(army.m_shortIds.filter((x) => unitIds[saveIdOf(x.m_miniGuid)])
+    .map((x) => [x.m_shortId, unitIds[saveIdOf(x.m_miniGuid)]])) }, null, 1) + '\n');
 const old = JSON.parse(readFileSync(OUT, 'utf8'));
 const oldBySlug = new Map(old.minis.map((m) => [m.slug, m]));
-const talentOrder = JSON.parse(readFileSync(join(DATA, 'army_code_minis.json'), 'utf8')).talentOrder || {};
+const talentOrder = codes.talentOrder || {};
 const sprites = { art: new Map(), icons: new Map(), talents: new Map() }; // file name -> sprite name
 const tagIcons = {};
 const iconPath = (spriteName, file) => { if (!spriteName) return null; sprites.icons.set(file, spriteName); return `icons/${file}.webp`; };
@@ -164,7 +186,6 @@ for (const [saveId, slug] of Object.entries(unitIds)) {
     talents[order && Number.isInteger(order[gi]) ? order[gi] : gi] = { name: text(t.m_name) || t.name,
       description: text(t.m_description) || '', icon: file ? `talents/${file}.webp` : null };
   });
-  const st = statsOf(objs[m.m_stats]);
   // units/spells: the square Indicator_X_Pose; leaders: the face square of their tall Portrait_Leader_X banner (their
   // Indicator is cropped round)
   const portrait = sprite(m.m_portraitImage);
@@ -179,7 +200,8 @@ for (const [saveId, slug] of Object.entries(unitIds)) {
     const mm = /<b>(.*?)<\/b>/i.exec(raw);
     const full = text(m.m_abilityDescriptionRef);
     leaderAbility = mm ? { name: mm[1].replace(/<[^>]+>/g, '').trim(),
-      description: full.replace(mm[1].replace(/<[^>]+>/g, '').trim(), '').trim() }       : /\n/.test(full)
+      description: full.replace(mm[1].replace(/<[^>]+>/g, '').trim(), '').trim() }
+      : /\n/.test(full)
       ? { name: full.split('\n')[0].trim(), description: full.slice(full.indexOf('\n')).trim() }
       : { name: 'Leader ability', description: full };
   }
@@ -191,17 +213,13 @@ for (const [saveId, slug] of Object.entries(unitIds)) {
     ...(families.length > 1 ? { families } : {}),
     role,
     cost: Number(m.m_gold) || 0,
-    speed: st.speed,
-    attackSpeed: st.attackSpeed != null ? String(st.attackSpeed) : null,
     damageType,
     description: text(m.m_descriptionRef) || '',
-    summary: text(m.m_shortSummaryRef) || undefined,
-    base: st.base,
     traits,
     talents: talents.filter(Boolean),
     ...(leaderAbility ? { leaderAbility } : {}),
     art: portrait ? `art/${slug}.webp` : prev.art,
-    stats: st.stats,
+    stats: statsOf(objs[m.m_stats]),
     ...(prev.fixedArmySlots ? { fixedArmySlots: prev.fixedArmySlots } : {}),
     ...(prev.armySlotUpgrades ? { armySlotUpgrades: prev.armySlotUpgrades } : {}),
     ...(prev.alwaysOwned ? { alwaysOwned: true } : {}),
@@ -210,16 +228,14 @@ for (const [saveId, slug] of Object.entries(unitIds)) {
 }
 minis.sort((a, b) => a.name.localeCompare(b.name));
 
-// compare with the previous table (what changed by switching sources)
+// what changed since the table that was there before
 const diffs = [];
 for (const m of minis) {
   const o = oldBySlug.get(m.slug);
   if (!o) { diffs.push(`${m.slug}: new`); continue; }
-  for (const k of ['name', 'category', 'family', 'cost', 'damageType', 'speed']) {
+  for (const k of ['name', 'category', 'family', 'cost', 'damageType']) {
     if (String(o[k] ?? '') !== String(m[k] ?? '')) diffs.push(`${m.slug}.${k}: "${o[k]}" -> "${m[k]}"`);
   }
-  const was = `${o.base?.health}/${o.base?.damage}`, now = `${m.base.health}/${m.base.damage}`;
-  if (was !== now) diffs.push(`${m.slug}.base: ${was} -> ${now}`);
   const on = (o.talents || []).map((t) => t.name).join(' | '), nn = m.talents.map((t) => t.name).join(' | ');
   if (on !== nn) diffs.push(`${m.slug}.talents: ${on} -> ${nn}`);
   const ot = (o.traits || []).map((t) => t.name).sort().join(','), nt = m.traits.map((t) => t.name).sort().join(',');

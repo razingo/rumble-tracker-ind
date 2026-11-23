@@ -54,7 +54,7 @@ const clean = (s) => s?.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim() || n
 
 // event currencies (data_currencytype.bundle): A, B, C share one balance each across events
 const CUR = { '0c6d981755f2d43f28921e60e9555871': 'A', '0d9e33ea4c36c4bb79ef30d6d82203d3': 'B', '0152633a93ba94c2bab0dae8daa8745a': 'C' };
-const WEEKDAYS =['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 function schedule(sc) {
@@ -102,20 +102,13 @@ for (const d of Object.values(objs)) {
   const timing = objs[d.m_scheduleTiming];
   const sc = schedule(timing && objs[timing.m_schedule]);
   if (!sc) { console.warn('no schedule:', d.name); continue; }
-  const modes = (d.m_questModes || []).map((q) => {
-    const m = objs[q.m_mode];
-    return { name: clean(str[m?.m_displayName] || str[m?.m_modeName] || str[m?.m_title]) || m?.name || null,
-      offsetDays: q.m_startTimeOffset?.m_days || 0, days: q.m_duration?.m_days || null };
-  });
   events.push({
     id: d.name.replace(/_?SeasonalEventDefinition_?/, '') || d.name,
     saveId: saveIdOf(d.guid),   // how the registry refers to this event (StoreState active-event list)
     name: clean(str[d.m_eventName]) || null,
     family: family(d.name),
     currency: CUR[d.m_currencyType] || null,
-    leaderboard: !!d.m_leaderboardAvailable,
     schedule: sc,
-    modes: modes.filter((m) => m.name),
   });
 }
 events.sort((a, b) => a.id.localeCompare(b.id));
@@ -175,7 +168,7 @@ function rewardOf(r) {
   if (icon) { out.icon = icon; sprites.add(icon); }
   return out;
 }
-// Tickets an event's challenges can pay out (matches rumble-events.marshen.de "Total collectable tickets").
+// Tickets an event's challenges can pay out.
 // Each challenge option has a deck and a number of active challenges:
 //  - fixed decks (m_alwaysNonRandom, or no more challenges than active slots): every challenge's whole chain
 //    (m_nextChallenges), each step paying m_challengeRewardAmount (SharedInt)
@@ -225,27 +218,9 @@ function challengeTickets(d, days) {
   }
   return { total, steps, missing, groups };
 }
-// DEBUG_DECKS=1: print every deck of every challenge option with chain totals, to work out the counting rule
-function debugDecks(ev, d) {
-  const chain = (g) => { let t = 0, n = 0; const seen = new Set();
-    for (let c = objs[g]; c && !seen.has(c.guid); c = objs[(c.m_nextChallenges || [])[0]]) { seen.add(c.guid);
-    t += objs[c.m_challengeRewardAmount]?.m_value || 0; n++; } return { t, n }; };
-  for (const opt of d?.m_challengeOptions || []) {
-    const deck = objs[opt.m_challengesDeck];
-    const decks = deck?.type === 'RandomDeckSet' ? deck.m_decks.map((x) =>
-      ({ d: objs[x.m_deck], perm: x.m_requiredPermission })) : [{ d: deck }];
-    for (const { d: dk, perm } of decks) {
-      const cs = (dk?.m_challenges || []).map((e) => ({ ...chain(e.m_challenge), cards: e.m_cardCount || 1 }));
-      console.log(`  ${ev.id} active=${opt.m_activeChallengeCount} ${dk?.name || '?'}${perm
-        ? ' (gated)' : ''} nonRandom=${!!dk?.m_alwaysNonRandom} challenges=${cs.length} chainSum=${cs.reduce((s, c) =>
-        s + c.t, 0)} perChallenge=[${cs.map((c) => c.t).slice(0, 12).join(',')}${cs.length > 12 ? ',…' : ''}]`);
-    }
-  }
-}
 for (const ev of events) {
   if (ev.schedule.kind === 'once') continue;
   const d = Object.values(objs).find((o) => o.type === 'SeasonalEventDefinition' && o.guid && saveIdOf(o.guid) === ev.saveId);
-  if (process.env.DEBUG_DECKS && /DMF|Gadget|Pilgrim|Solo_Evergreen_W1|Winterveil1/.test(ev.id)) debugDecks(ev, d);
   const ct = challengeTickets(d, ev.schedule.days);
   if (ct.steps) { ev.challengeTickets = ct.total; ev.challenges = ct.groups; }
   if (ct.missing) console.warn(`${ev.id}: ${ct.missing} challenge steps without data`);
@@ -301,10 +276,10 @@ const raid = rotation(raidSettings?.m_raidRotation, (o) => {
   return { name: clean(str[o?.m_name]) || k.replace(/([a-z])([A-Z])/g, '$1 $2'), type };
 });
 if (raid) rotations.push({ id: 'raid', label: 'Raid / Siege', ...raid });
-// income bonuses (e.g. the Basic Booster's PremiumBundleIncomeBonus: +50% coins, +20% XP), keyed by save id.
+// income bonuses (e.g. the Basic Booster's PremiumBundleIncomeBonus: +50% coins), keyed by save id.
 // The save lists the ones a player owns in StoreState f23.f3.
 const incomeBonuses = Object.fromEntries(Object.values(objs).filter((o) => o.type === 'IncomeBonus').map((o) => [saveIdOf(o.guid), {
-  name: o.name, coinsPercent: o.m_bonusStoreCurrencyPercent || 0, xpPercent: o.m_bonusExperiencePercent || 0,
+  coinsPercent: o.m_bonusStoreCurrencyPercent || 0,
 }]));
 writeFileSync(join(WORK, 'event_reward_sprites.json'), JSON.stringify([...sprites].sort(), null, 1) + '\n');
 // currency letter -> save-data id, to show the player's ticket balance
@@ -317,5 +292,4 @@ const currencyNames = Object.fromEntries(Object.values(objs)
 writeFileSync(OUT, JSON.stringify({
   note: 'Built from the game files. Times in UTC.', currencies, currencyNames, incomeBonuses, rotations, events }, null, 2) + '\n');
 console.log(events.length, 'events ->', OUT);
-for (const e of events) console.log(e.schedule.kind.padEnd(10), e.id.padEnd(42), '|', e.name, '|', e.currency,
-  e.modes.length ? `| ${e.modes.length} modes` : '');
+for (const e of events) console.log(e.schedule.kind.padEnd(10), e.id.padEnd(42), '|', e.name, '|', e.currency);

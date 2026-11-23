@@ -1,6 +1,6 @@
 """Hornless card frames: cut a rounded-rectangle window into each faction frame (same thickness on all
 sides), add a soft dark bevel along the cut, and write one matching fill mask.
-usage: python make_card_frames.py <cand_dir> <out_dir>"""
+usage: python make_card_frames.py <slots_dir> <out_dir>"""
 import os, sys
 from PIL import Image, ImageDraw, ImageFilter, ImageChops
 

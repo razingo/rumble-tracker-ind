@@ -7,7 +7,7 @@ import { traitPicker, bindTraitPicker } from './trait-picker.js';
 import { rarityName, rarityColor, FAMILIES, miniOf, unitName, balance, currencyName, coreName, nextUpgrade,
   talentSlots, effectivePicks, isLeader, armyOf, hasBoost, totalLevel, armyTotals, remainingToLegendary, familiesOf } from './units.js';
 
-// Versions up to 0.8.0 saved these without the tab's name.
+// The earlier tracker, whose data this one uses, saved these without the tab's name.
 for (const key of ['filters', 'show', 'sort', 'planExpanded']) {
   store.rename(key, `collection${key[0].toUpperCase()}${key.slice(1)}`);
 }

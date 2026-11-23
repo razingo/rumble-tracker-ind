@@ -67,9 +67,8 @@ to one JSON file, which *Import backup…* restores, also on another PC.
 ### Updating
 
 When its window opens, and once a day, the tracker asks GitHub whether a newer version is out, and offers it in a
-pop-up. *Download now* fetches
-the release, checks it against the checksums published with it, replaces `RumbleTracker.exe` and restarts; if the new
-version fails to start, the previous one is put back. An exe you built yourself is only told about the new version,
+pop-up. *Download now* fetches the release, checks it against the checksums published with it, replaces
+`RumbleTracker.exe` and restarts; if the new version fails to start, the previous one is put back. An exe you built yourself is only told about the new version,
 and is left as it is. You can also download the release and replace the exe by hand. Either way your data stays where
 it is. The check can be turned off in **⚙ Settings**. The [changelog](CHANGELOG.md) lists what changed.
 
@@ -87,14 +86,15 @@ data again from your game install. It does that in the background, at low priori
 a banner says so, and the window picks the new data up when it is ready. It looks at start, when the game closes and
 every half hour. Nothing is downloaded.
 
-A mini that a patch adds shows as *Needs your input* until a newer version of the tracker knows its save ID.
+A mini that a patch adds is read with the rest, once the game's files name it.
 
 ## Privacy
 
 - The tracker only **reads** the game's saved data (from the Windows registry). It never changes it, and it ignores
   the login tokens stored next to it.
 - It sends nothing about you anywhere. Its only request to the internet asks GitHub for the tracker's latest version,
-  when its window opens and once a day, and can be turned off in **⚙ Settings**; a new version is downloaded only when you click *Download now*.
+  when its window opens and once a day, and can be turned off in **⚙ Settings**; a new version is downloaded only when
+  you click *Download now*.
   *Report a problem* and the other links open in your own browser.
 - The local page is only reachable from this PC, and only by the tracker's own page.
 
@@ -174,7 +174,7 @@ Environment variables for development and testing:
 | `server/rdmodule.mjs`, `rdmodule/` | The rdmodule and its page |
 | `gamedata/` | Game data and art (© Blizzard, see NOTICE), served as `/static/…`. Not in the repository; read from the game install |
 | `desktop/` | The exe's launcher (`launcher.cjs`), the unseen window the rdmodule's pictures are drawn in (`render.ps1`), the window and tray icon (`window.ps1`, with the WebView2 libraries in `webview2/`), Windows integration (`integration.ps1`), Uninstall in Settings (`uninstall.ps1`) and the script that draws the icon (`make-icon.ps1`, into `web/favicon.ico`) |
-| `tools/gamedata/` | The game-data builder: `build.mjs` runs the steps, with the table builders, the image extractors and `seed/`, the few tables kept by hand |
+| `tools/gamedata/` | The game-data builder: `build.mjs` runs the steps, with the table builders, the image extractors and `seed/`, the tracker's own few tables |
 | `tools/rdmodule/` | The rdmodule's exports and render pages |
 | `tools/` | What the exe carries (`fetch-python.mjs`, `fetch-rdmodule-tools.mjs`, `fetch-webview2.ps1`), building the release (`build-release.mjs`, Node.js 25.5+) and the checks: style (`check-style.mjs`), that two extractions give the same files (`check-extraction.mjs`) and pinned software with a newer version out (`check-pins.mjs`). `git.mjs` finds Git for the ones that need it |
 | `test/` | Node's built-in test runner. `helpers.mjs` builds save values and a tracker in a temporary folder; the tests of the window, tray and Windows integration (`desktop.test.mjs`) run on Windows only |

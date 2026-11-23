@@ -15,8 +15,6 @@
   const ADVANCE = 45; // how much faster than the leader minis move up to their line
   const HEARTS = 3; // what a mini or an enemy starts with, like the leader
   const NEAR = 700; // how far ahead "near you" reaches: up to the melee line
-  // Leaders drawn as a figure (figures.js) instead of a framed portrait, when they have no sprite.
-  const LEADER_FIGURES = { thrall: 'warchief' };
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
 
@@ -59,7 +57,7 @@
   // facing right. sprites/index.json says how to cut each sheet: { cell: [w, h], cols, at: [x, y] (the feet, within a
   // cell), body (the standing figure's height), anims: { move, attack, idle, death, deploy, cast, charge: [first frame,
   // frames, seconds] } }, each there when the unit has such a clip.
-  // sprite() is null while loading or when there is none; units then fall back to a figure or a portrait token.
+  // sprite() is null while loading or when there is none; units then fall back to a portrait token.
   const sprites = {};
   // Effects: frames of the game's own particle effects on black (sprites/fx-<key>.png), cut as sprites/fx.json says:
   // { cell: [w, h], cols, frames, seconds, at: [x, y] (the effect's origin within a cell), unit (pixels per game unit) }.
@@ -1410,7 +1408,7 @@
         if (k === 'burrow' || k === 'stealth') continue;
         if (k === 'spin' || k === 'shield') { damage(e, k === 'spin' ? 3 : 99, {}); continue; }
         if (hurtPlayer(d.dmg)) {
-          e.hp = 0;
+          e.hp = 0; // (it got through: gone without counting as a kill)
           puff(e.x + e.w / 2, e.y - e.h / 2, '#d9d2bf', 8);
         }
       }
@@ -1807,14 +1805,10 @@
     if (k === 'stealth') { ctx.globalAlpha = 0.35; }
     if (p.inv > 0 && !k && Math.floor(r.time * 12) % 2) ctx.globalAlpha = 0.4;
     if (k === 'spin') { ctx.translate(cx, cy); ctx.rotate(r.time * 20); ctx.translate(-cx, -cy); }
-    const figure = LEADER_FIGURES[l.id];
     const pose = p.deploy > 0 ? { anim: 'deploy', p: 1 - p.deploy / Math.min(DEPLOY_MAX, clip(l.id, 'deploy')) }
       : p.lunge > 0 ? { ...attackPose(p), anim: p.act || 'attack' } : { anim: r.stalled ? 'idle' : 'move', t: r.time };
     if (drawSprite(l.id, p.x + p.w / 2, p.y - (l.role === 'flying' ? 14 : 0), dims(l.id, 66).tall, pose)) {
       // drawn
-    } else if (figure && window.Figures?.has(figure)) {
-      Figures.draw(ctx, figure, p.x + p.w / 2, p.y, 92, { t: r.time, action: p.lunge > 0 ? 'attack' : walking ? 'walk' : 'idle',
-        p: p.lunge > 0 ? 1 - p.lunge / ATTACK_TIME : 0 });
     } else leaderToken(l, cx, cy, d);
     ctx.restore();
     if (k === 'shield') {
@@ -1839,10 +1833,6 @@
         : { anim: m.still ? 'idle' : !m.charged && clip(art, 'charge') ? 'charge' : 'move', t: m.t }),
         tint: m.flash > 0 ? HIT_TINT : null })) {
       // drawn
-    } else if (window.Figures?.has(m.id)) {
-      const attacking = m.lunge > 0;
-      Figures.draw(ctx, m.id, m.x + m.w / 2, m.y + (m.air ? 14 : 0), d.size * 1.5, { t: m.t, flash: m.flash > 0,
-        action: attacking ? 'attack' : m.still ? 'idle' : 'walk', p: attacking ? 1 - m.lunge / ATTACK_TIME : 0 });
     } else {
       token(d.art === undefined ? m.id : d.art, cx, cy, d.size, FAMILY[d.family], { flash: m.flash > 0, wings: m.air,
         seed: m.t, fallback: m.id === 'scarab' ? scarab : null });
@@ -1873,14 +1863,17 @@
 
   function drawTower(e) {
     const { x, y, w, h } = e;
+    // the light that grows where its shot will come from (a dragon tower's low down, the others' at gy)
+    const glow = (gy) => {
+      if (e.windup <= 0) return;
+      const k = 1 - e.windup / 0.6;
+      ctx.fillStyle = e.kind === 'dragon' || e.kind === 'rocket' ? '#ff8a2b' : '#fff4c0';
+      ctx.globalAlpha = 0.5 + k * 0.5;
+      ctx.beginPath(); ctx.arc(x - 4, e.kind === 'dragon' ? y - 14 : gy, 4 + k * 10, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+    };
     if (drawSprite(`tower-${e.kind === 'plain' ? 'guard' : e.kind}`, x + w / 2, y + 4, h + 60, { flip: true, tint: e.flash > 0 ? HIT_TINT : null })) {
-      if (e.windup > 0) {
-        const k = 1 - e.windup / 0.6;
-        ctx.fillStyle = e.kind === 'dragon' || e.kind === 'rocket' ? '#ff8a2b' : '#fff4c0';
-        ctx.globalAlpha = 0.5 + k * 0.5;
-        ctx.beginPath(); ctx.arc(x - 4, e.kind === 'dragon' ? y - 14 : y - h - 20, 4 + k * 10, 0, Math.PI * 2); ctx.fill();
-        ctx.globalAlpha = 1;
-      }
+      glow(y - h - 20);
       hearts(e, x + w / 2, y - h - 78);
       return;
     }
@@ -1900,13 +1893,7 @@
     const image = crest ? img(`pvp/${crest}.webp`) : null;
     if (image) ctx.drawImage(image, x + w / 2 - 34, y - h - 58, 68, 68);
     else { ctx.fillStyle = '#6b4a2b'; ctx.fillRect(x + w / 2, y - h - 14, 3, 32); ctx.fillStyle = '#c44'; ctx.fillRect(x + w / 2 + 3, y - h - 14, 18, 11); }
-    if (e.windup > 0) {
-      const k = 1 - e.windup / 0.6;
-      ctx.fillStyle = e.kind === 'dragon' || e.kind === 'rocket' ? '#ff8a2b' : '#fff4c0';
-      ctx.globalAlpha = 0.5 + k * 0.5;
-      ctx.beginPath(); ctx.arc(x - 4, e.kind === 'dragon' ? y - 14 : y - 40, 4 + k * 10, 0, Math.PI * 2); ctx.fill();
-      ctx.globalAlpha = 1;
-    }
+    glow(y - 40);
     hearts(e, x + w / 2, y - h - 74);
   }
 
@@ -2215,10 +2202,6 @@
       if (drawSprite(c.art || 'scarab', c.x + c.w / 2, c.y + (c.air ? 10 + gone * 40 : 0), c.tall,
         c.fall ? { anim: 'death', p: gone, flip: c.enemy, alpha: Math.min(1, (1 - gone) * 4) }
           : { flip: c.enemy, lean: -1.4 * gone, alpha: 1 - gone * gone })) continue;
-      if (!c.enemy && window.Figures?.has(c.art)) {
-        Figures.draw(ctx, c.art, c.x + c.w / 2, c.y + (c.air ? 14 : 0), c.tall, { t: 0, action: 'death', p: 1 - c.life / c.max });
-        continue;
-      }
       ctx.globalAlpha = clamp(c.life / c.max, 0, 1);
       const d = c.tall * 0.7 * (0.6 + 0.4 * c.life / c.max);
       token(c.art, c.x + c.w / 2, c.y - c.h / 2 + (1 - c.life / c.max) * 10, d, c.enemy ? '#d63a3a' : FAMILY[c.family],
@@ -2516,7 +2499,7 @@
 
   // ---------- frame ----------
   function resize() {
-    const vw = innerWidth, vh = innerHeight - 20; // room for the line under the game
+    const vw = innerWidth, vh = innerHeight - 20; // room for the line under the canvas
     const s = Math.min(vw / W, vh / H);
     const dpr = devicePixelRatio || 1;
     canvas.style.width = `${Math.floor(W * s)}px`;

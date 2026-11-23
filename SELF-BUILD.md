@@ -34,7 +34,7 @@ leaves replacing the exe to you. Only exes built by this repository's release wo
 It needs Warcraft Rumble for PC installed, and nothing else: no Python, and no internet connection for its game data.
 
 - **First start:** the window shows a loading bar while the game data is read from the game install. The bar fills as
-  each of the 21 steps finishes and names the ones running. This takes about a minute.
+  each of the 22 steps finishes and names the ones running. This takes about a minute.
 - **After a game patch:** the tracker sees that the installed game is a newer version than its data and reads the data
   again in the background, while it stays usable. It looks at start, when the game closes and every half hour.
 - **After a tracker update:** if the new version reads something more or differently, only that part is read again,
@@ -70,9 +70,10 @@ About 690 small files, 5 MB: the minis' portraits, talent and trait icons, rewar
 icons, the page's own card frames, army boards and backgrounds, and the tables behind them. Only what the tracker
 shows is extracted, and a step that runs again first clears what it wrote before, so nothing unused stays behind.
 
-`tools\gamedata\seed\` holds the few tables kept by hand, which are not in the game files: the minis' save IDs and
-keys, level and upgrade rules, army code numbers, and which family a two-family mini is filed under. A mini added by a
-game patch needs its save ID and key added to `seed\unit_ids.json`, then a new exe.
+`tools\gamedata\seed\` holds the tracker's own few tables: the key it files each mini under (by the mini's save ID),
+which family a two-family mini is filed under, the order it keeps talents in, and the colors and names of rarities and
+army slots. A mini added by a game patch needs no new exe: it gets its key from its name when the game data is read.
+The level and upgrade rules and the army code numbers are read from the game too.
 
 Each step of the reading has a version, made of its own script, its inputs, its settings (an image size, for
 example) and the versions of the tools it uses (Python and its packages). After a new version of the tracker, only

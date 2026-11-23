@@ -9,9 +9,8 @@
 #   unitassets_spell_<x>.bundle  spells; only the ones that summon something have real models
 #   unitstatue_<x>.bundle        the pose/statue version used in menus (higher-resolution textures)
 # Meshes come out in their bind (rest) pose: skeletons and animations are not exported.
-import os, re, sys, json, glob, UnityPy
+import os, re, sys, json, glob, shutil, UnityPy
 
-HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.environ["RUMBLE_WORK"]  # the working folder: exports, indexes, the tables read
 B = os.environ["RUMBLE_BUNDLES"].replace("\\", "/")
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "models")
@@ -239,18 +238,13 @@ def main():
         print(bundle)
         part = "statue" if kind == "statue" else "battle"
         res = export_bundle(bundle, os.path.join(OUT, ukey, part))
-        u = units.setdefault(ukey, {})
-        d = by_bundle.get(f"{cat}_{x}") or by_bundle.get(f"unit_{x}")
-        mini = minis.get(d["slug"]) if d and d.get("slug") else None
-        u.update({"name": mini["name"] if mini else (d["internal"] if d else x.capitalize()), "slug": d.get("slug") if d else None,
-                  "internal": d["internal"] if d else x, "collectible": bool(mini),
-                  "category": mini.get("category") if mini else cat})
+        u = units.setdefault(ukey, {})  # (named below, once all are here)
         u.setdefault("bundles", {})[part] = bundle
         # a statue with the same model as the battle unit: point at the battle files instead of a second copy
         if res and part == "statue" and u.get("battle"):
             same = {(m["mesh"], m["vertices"]) for m in u["battle"]["meshes"]}
             if all((m["mesh"], m["vertices"]) in same for m in res["meshes"]) and res["meshes"]:
-                import shutil; shutil.rmtree(os.path.join(OUT, ukey, part)); u["statue"] = "same as battle"; continue
+                shutil.rmtree(os.path.join(OUT, ukey, part)); u["statue"] = "same as battle"; continue
         if res:
             for mm in res["meshes"]: mm["obj"] = f"{ukey}/{part}/{mm['obj']}"
             u[part] = {"meshes": res["meshes"], "textures": {f"{ukey}/{part}/{k}": v for k, v in res["textures"].items()}}
@@ -325,7 +319,8 @@ def main():
                         key=lambda m: -m["vertices"])
             if st: u["model"] = st[0]["obj"]; u["texture"] = st[0]["color"] and f"{st[0]['obj'].rsplit('/', 1)[0]}/{st[0]['color']}"
             else: u.pop("model", None); u.pop("texture", None)
-    for k, sz in unit_sizes().items():
+    # (reading the sizes goes through every unit data bundle: not for towers alone)
+    for k, sz in (unit_sizes() if units else {}).items():
         if k in units: units[k]["size"] = sz
     index["source"] = "Warcraft Rumble game files (unitassets_*/unitstatue_* bundles); models in their rest pose"
     index["bySlug"] = {u["slug"]: k for k, u in sorted(units.items()) if u.get("slug")}

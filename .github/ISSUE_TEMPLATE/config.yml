@@ -3,4 +3,4 @@ blank_issues_enabled: true
 contact_links:
   - name: Game data out of date after a patch
     url: https://github.com/razingo/rumble-tracker-ind#game-data-updates
-    about: New events or minis missing right after a game update? Restart the tracker so it reads the game data again.
+    about: New events or minis missing right after a game update? The tracker reads the new game data by itself, within half an hour.

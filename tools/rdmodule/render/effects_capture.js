@@ -3,7 +3,7 @@
 // page's simulation as it is: loadEffect, step, restart, fitCamera, camera, controls, renderer, scene, effect, ui.
 // /fx/effects.html?capture renders every effect in sprites.json ("effects": key -> { unit, prefab, and optionally
 // seconds, from, frames, yaw, pitch, zoom, tint }), ?capture=a,b only those; each is saved as sprites/fx-<key>.png, a sheet
-// of frames on black (the game adds them onto the scene), and sprites/fx.json says how to cut them:
+// of frames on black (the rdmodule adds them onto its scene), and sprites/fx.json says how to cut them:
 // { cell: [w, h], cols, frames, seconds, at: [x, y] (the effect's own origin, within a cell), unit (pixels per game unit) }.
 const FX_OUT = 256; // the longer side of a frame
 const FX_RATE = 24; // frames a second
@@ -32,7 +32,7 @@ async function captureEffect(spec) {
   // for a PC busy with the other exports)
   for (let i = 0; i < 3000 && texturesLoading > 0; i++) await new Promise((r) => setTimeout(r, 20));
   const dt = 1 / 60, from = spec.from || 0, total = Math.min(spec.seconds ? from + spec.seconds : effect.duration, effect.duration);
-  // once through, so the viewer frames how far it spreads; then the camera moves to the game's side and stays put
+  // once through, so the viewer frames how far it spreads; then the camera moves to the side the rdmodule looks from and stays put
   for (let x = 0; x < total; x += dt) step(dt);
   if (!effect.fitted) fitCamera();
   const mid = controls.target.clone(), dist = camera.position.distanceTo(mid) * (spec.zoom || 1);

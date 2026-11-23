@@ -9,8 +9,8 @@
 // on first use.
 //
 //  1. Find the game (the folder given, RUMBLE_GAME_DIR, or where Windows says it is installed).
-//  2. Start from the tables kept by hand (seed/: save IDs and keys of the minis, level rules, army code numbers).
-//  3. Build the tables (minis, army boards, events, store, PvP), then extract the images they name and no others
+//  2. Start from the tracker's own tables (seed/: the minis' keys, colors and slot names, the talent order).
+//  3. Build the tables (rules, minis, army boards, events, store, PvP), then extract the images they name and no others
 //     (portraits, talent and trait icons, reward and store art, currency icons, the page's frames and boards: about
 //     690 small files, 4.8 MB).
 //  4. Write gamedata.json: the game's version and each step's.
@@ -40,6 +40,7 @@ const TABLES = ['unityfs.mjs'], IMAGES = ['extract_reward_icons.py'];
 const SOURCES = {
   'Starting tables': readdirSync(SEED).map((f) => `seed/${f}`),
   'Index of the game files': ['build_guid_index.mjs', ...TABLES],
+  Rules: ['build_rules.mjs', ...TABLES],
   Minis: ['build_minis.mjs', 'family_pair_sprites.json', ...TABLES],
   'Army boards': ['army_boards.mjs', ...TABLES],
   Events: ['build_events.mjs', ...TABLES],
@@ -263,7 +264,7 @@ export function withDependents(steps, names) {
  * Throws when the tables in `dir` are plainly broken: a game patch may change the game's files so that a builder
  * finds nothing and still ends well. Then the read fails, and the data the tracker had stays. Only what no patch
  * does is refused: far fewer minis than the tracker knows IDs for (a few may be missing: the tracker can know a
- * mini before the installed game has it), a mini without a name or portrait, an empty table.
+ * mini before the installed game has it), a mini without a name or portrait, an empty table, no level rules.
  */
 const MINIS_FOUND = 0.9; // the share of the known minis a read must find
 export function checkTables(dir) {
@@ -276,6 +277,9 @@ export function checkTables(dir) {
     if (!minis.length || minis.length < MINIS_FOUND * known) problems.push(`${minis.length} minis, where ${known} are known`);
     const bare = minis.filter((m) => !m.name || !m.art);
     if (bare.length) problems.push(`${bare.length} minis without a name or portrait (${bare.slice(0, 3).map((m) => m.slug).join(', ')})`);
+    const rules = read('rules.json');
+    if (!size(rules.xpToNext) || !size(rules.rarityUpgrade)) problems.push('no level or upgrade rules');
+    if (!size(read('army_code_minis.json').shortIds)) problems.push('no army code numbers');
     if (!size(read('events.json').events)) problems.push('no events');
     if (!size(read('store.json').offers)) problems.push('no shop offers');
     if (!size(read('pvp.json').ranks)) problems.push('no PvP ranks');
@@ -339,9 +343,10 @@ export async function buildGameData({ game = findGame(), out, work, due = 'all',
       return [];
     }],
     ['Index of the game files', ['Starting tables'], table('build_guid_index.mjs')],
+    ['Rules', ['Starting tables'], table('build_rules.mjs')],
     ['Minis', ['Starting tables'], table('build_minis.mjs')],
     ['Army boards', ['Index of the game files', 'Minis'], table('army_boards.mjs', join(work, 'guid_index.json'), '--write')],
-    ['Events', ['Starting tables'], table('build_events.mjs')],
+    ['Events', ['Minis'], table('build_events.mjs')], // (it names reward minis by the keys Minis may add)
     ['Store', ['Starting tables'], table('build_store.mjs')],
     ['PvP', ['Index of the game files'], table('build_pvp.mjs')],
     ['Event icons', ['Python', 'Starting tables'], async () => {

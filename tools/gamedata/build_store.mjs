@@ -16,7 +16,7 @@ const BUNDLES = new RegExp('^(' + [
   'feature_store',
 ].join('|') + ')\\.bundle$');
 const WANT = new RegExp('^(' + [
-  'StoreOffer', 'CommerceProduct', 'CommercePrice', 'CommerceOfferTiming', 'SharedInt', 'StoreGridXpBoost', 'Rarity',
+  'StoreOffer', 'CommerceProduct', 'CommercePrice', 'SharedInt', 'StoreGridXpBoost', 'Rarity',
   'StoreSettings', 'TomeProgression', 'L10N\\.UserFacingString\\w*',
 ].join('|') + ')$');
 
@@ -52,7 +52,6 @@ for (const o of Object.values(objs)) {
   const product = objs[o.m_product?.m_nonAbGroupValue];
   const price = objs[product?.m_price];
   const vc = (price?.m_virtualCurrencyPrices || [])[0];
-  const timing = objs[o.m_timing];
   const banner = String(o.m_bannerImage || '').split(',')[1] || null;
   offers[saveIdOf(o.guid)] = {
     name: o.name,
@@ -62,8 +61,6 @@ for (const o of Object.values(objs)) {
     cost: vc ? { coins: vc.m_currencyType === COINS, currency: CURRENCY_NAMES[vc.m_currencyType] || vc.m_currencyType,
       amount: int(vc.m_priceAmount) } : null,
     realMoney: o.m_costType === 'RealMoney' || undefined,
-    free: (!o.m_costType && !vc) || undefined,
-    refreshDays: timing?.m_refreshDuration?.m_days || undefined,
   };
 }
 
@@ -90,8 +87,6 @@ const rules = ss && {
   refreshSeconds: ss.m_recycleGridItemsInterval,
   recentlySeen: ss.m_recentlySeenCounts,
   specialMinis: (ss.m_superSpecialAwesomeMinis || []).map(saveIdOf),
-  featured: (ss.m_featuredItems || []).map((f) => ({ items: f.m_items.map(saveIdOf), start: f.m_startTime, end: f.m_endTime })),
-  minShown: ss.m_ownedMiniThresholds,
 };
 
 // sprites to extract (extract_reward_icons.py store_sprites.json gamedata/store): banners of offers that can

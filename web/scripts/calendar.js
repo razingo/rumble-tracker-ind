@@ -8,8 +8,9 @@ import { occurrences, rotationAt, rotationName } from './lib/schedule.js';
 
 let EVENTS = null; // { currencies: { A|B|C: saveId }, rotations: [...], events: [...] }
 onTablesReload(() => { EVENTS = null; });
-// How far the timeline is shifted (in days), the event whose reward tree is open, and the rewards picked in it.
-const view = { offset: 0, tree: null, picks: [] };
+// How far the timeline is shifted (in days), the event whose reward tree is open, the rewards picked in it, and
+// whether its challenge list is open.
+const view = { offset: 0, tree: null, picks: [], challengesOpen: false };
 // The event ticket slots A, B and C, with their currency IDs (events.json).
 const ticketSlots = () => EVENTS?.currencies || {};
 // The event's ticket icon in events/, named by events.json

@@ -55,7 +55,6 @@ export function writeJson(p, value) {
   return next;
 }
 
-/** Resolves once every queued write has finished (successfully or not). */
 /**
  * Puts the folder `from` in the place of `to`. The old one is moved aside first and only deleted once the new one is
  * there, so a failure leaves the old one where it was. A scanner or a closing window may hold a file for a moment:
@@ -84,6 +83,7 @@ export async function replaceFolder(from, to) {
   await rm(old, { recursive: true, force: true, maxRetries: 20, retryDelay: 250 }).catch(() => {});
 }
 
+/** Resolves once every queued write has finished (successfully or not). */
 export async function flushWrites() {
   while (queues.size) await Promise.allSettled([...queues.values()]);
 }

@@ -1,9 +1,8 @@
 // List every Gryphon.Data.Mini (guid + internal name) from the unitdata_* bundles with its save-data ID, and the
-// tracker slug for the ones already in unit_ids.json. Run by extract.mjs: node all_minis.mjs <out.json>
+// tracker slug for the ones in unit_ids.json. Run by extract.mjs: node all_minis.mjs <out.json>
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { readBundle, bundleFiles, saveIdOf } from '../gamedata/unityfs.mjs';
-
 
 const dir = process.env.RUMBLE_BUNDLES;
 const files = bundleFiles(dir, (n) => /unitdata_/.test(n));

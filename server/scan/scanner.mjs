@@ -34,13 +34,13 @@ export function createScanner(ctx, { readPrefs }) {
     }
   }
 
-  /** The account's state, loaded from state/<id>.json on first use (and moved from older formats). */
+  /** The account's state, loaded from state/<id>.json on first use (and moved from an older form). */
   async function account(id, dirty) {
     let acc = ctx.accounts.get(id);
     if (acc) return acc;
     acc = await ctx.readUserJson(path.join(ctx.paths.STATE, `${id}.json`), { snapshot: null, events: [] });
     ctx.accounts.set(id, acc);
-    if (acc.pvpLog) { // versions before 0.4.0 kept the PvP log here
+    if (acc.pvpLog) { // the earlier tracker, whose data this one uses, kept the PvP log here
       if (!ctx.user.pvpHistory[id]) {
         ctx.user.pvpHistory[id] = acc.pvpLog;
         dirty.add('pvpHistory');

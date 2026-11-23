@@ -40,7 +40,8 @@ export async function decodeArmyCode(code) {
   const table = await codeTable();
   let bytes, top;
   try {
-    bytes = Uint8Array.from(atob(code.trim().replace(/^rumblo:/i, '')), (c) => c.charCodeAt(0));
+    const text = code.trim(), has = text.toLowerCase().startsWith(table.prefix.toLowerCase());
+    bytes = Uint8Array.from(atob(has ? text.slice(table.prefix.length) : text), (c) => c.charCodeAt(0));
     top = parseMessage(bytes);
   } catch {
     throw new Error('Not a Warcraft Rumble army code.');
