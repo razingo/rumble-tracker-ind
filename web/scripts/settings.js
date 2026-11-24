@@ -1,6 +1,7 @@
-// The Settings dialog, a card for each section: Start with Windows, what closing the window does and the game's
-// folder, the notifications, extracting the additional data (for the rdmodule, web/scripts/rdmodule.js) and
-// uninstalling. The server keeps the settings and sends the notifications, also while the page is closed.
+// The Settings dialog, a card for each section: Start with Windows, what closing the window does, the game's folder
+// and the tracker's own, the notifications, extracting the additional data (for the rdmodule,
+// web/scripts/rdmodule.js) and uninstalling. The server keeps the settings and sends the notifications, also while
+// the page is closed.
 import { $, getJson, post, showMessage, state } from './core.js';
 import { showDialog, confirmDialog, alertDialog } from './dialogs.js';
 import { CLOSE_CHOICES } from './lib/constants.js';
@@ -8,7 +9,7 @@ import { esc, dateTime, ago } from './lib/format.js';
 
 let notify = null; // { settings, types, log, pending, playing }
 // { startWithWindows, closeWindow (both null from source), checkUpdates, lastUpdateCheck, updateCheckError, gameFolder,
-// gameFolderUsed }
+// gameFolderUsed, storageFolder (null from source) }
 let general = null;
 let extra = null; // the additional data: { available, state, done, total, label, error } (server/rdmodule.mjs)
 let extraTimer = null;
@@ -22,20 +23,55 @@ async function loadSettings() {
 }
 
 /** One section of the dialog, in a card of its own; nothing when it has nothing to show. */
-const section = (title, body, kind = '') => (body ? `<section class="set-card ${kind}"><h3>${title}</h3>${body}</section>` : '');
+const section = (title, body, kind = '') => (body ? `<section class="dialog-card ${kind}"><h3>${title}</h3>${body}</section>` : '');
 const gb = (bytes) => (bytes / 2 ** 30).toFixed(1).replace(/\.0$/, '');
 
 const dialogHead = '<div class="dialog-head"><h2>Settings</h2><button class="chip" value="close" aria-label="Close">✕</button></div>';
 
+/** A folder field with a button beside it that opens the folder in Explorer (`which`: game or storage). */
+const folderField = (id, label, input, which, there) => `<label class="folder-label" for="${id}">${label}</label>
+    <div class="folder-row"><input type="text" id="${id}" spellcheck="false" ${input}>
+      <button type="button" class="chip folder-open" data-open-folder="${which}" title="Open this folder"
+        aria-label="Open this folder" ${there ? '' : 'disabled'}><svg viewBox="0 0 20 20" aria-hidden="true"><path
+        d="M2 5.5A1.5 1.5 0 0 1 3.5 4h4l2 2h7A1.5 1.5 0 0 1 18 7.5V8H5.2a2 2 0 0 0-1.9 1.4L2 13.6Zm3.2 4h13.3a1 1 0 0 1 1 1.3l-1.3
+        4.2a1.5 1.5 0 0 1-1.4 1H3.1a1 1 0 0 1-1-1.3l1.7-4.5a1.5 1.5 0 0 1 1.4-.7Z"/></svg></button></div>`;
+
 /** The game's folder, where the tracker reads its game data from the game: the one found, or one given by hand. */
 function gameFolderSection() {
   if (!general) return '';
-  return `<label class="game-folder">Warcraft Rumble's folder
-      <input type="text" data-setting="gameFolder" value="${esc(general.gameFolder)}" spellcheck="false"
-        placeholder="${esc(general.gameFolderUsed || 'D:\\Games\\Warcraft Rumble')}"></label>
+  return `${folderField('gameFolder', 'Warcraft Rumble\'s folder', `data-setting="gameFolder" value="${esc(general.gameFolder)}"
+      placeholder="${esc(general.gameFolderUsed || 'D:\\Games\\Warcraft Rumble')}"`, 'game', general.gameFolderUsed)}
     <p class="muted small">${general.gameFolderUsed ? `The game data is read from ${esc(general.gameFolderUsed)}.`
       : 'The game was not found on this PC.'} Fill this in only if that is wrong: the folder that holds
       WarcraftRumble.exe. Leave it empty to have the tracker look for the game.</p>`;
+}
+
+/** The folder the tracker keeps its files in (only the exe has a choice), and moving it. */
+function storageSection() {
+  if (!general?.storageFolder) return '';
+  return `${folderField('storageFolder', 'The tracker\'s folder', `data-storage value="${esc(general.storageFolder)}"`, 'storage', true)}
+    <p class="muted small">Everything the tracker keeps is here: your data, what it reads from the game and its own
+      program files. To move it, type another folder, such as D:\\Games. The tracker makes a folder of its own named
+      RumbleTracker in it, moves its files there and restarts.</p>`;
+}
+
+/** Moves the tracker's files to the folder typed, once confirmed; the tracker restarts for it. */
+async function moveStorage(dlg, el) {
+  const folder = el.value.trim();
+  const back = () => { el.value = general.storageFolder; };
+  if (!folder || folder === general.storageFolder) return back();
+  if (!(await confirmDialog(`The tracker makes a folder of its own named RumbleTracker in ${folder} and moves all its `
+    + 'files there. It closes, moves them, and starts again; that can take a few minutes.',
+  { title: 'Move the tracker\'s files?', ok: 'Move' }))) return back();
+  try {
+    await post('/api/storage', { folder });
+  } catch (err) {
+    back();
+    return alertDialog(err.message, { title: 'Not moved' });
+  }
+  dlg.close();
+  document.body.innerHTML = '<main class="quit-page"><h1>The tracker\'s files are being moved</h1>'
+    + '<p>This window closes in a moment, and the tracker starts again once they are moved.</p></main>';
 }
 
 /** When a newer version was last looked for, or why that did not work. */
@@ -60,7 +96,8 @@ function generalSection() {
       data-setting="checkUpdates" ${general.checkUpdates ? 'checked' : ''}> Check for new versions</label>
       <p class="muted small">Asks GitHub for the tracker's latest version when this window opens and once a day. Nothing
         about you is sent.${general.checkUpdates ? lastCheck() : ''}</p>`;
-  return `${autostart}${close}${updates}${gameFolderSection()}<span class="dialog-message small" data-setting-message></span>`;
+  return `${autostart}${close}${updates}${gameFolderSection()}${storageSection()}<span class="dialog-message small"
+    data-setting-message></span>`;
 }
 
 /** One notification type: on or off, its warning time if it has one, and whether it is sent while playing. */
@@ -270,6 +307,7 @@ export function bindSettings() {
   $('#settingsButton').addEventListener('click', () => openSettings(dlg));
   dlg.addEventListener('change', (e) => {
     if (e.target.dataset.setting) saveGeneral(dlg, e.target);
+    else if ('storage' in e.target.dataset) moveStorage(dlg, e.target);
     else if (e.target.dataset.notifyField && notify) changeNotification(dlg, e.target);
   });
   dlg.addEventListener('click', (e) => {
@@ -277,6 +315,9 @@ export function bindSettings() {
     if (e.target === dlg) dlg.close();
     else if (e.target.closest('[data-notify-test]')) sendTest(dlg);
     else if (e.target.closest('[data-uninstall]')) uninstall(dlg);
+    else if (e.target.closest('[data-open-folder]')) {
+      post('/api/open-folder', { which: e.target.closest('[data-open-folder]').dataset.openFolder }).catch(() => {});
+    }
     else if (e.target.closest('[data-extract]')) extractExtra(dlg);
   });
 }

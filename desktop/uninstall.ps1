@@ -1,11 +1,13 @@
 # Removes the tracker from this PC, started by desktop/launcher.cjs for Uninstall in Settings. It waits for the tracker
 # to stop (it writes its last backup and saves first), then removes the Start menu shortcut, the rumble-tracker: link,
-# Start with Windows, the notification settings Windows kept for the tracker, the data folder, the unpacked program
-# files with the window's WebView2 data, and the files of the release zip next to the exe; that folder too, once
-# nothing else is left in it. A data folder set with RUMBLE_DATA_DIR may hold other files, so it's left as it is.
-# Environment: RT_PARENT (the tracker's process id), RT_EXE, RT_DATA (data folder), RT_HOME (unpacked program files and
-# WebView2 data), RT_TITLE (the shortcut's name), RT_FILES_ONLY (leave the shortcut, link, Start with Windows and
-# notification settings, for the tests).
+# Start with Windows, the notification settings Windows kept for the tracker, the tracker's folder (the data, the
+# unpacked program files and the window's WebView2 data), the note of where that folder is, and the files of the
+# release zip next to the exe; that folder too, once nothing else is left in it. Only folders named RumbleTracker
+# are removed whole. A data folder set with RUMBLE_DATA_DIR is outside the tracker's folder and may hold other
+# files, so it's left as it is.
+# Environment: RT_PARENT (the tracker's process id), RT_EXE, RT_HOME (the tracker's folder), RT_NOTE (the folder of
+# the note, empty when there is none), RT_TITLE (the shortcut's name), RT_FILES_ONLY (leave the shortcut, link, Start
+# with Windows and notification settings, for the tests).
 $ErrorActionPreference = 'SilentlyContinue'
 $ProgressPreference = 'SilentlyContinue'
 
@@ -23,10 +25,8 @@ if (-not $env:RT_FILES_ONLY) {
 $exe = $env:RT_EXE
 $folder = Split-Path -Parent $exe
 $notices = Join-Path $folder 'THIRD-PARTY-NOTICES'
-$data = $env:RT_DATA
-$defaultData = Join-Path $env:APPDATA 'RumbleTracker'
-if ([IO.Path]::GetFullPath($data).TrimEnd('\') -ne [IO.Path]::GetFullPath($defaultData).TrimEnd('\')) { $data = $null }
-$targets = @($data, $env:RT_HOME, $exe, "$exe.old", "$exe.failed") +
+$own = @($env:RT_HOME, $env:RT_NOTE) | Where-Object { $_ -and (Split-Path -Leaf $_) -eq 'RumbleTracker' }
+$targets = @($own) + @($exe, "$exe.old", "$exe.failed") +
   @('README.md', 'LICENSE.txt', 'NOTICE.md' | ForEach-Object { Join-Path $folder $_ }) +
   @('Node.js-LICENSE.txt', 'WebView2-LICENSE.txt', 'WebView2-NOTICE.txt', 'Font-LilitaOne-OFL.txt', 'Font-Nunito-OFL.txt',
     'Python-LICENSE.txt', 'UnityPy-LICENSE.txt', 'Pillow-LICENSE.txt', 'lz4-LICENSE.txt', 'Brotli-LICENSE.txt',

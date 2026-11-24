@@ -65,6 +65,7 @@ function renderReportDialog(msg = '') {
   const d = REPORT.data;
   dlg.innerHTML = `<form method="dialog" class="report-form">
     <div class="dialog-head"><h2>Report a problem</h2><button class="chip" value="close" aria-label="Close">✕</button></div>
+    <div class="dialog-card">
     <p class="muted small">Opens a GitHub issue (free account needed). Nothing is sent until you press <b>Submit</b> there.</p>
     <label class="report-field">Short title <input data-report-field="title" maxlength="120" value="${esc(REPORT.title)}"
       placeholder="e.g. Calendar shows the wrong end date for Darkmoon Faire"></label>
@@ -85,6 +86,7 @@ function renderReportDialog(msg = '') {
     ? '<button type="button" class="chip" data-report-screenshot>Take a screenshot</button> Select an area; it is copied, so '
       + 'paste it into the issue on GitHub with <b>Ctrl+V</b>.'
     : 'For a screenshot, press <b>Win+Shift+S</b>, select an area, then paste it into the issue on GitHub with <b>Ctrl+V</b>.'}</p>
+    </div>
     <div class="report-actions">
       <button type="button" class="button" data-report-open ${d ? '' : 'disabled'}>Open on GitHub</button>
       <button type="button" class="chip" data-report-copy ${d ? '' : 'disabled'}>Copy report</button>

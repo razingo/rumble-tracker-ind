@@ -15,7 +15,7 @@ export function showDialog({ title, message, buttons }) {
     const paragraphs = String(message || '').split(/\n\s*\n/).map((p) => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('');
     dlg.innerHTML = `<form method="dialog" class="dialog-form message-form">
       ${title ? `<div class="dialog-head"><h2>${esc(title)}</h2></div>` : ''}
-      <div class="message-body">${paragraphs}</div>
+      ${message ? `<div class="message-body dialog-card">${paragraphs}</div>` : ''}
       <div class="message-actions">${buttons.map((b, i) => `<button value="${i}"
         class="${b.primary ? `button${b.danger ? ' danger' : ''}` : 'chip'}">${esc(b.label)}</button>`).join('')}</div>
     </form>`;

@@ -32,9 +32,6 @@ WebView2, which comes with Windows 10 and 11. It doesn't use your browser, so yo
 aren't touched; links to other sites open in your default browser. On the rare PC without WebView2, the tracker
 only explains how to install it from Microsoft; start it again once WebView2 is installed.
 
-It uses the same data as the earlier tracker with a browser window, so it replaces that one: if the browser-window
-tracker is running when you start this one, it's asked to quit first.
-
 ### The tray icon
 
 The first time you close the window, the tracker asks whether to keep running in the tray or quit, and remembers your
@@ -56,12 +53,18 @@ Releases are built by GitHub Actions from this repository's source; with the Git
 
 | What | Where |
 |---|---|
-| Your own data: names you gave, armies, talents, G.R.I.D. and PvP history, progress, notification settings, and the game data read from your game install | `%APPDATA%\RumbleTracker` |
-| Automatic backups (one a day, kept for 7 days) | `%APPDATA%\RumbleTracker\backups` |
-| The tracker's log (`tracker.log`, attach it to a bug report if asked) | `%APPDATA%\RumbleTracker` |
-| The program's files, unpacked from the exe on first start, and the window's WebView2 data | `%LOCALAPPDATA%\RumbleTracker` |
+| Your own data: names you gave, armies, talents, G.R.I.D. and PvP history, progress, notification settings, and the game data read from your game install | `data` |
+| Automatic backups (one a day, kept for 7 days) | `data\backups` |
+| The tracker's log (`tracker.log`, attach it to a bug report if asked) | `data` |
+| The program's files, unpacked from the exe on first start | `app` |
+| The window's WebView2 data | `webview2` |
 
-Paste either path into the Explorer address bar to open it. *Backup → Export backup* in the tracker saves everything
+All of it is in one folder named `RumbleTracker`. The first start asks where to put it, with `%LOCALAPPDATA%` filled
+in; the tracker makes the `RumbleTracker` folder there. **⚙ Settings → The tracker's folder** shows where it is, opens
+it, and moves it: type another folder and the tracker moves its files there and restarts. A small note of where the
+folder is stays in `%APPDATA%\RumbleTracker`.
+
+*Backup → Export backup* in the tracker saves everything
 to one JSON file, which *Import backup…* restores, also on another PC.
 
 ### Updating
@@ -154,7 +157,7 @@ Environment variables for development and testing:
 
 | Variable | What it does |
 |---|---|
-| `RUMBLE_DATA_DIR` | The data folder, instead of `data/` (from source) or `%APPDATA%\RumbleTracker` (exe) |
+| `RUMBLE_DATA_DIR` | The data folder, instead of `data/` (from source) or `data` in the tracker's folder (exe) |
 | `PORT` | One fixed port; `RUMBLE_FIRST_PORT` moves the range of 20 ports the exe tries instead |
 | `RUMBLE_GAME_DIR` | The game's folder, when Windows has no install entry for it |
 | `RUMBLE_PYTHON` | The Python the image steps use, instead of the private one or one found on this PC |

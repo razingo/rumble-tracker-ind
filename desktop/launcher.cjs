@@ -1,8 +1,10 @@
 // Entry point of RumbleTracker.exe (Node.js single executable application), built by tools/build-release.mjs.
 //
-// The app's files are embedded as one asset and unpacked per version to %LOCALAPPDATA%\RumbleTracker\app; a CommonJS
-// helper imports the server from there (a single executable cannot import ES modules from disk). User data is in
-// %APPDATA%\RumbleTracker.
+// Everything the tracker keeps is in one folder named RumbleTracker: in %LOCALAPPDATA% unless the user picked
+// another place, on the first start or in Settings. In it: data (the user's data and what is read from the game), app
+// (the program's files) and the window's WebView2 data. A note in %APPDATA%\RumbleTracker says where the folder is.
+// The app's files are embedded as one asset and unpacked per version to the folder's app; a CommonJS helper imports
+// the server from there (a single executable cannot import ES modules from disk).
 //
 // The exe has no console. The page opens in a window of its own: desktop/window.ps1 shows it with WebView2 (Windows'
 // embeddable Chromium) and holds the tray icon too. Without WebView2 it only shows how to install it, and closing that
@@ -39,18 +41,34 @@ const afterUpdate = (() => {
   const m = /^--after-update=(\d+):(\d+)$/.exec(process.argv.slice(2).find((a) => a.startsWith('--after-update=')) || '');
   return m ? { pid: Number(m[1]), port: Number(m[2]) } : null;
 })();
+// --restart=<pid>: started by the tracker itself, to move its files (Settings); waits for that instance (pid) to stop
+const restartOf = Number(/^--restart=(\d+)$/.exec(process.argv.slice(2).find((a) => a.startsWith('--restart=')) || '')?.[1]) || null;
 const LOCAL = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
 const ROAMING = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
-const DATA = path.resolve(process.env.RUMBLE_DATA_DIR || path.join(ROAMING, 'RumbleTracker'));
-const HOME = path.join(LOCAL, 'RumbleTracker'); // unpacked app and the window's WebView2 data
+const FOLDER_NAME = 'RumbleTracker';
+const DEFAULT_HOME = path.join(LOCAL, FOLDER_NAME);
+// The note of where the tracker's folder is, and the folder that held the data before there was a choice.
+const NOTE_DIR = path.join(ROAMING, FOLDER_NAME);
+const NOTE = path.join(NOTE_DIR, 'location.json');
+// RUMBLE_DATA_DIR (for testing) names the data folder itself: nothing is asked, moved or noted.
+const FIXED_DATA = process.env.RUMBLE_DATA_DIR ? path.resolve(process.env.RUMBLE_DATA_DIR) : null;
+let HOME = DEFAULT_HOME; // the tracker's folder: unpacked app, the window's WebView2 data and, in data, the rest
+let DATA = null; // set once the folder is known (useHome)
+let LOG = null;
 let APP_DIR = null; // this version's unpacked files (set by main)
 let host = null; // server/host.mjs, loaded by main before the server starts
 
 process.title = TITLE;
 
 // Logging
-fs.mkdirSync(DATA, { recursive: true });
-const LOG = path.join(DATA, 'tracker.log');
+// Lines written before the folder is known wait in `early`.
+let early = [];
+function useHome(home, data = path.join(home, 'data')) {
+  HOME = home;
+  DATA = data;
+  fs.mkdirSync(DATA, { recursive: true });
+  LOG = path.join(DATA, 'tracker.log');
+}
 // Called only by the instance that runs (not when handing over to a running one).
 const rotateLog = () => {
   try {
@@ -82,7 +100,10 @@ for (const level of ['log', 'info', 'warn', 'error']) {
   console[level] = (...a) => {
     let line = withoutUserName(a.map((x) => (typeof x === 'string' ? x : x instanceof Error ? x.stack : JSON.stringify(x))).join(' '));
     if (line.length > MAX_LINE) line = `${line.slice(0, MAX_LINE)}… (${line.length - MAX_LINE} more characters)`;
-    const text = `${new Date().toISOString()} ${line}\n`;
+    let text = `${new Date().toISOString()} ${line}\n`;
+    if (!LOG) return void early.push(text);
+    text = early.join('') + text;
+    early = [];
     try {
       if (logBytes === null) {
         try {
@@ -202,14 +223,141 @@ function startWindowHost(onQuit, show = !NO_WINDOW) {
   });
 }
 
-// Starting up
-// This tracker's repository, as its server names it; the browser-window tracker names its own.
-const OWN_REPO = process.env.RUMBLE_ISSUES_REPO || 'razingo/rumble-tracker-ind';
+// The tracker's folder
+// (the functions from here to "Starting up" use only fs and path, and the tests read them out of this file)
+
+/** The folder the tracker makes for itself in the one the user picked; a folder already named so is used as it is. */
+function homeIn(picked) {
+  const p = path.resolve(picked);
+  return path.basename(p).toLowerCase() === FOLDER_NAME.toLowerCase() ? p : path.join(p, FOLDER_NAME);
+}
+
+const samePath = (a, b) => path.resolve(a).toLowerCase() === path.resolve(b).toLowerCase();
+const inside = (inner, outer) => (path.resolve(inner).toLowerCase() + path.sep).startsWith(path.resolve(outer).toLowerCase() + path.sep);
+
+function readNote(file) {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function writeNote(file, note) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(`${file}.tmp`, JSON.stringify(note, null, 2));
+  fs.renameSync(`${file}.tmp`, file);
+}
+
+/** { files, bytes } under a folder, or of a file. */
+function measure(p, sum = { files: 0, bytes: 0 }) {
+  const st = fs.statSync(p);
+  if (!st.isDirectory()) {
+    sum.files++;
+    sum.bytes += st.size;
+    return sum;
+  }
+  for (const name of fs.readdirSync(p)) measure(path.join(p, name), sum);
+  return sum;
+}
 
 /**
- * Port state: 'tracker' (this tracker already runs), 'edition' (the browser-window tracker runs, with the same data),
- * 'free' or 'other'.
+ * Moves a file or folder. On the same disk it is renamed; to another disk it is copied, the copy is counted, and
+ * only then is the original removed. Anything already at `to` is a leftover of a move that was cut off, and goes.
  */
+function moveEntry(from, to) {
+  fs.rmSync(to, { recursive: true, force: true });
+  fs.mkdirSync(path.dirname(to), { recursive: true });
+  try {
+    fs.renameSync(from, to);
+    return;
+  } catch (e) {
+    if (!['EXDEV', 'EPERM', 'EACCES', 'EBUSY'].includes(e.code)) throw e;
+  }
+  fs.cpSync(from, to, { recursive: true, preserveTimestamps: true });
+  const a = measure(from);
+  const b = measure(to);
+  if (a.files !== b.files || a.bytes !== b.bytes) throw new Error(`The copy of ${path.basename(from)} is not complete.`);
+  fs.rmSync(from, { recursive: true, force: true });
+}
+
+/** What a move of the tracker's files moves: [from, to, which names] for each folder. */
+function movePairs(move, noteDir) {
+  const window = (name) => name.startsWith('webview2');
+  // from before there was a choice: the data in %APPDATA%, the window's data in %LOCALAPPDATA%
+  if (move.legacy) {
+    return [[noteDir, path.join(move.to, 'data'), (name) => !name.startsWith('location.json')],
+      [move.from, move.to, window]];
+  }
+  return [[path.join(move.from, 'data'), path.join(move.to, 'data'), () => true], [move.from, move.to, window]];
+}
+
+/** Moves the files of each pair, entry by entry; `back` moves them the other way (after a move that failed). */
+function moveFiles(pairs, back = false) {
+  for (const [a, b, wanted] of pairs) {
+    const [from, to] = back ? [b, a] : [a, b];
+    if (samePath(from, to) || !fs.existsSync(from)) continue;
+    for (const name of fs.readdirSync(from)) if (wanted(name)) moveEntry(path.join(from, name), path.join(to, name));
+  }
+}
+
+/** Bytes the pairs hold that would go to another disk, and the bytes free there (null when that can't be told). */
+function roomFor(pairs) {
+  let needed = 0;
+  let free = null;
+  for (const [from, to, wanted] of pairs) {
+    const disk = (p) => path.parse(path.resolve(p)).root.toLowerCase();
+    if (!fs.existsSync(from) || disk(from) === disk(to)) continue;
+    for (const name of fs.readdirSync(from)) if (wanted(name)) needed += measure(path.join(from, name)).bytes;
+    try {
+      const s = fs.statfsSync(path.parse(path.resolve(to)).root);
+      free = s.bavail * s.bsize;
+    } catch {
+      // not told
+    }
+  }
+  return { needed, free };
+}
+
+/** After a move: the old folder's unpacked program goes, and the folder itself once nothing is left in it. */
+function tidyOld(old, kept) {
+  if (samePath(old, kept)) return;
+  for (const name of ['app', 'data']) {
+    try {
+      if (name === 'app' || !fs.readdirSync(path.join(old, name)).length) fs.rmSync(path.join(old, name), { recursive: true, force: true });
+    } catch {
+      // not there, or in use
+    }
+  }
+  try {
+    fs.rmdirSync(old);
+  } catch {
+    // not empty: the user's own files
+  }
+}
+
+/** Why the tracker's folder can't be `home`, or null: it must be a folder the tracker can write to. */
+function homeProblem(home, noteDir) {
+  if (!path.isAbsolute(home)) return 'Give the whole path of a folder, such as D:\\Games.';
+  if (samePath(home, noteDir) || inside(home, noteDir)) {
+    return 'That folder holds the note of where the tracker\'s files are. Pick another.';
+  }
+  try {
+    fs.mkdirSync(home, { recursive: true });
+    const probe = path.join(home, `.write-${process.pid}`);
+    fs.writeFileSync(probe, '');
+    fs.rmSync(probe);
+  } catch (e) {
+    return `The tracker can't write to that folder (${e.code || e.message}).`;
+  }
+  return null;
+}
+
+// Starting up
+// This tracker's repository, as its server names it.
+const OWN_REPO = process.env.RUMBLE_ISSUES_REPO || 'razingo/rumble-tracker-ind';
+
+/** Port state: 'tracker' (this tracker already runs), 'free' or 'other'. */
 function probe(port = PORT) {
   return new Promise((resolve) => {
     const req = http.get({ host: '127.0.0.1', port, path: '/api/report', headers: { host: `localhost:${port}` }, timeout: 3000 }, (res) => {
@@ -219,7 +367,7 @@ function probe(port = PORT) {
       res.on('end', () => {
         try {
           const { repo } = JSON.parse(body);
-          resolve(!repo ? 'other' : repo === OWN_REPO ? 'tracker' : 'edition');
+          resolve(repo === OWN_REPO ? 'tracker' : 'other');
         } catch {
           resolve('other');
         }
@@ -239,42 +387,153 @@ function canListen(port) {
   });
 }
 
-/**
- * A running tracker's port, else the first usable port: { running, port }. A running browser-window tracker is asked
- * to quit first, as two trackers on the same data would overwrite each other's changes.
- */
-let stoppedEdition = false; // logged once this instance has its own log
+/** A running tracker's port, else the first usable port: { running, port }. */
 async function findPort() {
-  let states = await Promise.all(PORTS.map((p) => probe(p)));
+  const states = await Promise.all(PORTS.map((p) => probe(p)));
   const running = PORTS.find((p, i) => states[i] === 'tracker');
   if (running) return { running: true, port: running };
-  const editions = PORTS.filter((p, i) => states[i] === 'edition');
-  if (editions.length) {
-    await Promise.all(editions.map(stopEdition));
-    stoppedEdition = true;
-    states = await Promise.all(PORTS.map((p) => probe(p)));
-  }
   for (const [i, p] of PORTS.entries()) if (states[i] === 'free' && await canListen(p)) return { running: false, port: p };
   return { running: false, port: null };
 }
 
-/**
- * Asks the browser-window tracker on `port` to quit and, if it agreed, waits up to 30 s until it has (it saves and
- * backs up first). Run from source, it can't be quit this way, so it's left running.
- */
-async function stopEdition(port) {
-  const agreed = await new Promise((resolve) => {
-    const req = http.request({ host: '127.0.0.1', port, path: '/api/quit', method: 'POST', timeout: 5000,
-      headers: { host: `localhost:${port}`, 'content-type': 'application/json' } }, (res) => {
-      res.resume();
-      res.on('end', () => resolve(res.statusCode === 200));
-    });
-    req.on('timeout', () => req.destroy(new Error('timeout')));
-    req.on('error', () => resolve(false));
-    req.end('{}');
+// Where the tracker keeps its files: asked on the first start, moved when the answer changes
+
+/** Runs a PowerShell script that shows a window, and resolves to what it printed. */
+function psWindow(script, env) {
+  return new Promise((resolve) => {
+    execFile(POWERSHELL, psArgs(script), { windowsHide: true, env: { ...process.env, RT_TITLE: TITLE, ...env } },
+      (err, out) => resolve(String(out || '').trim()));
   });
-  const until = Date.now() + 30000;
-  while (agreed && Date.now() < until && await probe(port) === 'edition') await sleep(200);
+}
+
+const ASK_FOLDER = `Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+[System.Windows.Forms.Application]::EnableVisualStyles()
+$f = New-Object System.Windows.Forms.Form
+$f.Text = $env:RT_TITLE; $f.StartPosition = 'CenterScreen'; $f.FormBorderStyle = 'FixedDialog'
+$f.MaximizeBox = $false; $f.MinimizeBox = $false; $f.ClientSize = New-Object System.Drawing.Size(520, 250)
+$f.Font = New-Object System.Drawing.Font('Segoe UI', 9.5); $f.TopMost = $true
+$l = New-Object System.Windows.Forms.Label
+$l.SetBounds(16, 14, 488, 96); $l.Text = $env:RT_TEXT
+$t = New-Object System.Windows.Forms.TextBox
+$t.SetBounds(16, 116, 392, 26); $t.Text = $env:RT_FOLDER
+$b = New-Object System.Windows.Forms.Button
+$b.SetBounds(416, 114, 88, 28); $b.Text = 'Browse...'
+$b.Add_Click({
+  $d = New-Object System.Windows.Forms.FolderBrowserDialog
+  $d.Description = 'The tracker makes a folder named RumbleTracker in the folder you pick.'
+  if (Test-Path -LiteralPath $t.Text) { $d.SelectedPath = $t.Text }
+  if ($d.ShowDialog($f) -eq 'OK') { $t.Text = $d.SelectedPath }
+})
+$e = New-Object System.Windows.Forms.Label
+$e.SetBounds(16, 150, 488, 40); $e.ForeColor = [System.Drawing.Color]::Firebrick; $e.Text = $env:RT_PROBLEM
+$ok = New-Object System.Windows.Forms.Button
+$ok.SetBounds(320, 204, 88, 30); $ok.Text = 'OK'; $ok.DialogResult = 'OK'
+$no = New-Object System.Windows.Forms.Button
+$no.SetBounds(416, 204, 88, 30); $no.Text = 'Cancel'; $no.DialogResult = 'Cancel'
+$f.Controls.AddRange(@($l, $t, $b, $e, $ok, $no)); $f.AcceptButton = $ok; $f.CancelButton = $no
+if ($f.ShowDialog() -eq 'OK') { [Console]::Out.Write('ok ' + $t.Text.Trim()) }`;
+
+const WAIT_WINDOW = `Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+[System.Windows.Forms.Application]::EnableVisualStyles()
+$f = New-Object System.Windows.Forms.Form
+$f.Text = $env:RT_TITLE; $f.StartPosition = 'CenterScreen'; $f.FormBorderStyle = 'FixedDialog'; $f.ControlBox = $false
+$f.ClientSize = New-Object System.Drawing.Size(420, 96); $f.Font = New-Object System.Drawing.Font('Segoe UI', 9.5)
+$l = New-Object System.Windows.Forms.Label
+$l.SetBounds(16, 14, 388, 40); $l.Text = $env:RT_TEXT
+$p = New-Object System.Windows.Forms.ProgressBar
+$p.SetBounds(16, 60, 388, 18); $p.Style = 'Marquee'
+$f.Controls.AddRange(@($l, $p))
+[void]$f.ShowDialog()`;
+
+/**
+ * Asks where the tracker should keep its files, until the answer is a folder it can use. Resolves to the tracker's
+ * own folder there, or null when the user pressed Cancel.
+ */
+async function askFolder(existing) {
+  let folder = LOCAL;
+  let problem = '';
+  for (;;) {
+    const text = `Where should the tracker keep its files?\n\nThe tracker makes a folder of its own named ${FOLDER_NAME} `
+      + 'in the folder you pick, and keeps everything in it: your data, what it reads from the game and its own program '
+      + `files.${existing ? ' The files it has now are moved there.' : ''} You can change this later in Settings.`;
+    const out = await psWindow(ASK_FOLDER, { RT_TEXT: text, RT_FOLDER: folder, RT_PROBLEM: problem });
+    if (!out.startsWith('ok')) return null;
+    folder = out.slice(2).trim();
+    const home = folder && path.isAbsolute(folder) ? homeIn(folder) : folder;
+    problem = folder ? homeProblem(home, NOTE_DIR) : 'Pick a folder.';
+    if (!problem) return home;
+  }
+}
+
+/** Moves the tracker's files as the note says, behind a window that asks to wait. Returns why it failed, or null. */
+function moveNow(note) {
+  const pairs = movePairs(note.moving, NOTE_DIR);
+  const { needed, free } = roomFor(pairs);
+  const gb = (bytes) => (bytes / 2 ** 30).toFixed(1);
+  if (free != null && needed > free) return `It needs ${gb(needed)} GB there, and ${gb(free)} GB is free.`;
+  const wait = spawn(POWERSHELL, psArgs(WAIT_WINDOW), { windowsHide: true, stdio: 'ignore',
+    env: { ...process.env, RT_TITLE: TITLE, RT_TEXT: 'Moving the tracker\'s files. This can take a few minutes.' } });
+  try {
+    moveFiles(pairs);
+    return null;
+  } catch (e) {
+    console.log(`Moving the files to ${note.moving.to} failed: ${e.message}`);
+    try {
+      moveFiles(pairs, true);
+    } catch (e2) {
+      console.log(`Moving them back failed: ${e2.message}`);
+      return `${e.message} Some files are now in ${note.moving.to} and some in ${note.moving.legacy ? NOTE_DIR : note.moving.from}.`;
+    }
+    return e.message;
+  } finally {
+    wait.kill();
+  }
+}
+
+/**
+ * Finds the tracker's folder: as noted, or asked for on the first start (and on the first start since there is a
+ * choice, when the files it has are moved). A move asked for in Settings is done here, before anything uses the
+ * files. Returns false when the tracker should not start.
+ */
+async function locate() {
+  if (FIXED_DATA) {
+    useHome(DEFAULT_HOME, FIXED_DATA);
+    return true;
+  }
+  let note = readNote(NOTE);
+  if (!note?.folder && !note?.moving) {
+    // files from before there was a choice: the data folder was the note's own folder
+    const legacy = fs.existsSync(NOTE_DIR) && fs.readdirSync(NOTE_DIR).some((n) => !n.startsWith('location.json'));
+    const to = await askFolder(legacy);
+    if (!to) return false;
+    note = legacy ? { moving: { legacy: true, from: DEFAULT_HOME, to } } : { folder: to };
+  } else if (note.moveTo && note.folder && !samePath(note.moveTo, note.folder)) {
+    note = { folder: note.folder, moving: { from: note.folder, to: note.moveTo } };
+  } else if (note.moveTo) note = { folder: note.folder };
+  let failed = null;
+  if (note.moving) {
+    const { moving } = note;
+    writeNote(NOTE, note); // (a move cut off goes on at the next start)
+    failed = moveNow(note);
+    if (!failed) {
+      tidyOld(moving.from, moving.to);
+      note = { folder: moving.to };
+    } else if (moving.legacy) {
+      // as before the question: it is asked again at the next start
+      fs.rmSync(NOTE, { force: true });
+      fatal(`The tracker's files could not be moved to ${moving.to}: ${failed}\n\nStart the tracker again to pick a folder.`);
+      return false;
+    } else note = { folder: note.folder };
+  }
+  writeNote(NOTE, note);
+  useHome(note.folder);
+  if (failed) {
+    console.log(`The files stay in ${note.folder}`);
+    await psWindow('Add-Type -AssemblyName System.Windows.Forms; '
+      + "[void][System.Windows.Forms.MessageBox]::Show($env:RT_MSG, $env:RT_TITLE, 'OK', 'Warning')",
+    { RT_MSG: `The tracker's files could not be moved: ${failed}\n\nThey stay in ${note.folder}.` });
+  }
+  return true;
 }
 
 /** Waits up to 20 s for the server to answer, checking often, as the window opens only once it does. */
@@ -425,9 +684,16 @@ function uninstall() {
   spawn(path.join(SYSTEM32, 'cmd.exe'), ['/d', '/c', 'start', '""', '/b', POWERSHELL, ...psArgs(PS_RUN_FILE)], {
     detached: true, stdio: 'ignore', windowsHide: true,
     env: { ...process.env, RT_SCRIPT: path.join(APP_DIR, 'desktop', 'uninstall.ps1'), RT_PARENT: String(process.pid),
-      RT_EXE: process.execPath, RT_DATA: DATA, RT_HOME: HOME, RT_TITLE: TITLE },
+      RT_EXE: process.execPath, RT_DATA: DATA, RT_HOME: HOME, RT_NOTE: FIXED_DATA ? '' : NOTE_DIR, RT_TITLE: TITLE },
   }).unref();
   quitFromTray('Uninstall from Settings');
+}
+
+/** Stops the tracker and starts it again, which waits for this instance to stop (to move its files, see locate). */
+function restart() {
+  console.log('Restarting');
+  spawn(process.execPath, [`--restart=${process.pid}`], { detached: true, stdio: 'ignore' }).unref();
+  quitFromTray('Restart to move the files');
 }
 
 /**
@@ -480,8 +746,10 @@ async function startServer(app) {
     return false;
   }
   host.attach({
-    options: { port: PORT, dataDir: DATA },
+    // (storage: the tracker's folder and the note that names it; null when RUMBLE_DATA_DIR fixes the data folder)
+    options: { port: PORT, dataDir: DATA, storage: FIXED_DATA ? null : { folder: HOME, note: NOTE } },
     applyUpdate,
+    restart,
     takeScreenshot: () => shellOpen('ms-screenclip:'),
     showWindow,
     uninstall,
@@ -510,10 +778,10 @@ function removeLeftovers() {
 
 async function main() {
   if (process.platform !== 'win32') return fatal(`${TITLE} runs on Windows only.`);
-  if (afterUpdate) await waitForExit(afterUpdate.pid);
+  if (afterUpdate || restartOf) await waitForExit(afterUpdate?.pid || restartOf);
   if (!await claimPort()) return;
+  if (!await locate()) return;
   rotateLog();
-  if (stoppedEdition) console.log('The browser-window tracker was running; it was asked to quit, as both use the same data');
   let app;
   try {
     app = unpack();

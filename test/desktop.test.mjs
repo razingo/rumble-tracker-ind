@@ -68,18 +68,22 @@ test("uninstalling removes the data, the program files and the zip's files, and 
     writeFileSync(path.join(dir, rel), 'x');
   };
   try {
-    for (const f of ['appdata/RumbleTracker/names.json', 'appdata/RumbleTracker/backups/b.json', 'home/app/v/x.mjs',
+    for (const f of ['appdata/RumbleTracker/location.json', 'picked/RumbleTracker/data/names.json',
+      'picked/RumbleTracker/data/backups/b.json', 'picked/RumbleTracker/app/v/x.mjs', 'picked/mine.txt',
       'zip/RumbleTracker.exe', 'zip/README.md', 'zip/THIRD-PARTY-NOTICES/Node.js-LICENSE.txt', 'other/RumbleTracker.exe',
       'other/mine.txt', 'custom/names.json']) file(f);
-    // %APPDATA%RumbleTracker is the usual data folder
-    const env = { RT_FILES_ONLY: '1', RT_PARENT: '0', APPDATA: path.join(dir, 'appdata'), RT_HOME: path.join(dir, 'home') };
-    await run({ ...env, RT_DATA: path.join(dir, 'appdata', 'RumbleTracker'), RT_EXE: path.join(dir, 'zip', 'RumbleTracker.exe') },
+    // the tracker's folder in the one the player picked, and the note of where it is
+    const env = { RT_FILES_ONLY: '1', RT_PARENT: '0', RT_HOME: path.join(dir, 'picked', 'RumbleTracker') };
+    await run({ ...env, RT_NOTE: path.join(dir, 'appdata', 'RumbleTracker'), RT_EXE: path.join(dir, 'zip', 'RumbleTracker.exe') },
       'uninstall.ps1');
-    assert.deepEqual(['appdata/RumbleTracker', 'home', 'zip'].filter((f) => existsSync(path.join(dir, f))), [], 'all removed');
-    // next to the exe, the player's own files stay, and so does their folder; a data folder set elsewhere stays too
-    await run({ ...env, RT_DATA: path.join(dir, 'custom'), RT_EXE: path.join(dir, 'other', 'RumbleTracker.exe') }, 'uninstall.ps1');
+    assert.deepEqual(['appdata/RumbleTracker', 'picked/RumbleTracker', 'zip'].filter((f) => existsSync(path.join(dir, f))), [],
+      'all removed');
+    assert.ok(existsSync(path.join(dir, 'picked', 'mine.txt')), 'what else is in the picked folder stays');
+    // next to the exe, the player's own files stay, and so does their folder; a folder under another name stays too
+    await run({ ...env, RT_HOME: path.join(dir, 'custom'), RT_NOTE: '', RT_EXE: path.join(dir, 'other', 'RumbleTracker.exe') },
+      'uninstall.ps1');
     assert.ok(!existsSync(path.join(dir, 'other', 'RumbleTracker.exe')) && existsSync(path.join(dir, 'other', 'mine.txt')));
-    assert.ok(existsSync(path.join(dir, 'custom', 'names.json')), 'a data folder set with RUMBLE_DATA_DIR is left');
+    assert.ok(existsSync(path.join(dir, 'custom', 'names.json')), 'only a folder named RumbleTracker is removed whole');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

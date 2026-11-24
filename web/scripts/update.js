@@ -67,7 +67,7 @@ export function renderUpdate() {
           ? 'Download now' : 'Open GitHub Releases'}</button>
           <button class="chip" data-update-later>Later</button></div>`;
     }
-    dlg.innerHTML = `<div class="dialog-form">${head}${body}</div>`;
+    dlg.innerHTML = `<div class="dialog-form">${head}<div class="dialog-card">${body}</div></div>`;
   }
   if (!dlg.open) dlg.showModal();
 }

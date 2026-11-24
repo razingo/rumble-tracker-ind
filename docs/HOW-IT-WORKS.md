@@ -22,11 +22,7 @@ The window shows the tracker's page with Microsoft Edge WebView2, which comes wi
 the tracker's own page; links to other sites open in your default browser. If WebView2 isn't installed or can't run,
 a small window explains how to install it from Microsoft. The tracker doesn't install it, open the page in your
 browser or stay in the tray: closing that window stops it, and once WebView2 is installed you start it again. The
-window's own WebView2 data (cache, zoom) is kept apart from your browser's, in `%LOCALAPPDATA%\RumbleTracker\webview2`.
-
-This tracker replaces the one with a browser window and uses the same data. If that one is running when this one
-starts, it's asked to quit first (it saves and writes its backup as usual), so the two never change your data at the
-same time.
+window's own WebView2 data (cache, zoom) is kept apart from your browser's, in `webview2` in the tracker's folder.
 
 ## The tray icon
 
@@ -39,7 +35,7 @@ backup and saves everything first.
 
 ## Backups
 
-**Automatic backups** are written to `%APPDATA%\RumbleTracker\backups`:
+**Automatic backups** are written to `data\backups` in the tracker's folder:
 
 - when the tracker starts, every 24 hours while it runs, and when it stops;
 - one file per day (a later backup on the same day replaces it);
@@ -105,26 +101,39 @@ A few seconds after each start, the exe makes sure of these, for your Windows ac
 
 ## Files and folders
 
+Everything the tracker keeps is in one folder named `RumbleTracker`. The first start asks where to put it, with
+`%LOCALAPPDATA%` filled in, and the tracker makes the `RumbleTracker` folder in the folder you pick. **⚙ Settings →
+The tracker's folder** shows where it is and opens it. To move it, type another folder there: the tracker closes,
+moves its files into a `RumbleTracker` folder in it, and starts again. If the move can't be finished, the files are
+put back and the tracker says why.
+
+A tracker from before there was a choice kept your data in `%APPDATA%\RumbleTracker` and the rest in
+`%LOCALAPPDATA%\RumbleTracker`. Its first start after the update asks the same question and moves both into the one
+folder.
+
 | Where | What |
 |---|---|
-| `%APPDATA%\RumbleTracker` | Your data: what you entered, the history, settings, the game data read from your game install (`gamedata`, with the reading's working files in `gamedata-build`), the game's folder if you gave one (`config.json`), automatic backups (`backups`), a downloaded update (`update`, removed once installed) and the log (`tracker.log`, `tracker.previous.log`) |
-| `%APPDATA%\RumbleTracker\state` | The last read of each account's save (rebuilt by the next read; not in backups) |
-| `%LOCALAPPDATA%\RumbleTracker\app` | The program's files, unpacked from the exe once per version |
-| `%LOCALAPPDATA%\RumbleTracker\webview2` | The window's WebView2 data (Microsoft Edge WebView2 shows the page). The files there are WebView2's own (cache, settings); the tracker stores nothing of yours in it, and deleting the folder only resets the window |
+| `%APPDATA%\RumbleTracker\location.json` | The note of where the tracker's folder is. It stays here wherever the folder is |
+| `data` | Your data: what you entered, the history, settings, the game data read from your game install (`gamedata`, with the reading's working files in `gamedata-build`), the game's folder if you gave one (`config.json`), automatic backups (`backups`), a downloaded update (`update`, removed once installed) and the log (`tracker.log`, `tracker.previous.log`) |
+| `data\state` | The last read of each account's save (rebuilt by the next read; not in backups) |
+| `app` | The program's files, unpacked from the exe once per version |
+| `webview2` | The window's WebView2 data (Microsoft Edge WebView2 shows the page). The files there are WebView2's own (cache, settings); the tracker stores nothing of yours in it, and deleting the folder only resets the window |
 
 ## Uninstalling
 
 **⚙ Settings → Uninstall the tracker…** does it all. The tracker stops (writing its last backup, as always), and a
-moment later the exe, `%APPDATA%\RumbleTracker`, `%LOCALAPPDATA%\RumbleTracker`, the Start menu shortcut, the
+moment later the exe, the tracker's folder, the note in `%APPDATA%\RumbleTracker`, the Start menu shortcut, the
 `rumble-tracker:` link (`HKEY_CURRENT_USER\Software\Classes\rumble-tracker`), Start with Windows and the notification
 settings Windows keeps for the tracker are removed. Next to the exe, only the files from the release zip go; the folder
-goes too if nothing else is left in it. A data folder you set yourself with `RUMBLE_DATA_DIR` is left as it is.
+goes too if nothing else is left in it. Of the folder you picked, only the `RumbleTracker` folder in it is removed.
+A data folder you set yourself with `RUMBLE_DATA_DIR` is left as it is.
 
 By hand:
 
 1. In **⚙ Settings**, untick *Start with Windows* if you ticked it.
 2. Quit the tracker.
-3. Delete `RumbleTracker.exe`, `%APPDATA%\RumbleTracker` and `%LOCALAPPDATA%\RumbleTracker`.
+3. Delete `RumbleTracker.exe`, the tracker's folder (**⚙ Settings** shows where it is; look before you quit) and
+   `%APPDATA%\RumbleTracker`.
 4. Delete the Start menu shortcut *Rumble Collection Tracker* (in the Start menu, right-click it → *Open file
    location*) and, if you like, the registry keys `HKEY_CURRENT_USER\Software\Classes\rumble-tracker` and
    `HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\razingo.RumbleCollectionTracker`

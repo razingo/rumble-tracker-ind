@@ -835,7 +835,7 @@ button { cursor: pointer; }
 
 /* Settings dialog */
 .dialog { width: min(620px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 0;
-  border: 1px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--ink); box-shadow: var(--shadow); }
+  border: 1px solid var(--line); border-radius: 14px; background: var(--panel-2); color: var(--ink); box-shadow: var(--shadow); }
 .dialog::backdrop { background: rgb(0 0 0 / 55%); }
 .dialog-form { padding: 16px 20px 20px; display: grid; gap: 10px; }
 .dialog-head { display: flex; align-items: center; justify-content: space-between; }
@@ -843,11 +843,15 @@ button { cursor: pointer; }
 .dialog-toggle { font-weight: 800; }
 .notify-account select, .close-window select { margin-left: 6px; }
 .close-window { display: block; margin-top: 10px; }
-.game-folder { display: block; margin-top: 14px; }
+.folder-label { display: block; margin-top: 14px; }
+.folder-row { display: flex; gap: 8px; align-items: center; }
+.folder-row input { flex: 1; min-width: 0; }
+.folder-open { display: grid; place-items: center; padding: 6px 9px; }
+.folder-open svg { width: 18px; height: 18px; fill: var(--accent); }
+.folder-open:disabled { opacity: .45; cursor: default; }
 .extra-row { align-items: center; gap: 12px; }
 .extra-state { font-size: 13px; opacity: .75; }
 .extra-state.good { color: #8fd98a; opacity: 1; }
-.game-folder input { display: block; width: 100%; margin-top: 4px; }
 .notify-table { width: 100%; border-collapse: collapse; }
 .notify-table.off { opacity: .5; }
 .notify-table th { font-size: 11px; font-weight: 700; color: var(--muted); text-align: center; line-height: 1.15; }
@@ -859,15 +863,18 @@ button { cursor: pointer; }
 .notify-quiet { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .dialog-actions { display: flex; align-items: center; gap: 10px; }
 .dialog-form h3 { margin: 6px 0 0; font-size: 14px; }
-/* Settings: each section in a card of its own, lighter than the dialog, under a gold title */
-#settingsDialog { background: var(--panel-2); }
-#settingsDialog .dialog-form { gap: 14px; }
-.set-card { display: grid; gap: 10px; padding: 12px 16px 16px; border: 1px solid var(--line); border-radius: 12px;
+/* A pop-up's title and close button stay on top while what is under them scrolls. What it holds is in cards, lighter
+   than the pop-up; in Settings each section has a card of its own under a gold title. */
+.dialog-head { position: sticky; top: 0; z-index: 1; margin: -16px -20px 0; padding: 12px 20px;
+  background: var(--panel-2); border-bottom: 1px solid rgb(242 179 61 / 35%); }
+.dialog-form, .report-form { gap: 14px; }
+.message-body p:last-child { margin-bottom: 0; }
+.dialog-card { display: grid; gap: 10px; padding: 12px 16px 16px; border: 1px solid var(--line); border-radius: 12px;
   background: var(--panel); box-shadow: 0 2px 8px rgb(0 0 0 / 30%); }
-.set-card h3 { margin: 0; padding-bottom: 7px; font-size: 18px; color: var(--accent);
+.dialog-card h3 { margin: 0; padding-bottom: 7px; font-size: 18px; color: var(--accent);
   border-bottom: 1px solid rgb(242 179 61 / 35%); }
-.set-card.danger { border-color: var(--warn); }
-.set-card.danger h3 { color: var(--warn); border-bottom-color: rgb(255 154 98 / 35%); }
+.dialog-card.danger { border-color: var(--warn); }
+.dialog-card.danger h3 { color: var(--warn); border-bottom-color: rgb(255 154 98 / 35%); }
 .extra-box { display: grid; gap: 10px; }
 .notify-log { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 180px; overflow: auto; }
 

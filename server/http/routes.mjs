@@ -8,6 +8,9 @@ import { buildState, liveState, resolveAccount, dataStale } from '../state.mjs';
 import { createHandlers, armoryFile } from './handlers.mjs';
 import { host } from '../host.mjs';
 import { givenGameFolder, setGameFolder } from '../game/folder.mjs';
+import { noteMove } from '../storage.mjs';
+import { EXPLORER } from '../system.mjs';
+import { execFile } from 'node:child_process';
 import { MINUTE, MB, CLOSE_CHOICES } from '../../web/scripts/lib/constants.js';
 import { localDay } from '../../web/scripts/lib/format.js';
 
@@ -62,6 +65,8 @@ export function createRoutes(ctx, deps) {
     // the game's folder given by hand ('' when none), and the one in use ('' when the game is not found)
     gameFolder: await givenGameFolder(ctx),
     gameFolderUsed: await deps.gameData?.gameFolder() || '',
+    // the folder the tracker keeps its files in (null where there is no choice: from source)
+    storageFolder: host.options.storage?.folder || null,
   });
 
   // "METHOD /path" to a handler(req, url) that returns [status, body]
@@ -141,6 +146,14 @@ export function createRoutes(ctx, deps) {
       }
       return [200, { ok: true, ...(await settings()) }];
     },
+    // The open-folder buttons in Settings: shows the tracker's own folder or the game's in Explorer.
+    'POST /api/open-folder': async (req) => {
+      const { which } = await readBody(req);
+      const folder = which === 'storage' ? host.options.storage?.folder : which === 'game' ? await deps.gameData?.gameFolder() : null;
+      if (!folder) return [400, { error: 'There is no such folder to open.' }];
+      execFile(EXPLORER, [folder], () => {});
+      return [200, { ok: true }];
+    },
     // Script errors reported by the page, for "Report a problem".
     'POST /api/client-error': async (req) => {
       const b = await readBody(req, 8 * 1024);
@@ -203,6 +216,22 @@ export function createRoutes(ctx, deps) {
       return [200, { ok: true }];
     });
     routes.set('POST /api/update', async () => deps.startUpdate());
+    // The tracker's folder in Settings: the move is noted, then the tracker restarts and moves its files
+    routes.set('POST /api/storage', async (req) => {
+      const { folder } = await readBody(req);
+      if (!host.options.storage) return [400, { error: 'This tracker\'s folder is set where it was started.' }];
+      if ((await deps.rdmodule?.status())?.state === 'running') {
+        return [400, { error: 'The additional data is being extracted. Move the files once that is done.' }];
+      }
+      let home;
+      try {
+        home = await noteMove(host.options.storage, folder);
+      } catch (e) {
+        return [400, { error: e.message }];
+      }
+      setTimeout(() => host.restart(), 200);
+      return [200, { ok: true, folder: home }];
+    });
     // Uninstall in Settings: after the answer reaches the page, the tracker stops and removes itself
     routes.set('POST /api/uninstall', async () => {
       setTimeout(() => host.uninstall(), 200);

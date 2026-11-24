@@ -45,7 +45,7 @@ Reading goes easy on the PC: the programs it starts run at low priority, and onl
 that is not done after 10 minutes is stopped, and the read is tried again later. Quitting the tracker stops a read in
 progress; the data it had stays as it was.
 
-The data is kept in `%APPDATA%\RumbleTracker\gamedata`, with working files in `gamedata-build` beside it. New data
+The data is kept in `data\gamedata` in the tracker's folder, with working files in `gamedata-build` beside it. New data
 replaces the old only once it is complete.
 
 ### When the game is not found
@@ -59,7 +59,7 @@ moved by hand has no such entry, or a wrong one. Then:
 2. Later, the folder can be changed in **⚙ Settings** under *Warcraft Rumble's folder*. Emptying the field makes the
    tracker look for the game again. A change is used right away.
 
-The folder is kept as `gameFolder` in `%APPDATA%\RumbleTracker\config.json`. From source, the `RUMBLE_GAME_DIR`
+The folder is kept as `gameFolder` in `data\config.json` in the tracker's folder. From source, the `RUMBLE_GAME_DIR`
 environment variable does the same.
 
 If the game is not installed at all, installing it is enough: the loading window looks again every 15 seconds.

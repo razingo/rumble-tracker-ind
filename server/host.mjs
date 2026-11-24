@@ -4,7 +4,8 @@
 //
 // The launcher passes in its start-up options, the window program's reports (the window was closed, whether the
 // game runs, Quit from the tray or Windows shutting down) and the app ID notifications are sent under. It shows the
-// window, installs downloaded updates, opens Windows' snipping overlay and uninstalls the tracker for the server.
+// window, installs downloaded updates, opens Windows' snipping overlay, restarts and uninstalls the tracker for the
+// server.
 
 let launcher = null;
 let quitHandler = null;
@@ -14,7 +15,8 @@ let windowClosedListener = null;
 
 export const host = {
   /**
-   * Called by the launcher with { options: { port, dataDir }, applyUpdate, takeScreenshot, showWindow, uninstall }.
+   * Called by the launcher with { options: { port, dataDir, storage: { folder, note } | null }, applyUpdate,
+   * takeScreenshot, showWindow, restart, uninstall }.
    */
   attach(hooks) { launcher = hooks; },
 
@@ -66,6 +68,8 @@ export const host = {
   takeScreenshot() { launcher?.takeScreenshot(); },
   /** Opens the window or brings it to the front. */
   showWindow() { launcher?.showWindow(); },
+  /** Stops the tracker and starts it again (to move its files, server/storage.mjs). */
+  restart() { launcher?.restart(); },
   /** Stops the tracker and removes it from this PC (desktop/uninstall.ps1). */
   uninstall() { launcher?.uninstall(); },
 };
