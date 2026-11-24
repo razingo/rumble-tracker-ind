@@ -3,6 +3,14 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.3.2
+
+- Calendar: shop offers for cores and the Modest Star Tome show their pictures.
+- Army: the lists show a faction filter only for factions that have a mini in them.
+- Fixed: on a PC where Warcraft Rumble was never played, no notification was ever sent.
+- Fixed: a faction filter chosen earlier could stay on, without its button, while the game data was read again.
+- After this update the tracker reads the shop's part of its game data again once, in the background.
+
 ## 0.3.1
 
 - Calendar: shop offers for cores, the Modest Star Tome and Arc Energy show their names instead of "{cores}" and
