@@ -3,6 +3,15 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.4.2
+
+- Uninstall asks whether to keep a backup. "Uninstall, keep a backup" saves your names, armies, goals, history
+  and settings to a file where you choose, and Backup → Import backup in a new tracker brings them back. If the
+  file isn't saved, nothing is uninstalled.
+- Uninstall also removes what earlier versions left in `%APPDATA%` and `%LOCALAPPDATA%`, wherever the tracker's
+  folder is now.
+- Uninstall no longer shows a PowerShell window while it removes the files.
+
 ## 0.4.1
 
 - Fixed: after updating to 0.4.0 the tracker did not open. It was waiting for an answer to the question of where
