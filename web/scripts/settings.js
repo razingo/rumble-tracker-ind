@@ -1,6 +1,6 @@
-// The Settings dialog: Start with Windows, what closing the window does, the notifications, uninstalling and, at the
-// bottom, extracting the additional data (for the rdmodule, web/scripts/rdmodule.js). The server keeps the settings
-// and sends the notifications, also while the page is closed.
+// The Settings dialog, a card for each section: Start with Windows, what closing the window does and the game's
+// folder, the notifications, extracting the additional data (for the rdmodule, web/scripts/rdmodule.js) and
+// uninstalling. The server keeps the settings and sends the notifications, also while the page is closed.
 import { $, getJson, post, showMessage, state } from './core.js';
 import { showDialog, confirmDialog, alertDialog } from './dialogs.js';
 import { CLOSE_CHOICES } from './lib/constants.js';
@@ -20,6 +20,10 @@ async function loadSettings() {
     getJson('/api/rdmodule', 'the additional data').catch(() => null),
   ]);
 }
+
+/** One section of the dialog, in a card of its own; nothing when it has nothing to show. */
+const section = (title, body, kind = '') => (body ? `<section class="set-card ${kind}"><h3>${title}</h3>${body}</section>` : '');
+const gb = (bytes) => (bytes / 2 ** 30).toFixed(1).replace(/\.0$/, '');
 
 const dialogHead = '<div class="dialog-head"><h2>Settings</h2><button class="chip" value="close" aria-label="Close">✕</button></div>';
 
@@ -56,7 +60,7 @@ function generalSection() {
       data-setting="checkUpdates" ${general.checkUpdates ? 'checked' : ''}> Check for new versions</label>
       <p class="muted small">Asks GitHub for the tracker's latest version when this window opens and once a day. Nothing
         about you is sent.${general.checkUpdates ? lastCheck() : ''}</p>`;
-  return `<h3>General</h3>${autostart}${close}${updates}<span class="dialog-message small" data-setting-message></span>`;
+  return `${autostart}${close}${updates}${gameFolderSection()}<span class="dialog-message small" data-setting-message></span>`;
 }
 
 /** One notification type: on or off, its warning time if it has one, and whether it is sent while playing. */
@@ -76,8 +80,7 @@ function notificationRow(t) {
 function notificationsSection() {
   const s = notify.settings;
   const accounts = state?.accounts || [];
-  return `<h3>Notifications</h3>
-    <p class="muted small">They keep coming while the tracker runs, even with this window closed.</p>
+  return `<p class="muted small">They keep coming while the tracker runs, even with this window closed.</p>
     <label class="dialog-toggle"><input type="checkbox" data-notify-field="enabled"
       ${s.enabled ? 'checked' : ''}> Send notifications</label>
     <label class="notify-account">For <select data-notify-field="account">
@@ -104,19 +107,19 @@ function notificationsSection() {
 function recentSection() {
   const item = (n) => `<li><span class="muted small">${esc(dateTime(n.t))}</span> <b>${esc(n.title)}</b> <span
     class="small">${esc(n.body)}</span>${n.delivered ? '' : ' <span class="text-warn small">(not delivered)</span>'}</li>`;
-  return `<h3>Recent</h3>${notify.log.length
+  return `${notify.log.length
     ? `<ul class="notify-log">${notify.log.map(item).join('')}</ul>` : '<p class="muted small">Nothing sent yet.</p>'}`;
 }
 
 /** Uninstall, only in the exe. */
 function uninstallSection() {
   if (!state?.standalone) return '';
-  return `<h3>Uninstall</h3>
-    <p class="muted small">Removes the tracker and everything it stored from this PC.</p>
+  return `<p class="muted small">Removes the tracker and everything it stored from this PC.</p>
     <div class="dialog-actions"><button type="button" class="chip danger" data-uninstall>Uninstall the tracker…</button></div>`;
 }
 
-/** The additional data, where this tracker can extract it: whether it is extracted, how far a run is, the button. */
+/** The additional data, where this tracker can extract it: whether it is extracted, how far a run is, the button,
+ * and what extracting takes. */
 function extraSection() {
   if (!extra?.available) return '';
   const when = typeof extra.extracted === 'string' ? ` on ${esc(dateTime(extra.extracted))}` : '';
@@ -129,7 +132,10 @@ function extraSection() {
     : extra.state === 'failed' ? `<p class="muted small">The last extraction failed: ${esc(extra.error || 'unknown reason')}</p>` : '';
   const button = extra.state === 'running' ? '<span class="extra-state">Extracting…</span>'
     : `<button type="button" class="chip" data-extract>${extra.extracted ? 'Extract again?' : 'Extract additional data?'}</button>`;
-  return `<div data-extra><div class="dialog-actions extra-row">${button}${have}</div>${line}</div>`;
+  const space = extra.freeSpace == null ? '' : `It needs about ${gb(extra.neededSpace)} GB of free disk space, and ${
+    gb(extra.freeSpace)} GB is free. `;
+  return `<div data-extra class="extra-box"><div class="dialog-actions extra-row">${button}${have}</div>${line}
+    <p class="muted small">${space}Extracting runs in the background and takes a few minutes.</p></div>`;
 }
 
 /** While the extraction runs and Settings is open, its progress is asked for every two seconds. */
@@ -147,7 +153,6 @@ function watchExtra(dlg) {
 async function extractExtra(dlg) {
   // how things are right now: the disk may have filled, or been cleared, since Settings was opened
   extra = await getJson('/api/rdmodule', 'the additional data').catch(() => extra);
-  const gb = (bytes) => (bytes / 2 ** 30).toFixed(1).replace(/\.0$/, '');
   if (extra?.freeSpace != null && extra.freeSpace < extra.neededSpace) {
     // too little room: nothing to press but Cancel, until some is freed
     await showDialog({ title: 'But why?', buttons: [{ label: 'Cancel', value: false, primary: true }],
@@ -190,8 +195,9 @@ function renderSettings() {
     dlg.innerHTML = '<p>Loading…</p>';
     return;
   }
-  dlg.innerHTML = `<form method="dialog" class="dialog-form">${dialogHead}${generalSection()}${gameFolderSection()}${notificationsSection()}
-    ${recentSection()}${uninstallSection()}${extraSection()}</form>`;
+  dlg.innerHTML = `<form method="dialog" class="dialog-form">${dialogHead}${section('General', generalSection())}
+    ${section('Notifications', notificationsSection())}${section('Recent', recentSection())}
+    ${section('Additional data', extraSection())}${section('Uninstall', uninstallSection(), 'danger')}</form>`;
 }
 
 const notifyMessage = (dlg) => dlg.querySelector('.dialog-message:not([data-setting-message])');
