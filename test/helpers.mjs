@@ -30,10 +30,6 @@ export const RULES = {
 const MINIS = [{ slug: 'kobold-miner', name: 'Kobold Miner' }, { slug: 'footmen', name: 'Footmen' }];
 const PVP = { victoryPoints: { base: 80, win: 2, loss: 1 } };
 
-/**
- * A context in a new temporary folder, with tables and user data loaded. `files` are extra files to create first, as
- * { 'names.json': {...} } in the data folder. Returns { ctx, dir, cleanup() }.
- */
 /** A folder that looks like the game's: it has the folder the game's files are in. */
 export async function fakeGame(dir) {
   const game = path.join(dir, 'Warcraft Rumble');
@@ -41,6 +37,10 @@ export async function fakeGame(dir) {
   return game;
 }
 
+/**
+ * A context in a new temporary folder, with tables and user data loaded. `files` are extra files to create first, as
+ * { 'names.json': {...} } in the data folder. Returns { ctx, dir, cleanup() }.
+ */
 export async function testContext({ files = {}, standalone = false } = {}) {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'rumble-ctx-'));
   const root = path.join(dir, 'app'), data = path.join(dir, 'data');

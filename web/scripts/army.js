@@ -109,7 +109,7 @@ window.addEventListener('pagehide', () => {
 /** The mini in slot i of the draft, by its key; slot 0 is the leader. */
 const draftSlug = (i) => (i === 0 ? builder.draft.leader : builder.draft.minis[i - 1]);
 /** The player's unit in slot i of the draft, or nothing for an empty slot or a mini the account doesn't own. */
-export function draftUnit(i) {
+function draftUnit(i) {
   return ownedUnit(draftSlug(i));
 }
 

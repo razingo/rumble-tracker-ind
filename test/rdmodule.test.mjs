@@ -102,6 +102,12 @@ test('the picture server saves what its own pages post, and nothing from another
     assert.equal((await save('..%2Fwork%2Fx.json', { origin: base })).status, 400);
     assert.equal((await fetch(`${base}/models/..%2F..%2Fsprites%2Ffootman.png`)).status, 404, 'nothing outside its folders');
     assert.equal((await fetch(`${base}/sprites/footman.png`)).status, 200);
+    // the pages it serves load three.js from here: they name nothing on the web, so nothing is downloaded
+    for (const page of ['render.html', 'fx/effects.html']) {
+      const r = await fetch(`${base}/${page}`);
+      assert.equal(r.status, 200, page);
+      assert.doesNotMatch(await r.text(), /https?:\/\//, `${page} names a web address`);
+    }
   } finally {
     await new Promise((resolve) => { server.close(resolve); server.closeAllConnections(); });
     await rm(dir, { recursive: true, force: true });

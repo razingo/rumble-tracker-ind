@@ -10,8 +10,9 @@ import { testContext } from './helpers.mjs';
 const app = { version: '9.9.9', zip: 'RumbleTracker-9.9.9-win-x64.zip', zipSha256: 'a'.repeat(64), exeSha256: 'b'.repeat(64) };
 const until = async (fn) => { for (let i = 0; i < 100 && !fn(); i++) await new Promise((r) => setTimeout(r, 10)); };
 
-test('the updater downloads, has the launcher install, then stops', async () => {
+test('the updater downloads, has the launcher install, then stops', async (t) => {
   const { ctx, cleanup } = await testContext({ standalone: true });
+  t.after(cleanup); // (also when the test fails)
   ctx.official = true;
   Object.assign(ctx.appUpdate, { newVersion: '9.9.9', latestApp: app });
   const stops = [];
@@ -29,11 +30,11 @@ test('the updater downloads, has the launcher install, then stops', async () => 
   assert.equal(ctx.appUpdate.state, 'restarting');
   assert.deepEqual([ctx.appUpdate.done, ctx.appUpdate.total], [5, 10]);
   assert.deepEqual(stops, ['App update: restarting as 9.9.9']);
-  await cleanup();
 });
 
-test('the updater shows a failed install and refuses when there is nothing to install', async () => {
+test('the updater shows a failed install and refuses when there is nothing to install', async (t) => {
   const { ctx, cleanup } = await testContext({ standalone: true });
+  t.after(cleanup); // (also when the test fails)
   const start = createUpdater(ctx, { shutdown: () => assert.fail('must not stop'), download: async () => 'x.exe', applyDelay: 0 });
   assert.equal((await start())[0], 409);
   Object.assign(ctx.appUpdate, { newVersion: '9.9.9', latestApp: app });
@@ -44,11 +45,11 @@ test('the updater shows a failed install and refuses when there is nothing to in
   await until(() => ctx.appUpdate.state === 'failed');
   assert.match(ctx.appUpdate.error, /EPERM/);
   assert.equal(ctx.errorLog.list().length, 1);
-  await cleanup();
 });
 
-test('checks for a new version run one at a time and announce a newer one once', async () => {
+test('checks for a new version run one at a time and announce a newer one once', async (t) => {
   const { ctx, cleanup } = await testContext();
+  t.after(cleanup); // (also when the test fails)
   let calls = 0, news = 0, found = { version: '9.9.9', app };
   const latest = async () => {
     calls++;
@@ -68,11 +69,11 @@ test('checks for a new version run one at a time and announce a newer one once',
   found = { version: ctx.appVersion, app: null };
   await check();
   assert.equal(ctx.appUpdate.newVersion, null);
-  await cleanup();
 });
 
-test('no check for a new version when that is turned off, or GitHub does not answer', async () => {
+test('no check for a new version when that is turned off, or GitHub does not answer', async (t) => {
   const { ctx, cleanup } = await testContext();
+  t.after(cleanup); // (also when the test fails)
   ctx.appUpdate.newVersion = '9.9.9';
   ctx.user.appSettings.checkUpdates = false;
   let calls = 0;
@@ -85,22 +86,21 @@ test('no check for a new version when that is turned off, or GitHub does not ans
   assert.equal(calls, 1);
   assert.equal(ctx.appUpdate.checkError, 'offline');
   assert.equal(ctx.errorLog.list().length, 0, 'being offline is not a problem to report');
-  await cleanup();
 });
 
-test('a damaged user file is moved aside and reported; the rest loads', async () => {
+test('a damaged user file is moved aside and reported; the rest loads', async (t) => {
   const { ctx, cleanup } = await testContext({ files: { 'plans.json': '{"broken": ',
     'names.json': { accounts: { a: 'Main' }, units: {} } } });
+  t.after(cleanup); // (also when the test fails)
   assert.deepEqual(ctx.user.plans, {});
   assert.equal(ctx.user.names.accounts.a, 'Main');
   assert.equal(ctx.errorLog.list()[0].source, 'data file');
   assert.ok((await readdir(ctx.paths.DATA)).some((n) => n.startsWith('plans.json.corrupt-')));
-  await cleanup();
 });
 
-test('damaged game tables throw, so the caller can have them read again', async () => {
+test('damaged game tables throw, so the caller can have them read again', async (t) => {
   const { ctx, cleanup } = await testContext();
+  t.after(cleanup); // (also when the test fails)
   await writeFile(path.join(ctx.paths.STATIC, 'rules.json'), '{nope');
   await assert.rejects(ctx.tables.load(), /rules\.json is not valid JSON/);
-  await cleanup();
 });

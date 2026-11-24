@@ -79,8 +79,8 @@ def save_tex(t):
     return fn
 
 def save_lightmap(t):
-    """Baked lightmaps are RGBM (light = rgb * alpha * 5, gamma space). Saved decoded as light / 2, so mid-grey is
-    'unchanged' and up to 2x brightening fits: multiply the base colour by 2 * this texture."""
+    """Baked lightmaps are RGBM (light = rgb * alpha * 5, gamma space). Saved decoded as light / 2, so mid-gray is
+    'unchanged' and up to 2x brightening fits: multiply the base color by 2 * this texture."""
     key = ("lightmap", t.m_Name, t.m_Width, t.m_Height)
     if key in SAVED: return SAVED[key]
     from PIL import Image

@@ -327,7 +327,7 @@
     'emerald-drake': { name: 'Emerald Drake', family: 'Cenarion', face: ['sprites/cards/emerald-drake', 'drake'], kind: 'flying', dmg: 2, rate: 1, size: 62, range: 170, elemental: true,
       cleave: true, poison: true },
     'spirit-wolf': { name: 'Feral Spirit', family: 'Horde', kind: 'melee', hp: 2, dmg: 1, rate: 0.6, size: 44, elemental: true },
-    'fire-elemental': { name: 'Fire Elemental', family: 'Blackrock', kind: 'melee', dmg: 1, rate: 0.8, size: 56, elemental: true, poison: true,
+    'fire-elemental': { name: 'Fire Elemental', family: 'Blackrock', kind: 'melee', dmg: 1, rate: 0.8, size: 56, elemental: true, burn: true,
       life: 12 }, // life: seconds until it is gone
     'skeleton-mage': { name: 'Skeletal Mage', family: 'Undead', face: ['skeleton-party'], kind: 'ranged', hp: 1, dmg: 1, rate: 0.9, range: 240, size: 36, hitsAir: true,
       chill: true, unbound: true },
@@ -722,7 +722,7 @@
       later: [], timer2: 0, mine: 0, arcane: 0, plays: 0, cheap: 0, wit: 0, hubris: false, clear: false, guard: false, reborn: false, purged: false,
       p: { x: LEADER_X, y: GROUND, w: 46, h: 64, hp: 3, inv: 0, lunge: 0, deploy: Math.min(DEPLOY_MAX, clip(l.id, 'deploy')) },
       hand: ids.slice(0, 3), queue: ids.slice(3),
-      gold: 4, goldT: 0, spd: 0, traveled: 0, bg: 0,
+      gold: 4, goldT: 0, traveled: 0, bg: 0,
       nextSpawn: 700, nextTower: 400 * M,
       enemies: [], minis: [], shots: [], bolts: [], fx: [], bursts: [], texts: [], stones: [], corpses: [],
       kills: 0, bounty: 0, score: 0, resolve: 0, dream: 0, dream2: 0, owed: 0, owedT: 0, unhurt: 0, unhurtKind: null, stalled: false, time: 0,
@@ -1014,7 +1014,7 @@
             if (e.air) { e.air = false; e.y = GROUND; } else if (ENEMIES[e.type].fire) e.x = Math.min(e.x, MELEE_LINE + 70);
           }
           break;
-        case 'arthas-menethil 1': winter(); for (const e of foes()) e.burn = Math.max(e.burn, 4); break;
+        case 'arthas-menethil 1': winter(); for (const e of foes()) { e.burn = Math.max(e.burn, 4); e.poisoned = true; } break;
         case 'arthas-menethil 2': winter(); break;
         case 'baron-rivendare 0': {
           const given = p.hp < 3 && r.minis.find((m) => m.hp > 0 && /^skeleton/.test(m.id));
@@ -1042,7 +1042,7 @@
         case 'grommash-hellscream 1': hit(2); summon('mirror-image', 2); break;
         case 'grommash-hellscream 2': hit((e) => (e.hp < e.max ? 4 : 2)); break;
         case 'hogger 0': cleave(); heal(0.5); break;
-        case 'hogger 1': cleave({ burn: 4 }); break;
+        case 'hogger 1': cleave({ burn: 4, poison: true }); break;
         case 'hogger 2':
           cleave();
           for (const m of r.minis) if (m.def.family === 'Beast') { m.max++; m.hp++; }
@@ -1153,8 +1153,8 @@
     if (e.holdKind === 'sleep') { e.hold = 0; e.holdKind = null; }
     e.hp -= n;
     e.flash = 0.12;
-    if (o.burn) {
-      if (e.burn <= 0) burstOn(o.burn === 4 ? 'poisoned' : 'burning', e);
+    if (o.burn) { // o.poison: it is poison that eats at it, not fire
+      if (e.burn <= 0) { burstOn(o.poison ? 'poisoned' : 'burning', e); e.poisoned = !!o.poison; }
       e.burn = Math.max(e.burn, o.burn === true ? 2 : o.burn); // seconds of burning
     }
     if (e.hp <= 0) kill(e);
@@ -1306,7 +1306,6 @@
     }
     if (p.deploy > 0) { p.deploy -= dt; spd = 0; } // the leader arrives first
     r.stalled = spd < 1;
-    r.spd = spd;
     r.traveled += spd * dt;
     r.bg += spd * dt;
     r.score += (spd * dt) / M;
@@ -1352,7 +1351,6 @@
       r.owedT += dt;
       if (r.owedT >= 2.5) { r.owedT -= 2.5; r.owed--; r.gold = Math.min(10, r.gold + 1); float(46, 500, '+1 Gold', '#ffe28a'); }
     } else r.owedT = 0;
-
 
     // spawning
     if (!tower && r.traveled >= r.nextTower) {
@@ -1498,7 +1496,8 @@
         if (isLeader('thrall') && (d.family === 'Horde' || d.elemental)) n *= 1.5;
         m.first = false;
         sfx(`${d.art === undefined ? m.id : d.art || m.id}.hit`, 0.25);
-        const o = { elemental: d.elemental, burn: d.venom ? 4 : d.poison || (isLeader('emperor-thaurissan') && !d.elemental) };
+        const o = { elemental: d.elemental, poison: !!(d.poison || d.venom),
+          burn: d.venom ? 4 : d.poison || d.burn || (isLeader('emperor-thaurissan') && !d.elemental) };
         burstOn(charging ? 'charge' : unitFx[d.art === undefined ? m.id : d.art || m.id]?.impact || HIT_FX[m.id] || 'sharp', target);
         if (d.cleave) {
           for (const e of r.enemies) {
@@ -1848,7 +1847,8 @@
     const cy = e.y - e.h / 2 - (moving ? Math.abs(Math.sin(e.t * 9)) * 3 : 0);
     shadow(cx, e.w * 1.3, e.air);
     const tint = e.holdKind === 'frost' ? 'rgba(170,220,255,0.45)' : e.holdKind === 'root' ? 'rgba(90,160,60,0.35)'
-      : e.holdKind === 'sleep' ? 'rgba(120,90,200,0.35)' : e.holdKind === 'stun' ? 'rgba(255,230,120,0.35)' : e.burn > 0 ? 'rgba(255,120,40,0.25)' : null;
+      : e.holdKind === 'sleep' ? 'rgba(120,90,200,0.35)' : e.holdKind === 'stun' ? 'rgba(255,230,120,0.35)'
+        : e.burn > 0 ? (e.poisoned ? 'rgba(110,220,90,0.25)' : 'rgba(255,120,40,0.25)') : null;
     if (!drawSprite(e.type, e.x + e.w / 2, e.y + (e.air ? 10 : 0), e.tall,
       { ...(e.lunge > 0 ? attackPose(e) : { anim: moving ? 'move' : 'idle', t: e.t }),
         flip: true, tint: e.flash > 0 ? HIT_TINT : tint })) {

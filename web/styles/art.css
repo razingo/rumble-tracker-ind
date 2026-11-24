@@ -164,9 +164,3 @@ body {
   color: #fff3d0;
 }
 
-/* Armory, with a tome on each saved army */
-.armory-card { position: relative; }
-
-@media (max-width: 700px) {
-  body { background-attachment: scroll; }
-}

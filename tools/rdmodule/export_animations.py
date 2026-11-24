@@ -1,4 +1,4 @@
-# Exports units as rigged, animated glTF (.glb): skeleton, skinned body, colour texture and all the animation clips
+# Exports units as rigged, animated glTF (.glb): skeleton, skinned body, color texture and all the animation clips
 # (walk, attack, death, deploy, celebration...), playable in three.js. Only the units whose names match the filter
 # (extract.mjs gives the ones the sprite list names).
 # usage: python -I export_animations.py [out_dir] [unit filter regex]
@@ -281,7 +281,7 @@ def fitting_clips(own, ids):
         except Exception as e: print("   clip failed", nm, e); continue
         hs = {b.path for b, _ in dec[0] if b.typeID == 4}
         if not hs: continue
-        # every skeleton the clip fits (variants such as murloc colours share one rig and its clips)
+        # every skeleton the clip fits (variants such as murloc colors share one rig and its clips)
         top = max(len(hs & ids[n]) for n in ids)
         for n in ids:
             hit = len(hs & ids[n])

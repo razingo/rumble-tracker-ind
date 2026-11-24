@@ -15,8 +15,9 @@ const save = ({ xp = 0, gold = 100, pvp } = {}) => ({
 });
 const readJsonFile = async (p) => JSON.parse(await readFile(p, 'utf8'));
 
-test('a scan stores snapshots, events, progress and PvP readings, and bumps the revision', async () => {
+test('a scan stores snapshots, events, progress and PvP readings, and bumps the revision', async (t) => {
   const { ctx, cleanup } = await testContext();
+  t.after(cleanup); // (also when the test fails)
   let next = save({ pvp: { honor: 1000, vp: 0 } });
   const { scan } = createScanner(ctx, { readPrefs: async () => next });
   const rev0 = ctx.rev;
@@ -41,11 +42,11 @@ test('a scan stores snapshots, events, progress and PvP readings, and bumps the 
   const rev = ctx.rev;
   await scan();
   assert.equal(ctx.rev, rev);
-  await cleanup();
 });
 
-test('a PvP log from an older version moves to pvp_history.json', async () => {
+test('a PvP log from an older version moves to pvp_history.json', async (t) => {
   const { ctx, cleanup } = await testContext();
+  t.after(cleanup); // (also when the test fails)
   const old = [{ t: '2026-01-01T00:00:00.000Z', season: 'x', honor: 1, vp: 0, start: true }];
   await writeFile(path.join(ctx.paths.STATE, `${ACC}.json`), JSON.stringify({ snapshot: null, events: [], pvpLog: old }));
   const { scan } = createScanner(ctx, { readPrefs: async () => save() });
@@ -54,11 +55,11 @@ test('a PvP log from an older version moves to pvp_history.json', async () => {
   assert.deepEqual(ctx.user.pvpHistory[ACC], old);
   assert.equal(ctx.accounts.get(ACC).pvpLog, undefined);
   assert.deepEqual((await readJsonFile(path.join(ctx.paths.DATA, 'pvp_history.json')))[ACC], old);
-  await cleanup();
 });
 
-test('read failures are reported only when they persist', async () => {
+test('read failures are reported only when they persist', async (t) => {
   const { ctx, cleanup } = await testContext();
+  t.after(cleanup); // (also when the test fails)
   let fail = true;
   const { scan } = createScanner(ctx, { readPrefs: async () => {
     if (fail) throw new Error('key busy');
@@ -74,22 +75,22 @@ test('read failures are reported only when they persist', async () => {
   fail = false;
   await scan();
   assert.equal(ctx.scan.lastError, null);
-  await cleanup();
 });
 
-test('a damaged account value keeps the last snapshot', async () => {
+test('a damaged account value keeps the last snapshot', async (t) => {
   const { ctx, cleanup } = await testContext();
+  t.after(cleanup); // (also when the test fails)
   let next = save();
   const { scan } = createScanner(ctx, { readPrefs: async () => next });
   await scan();
   next = { [ACC]: { units: Buffer.from([0x0b]), currencies: Buffer.alloc(0) } };
   await scan();
   assert.equal(ctx.accounts.get(ACC).snapshot.units.length, 1);
-  await cleanup();
 });
 
-test('one scan at a time', async () => {
+test('one scan at a time', async (t) => {
   const { ctx, cleanup } = await testContext();
+  t.after(cleanup); // (also when the test fails)
   let reads = 0;
   const { scan } = createScanner(ctx, { readPrefs: async () => {
     reads++;
@@ -98,7 +99,6 @@ test('one scan at a time', async () => {
   } });
   await Promise.all([scan(), scan(), scan()]);
   assert.equal(reads, 1);
-  await cleanup();
 });
 
 test('keeps one progress sample a day and skips unchanged ones', () => {

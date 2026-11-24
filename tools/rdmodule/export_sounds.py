@@ -79,7 +79,7 @@ with ThreadPoolExecutor(max_workers=max(2, min(4, (os.cpu_count() or 4) - 1))) a
 norm = lambda s: re.sub(r"[^a-z0-9]", "", s.lower())
 defs = json.load(open(os.path.join(ROOT, "all_mini_definitions.json"), encoding="utf8"))
 minis = {m["slug"]: m for m in json.load(open(os.path.join(ROOT, "gamedata", "minis.json"), encoding="utf8"))["minis"]}
-keys = {}  # normalised name -> slug
+keys = {}  # normalized name -> slug
 for d in defs:
     if d.get("slug") not in minis: continue
     for n in (d["internal"], re.sub("Leader$", "", d["internal"]), d["slug"], minis[d["slug"]]["name"],

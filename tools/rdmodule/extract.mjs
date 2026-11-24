@@ -141,9 +141,10 @@ function wanted(config) {
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png',
   '.obj': 'text/plain', '.mtl': 'text/plain', '.glb': 'model/gltf-binary' };
 const inside = (root, p) => { const f = normalize(join(root, p)); return f.startsWith(normalize(root) + sep) ? f : null; };
-// three.js from here instead of the web; a page says in its title when it is done, or that it failed
-const local = (page) => page
-  .replaceAll('https://cdn.jsdelivr.net/npm/three@0.187.0/', '/three/')
+// three.js from here instead of the web, whichever version the page names (the one fetched is the pinned one); a
+// page says in its title when it is done, or that it failed
+const CDN = /https:\/\/cdn\.jsdelivr\.net\/npm\/three@[\d.]+\//g;
+const local = (page) => offline(page.replace(CDN, '/three/'))
   .replaceAll('window.__done = true;', `window.__done = true;
   await fetch('/save/log-' + (location.pathname + location.search).replace(/\\W+/g, '-') + '.json', { method: 'POST',
     body: JSON.stringify(window.__log || document.getElementById('log')?.textContent || '') }).catch(() => {});
@@ -153,6 +154,12 @@ addEventListener('error', (e) => { document.title = 'FAILED ' + (e.message || 's
 addEventListener('unhandledrejection', (e) => { if (!window.__done) document.title = 'FAILED ' + (e.reason?.message || e.reason); });
 </script>
 <script type="module">`);
+/** The page as it is, once it names nothing on the web: the extraction downloads nothing. */
+function offline(page) {
+  const address = /https?:\/\/(?!localhost|127\.0\.0\.1)[\w.-]+\.[a-z]{2,}/i.exec(page);
+  if (address) throw new Error(`A render page still names ${address[0]}`);
+  return page;
+}
 /** The effects viewer with the capture added, a black background and no grid. */
 async function capturePage() {
   let page = await readFile(join(PAGES, 'effects.html'), 'utf8');

@@ -1,5 +1,4 @@
 :root {
-  --bg: #161a2e;
   --panel: #232842;
   --panel-2: #1b2036;
   --ink: #f3ead6;
@@ -8,6 +7,7 @@
   --accent: #f2b33d;
   --good: #6fdc8c;
   --warn: #ff9a62;
+  --error: #e5534b;
   --chip: #2c3252;
   --gold-1: #ffe08a;
   --gold-2: #f2b33d;
@@ -194,8 +194,8 @@ button { cursor: pointer; }
   display: flex;
   flex-direction: column;
   gap: 2px;
-  white-space: normal;
   /* the top bar keeps its own items on one line */
+  white-space: normal;
   background: linear-gradient(180deg, #2a3050, #1f2440);
   border: 2px solid var(--trim);
 }
@@ -239,7 +239,6 @@ button { cursor: pointer; }
 .army-toolbar label { display: flex; gap: 6px; align-items: center; color: var(--muted); }
 .chip.danger { color: #ffb38a; }
 .army-meta { flex-basis: 100%; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
-@media (max-width: 760px) { .army-meta { grid-template-columns: 1fr; } }
 .army-meta textarea {
   width: 100%;
   resize: vertical;
@@ -299,7 +298,6 @@ button { cursor: pointer; }
   min-width: 0;
   position: relative;
   overflow: visible;
-  border-width: 3px;
   --frame-top: #4c5272;
   --frame-bottom: #353a57;
   --frame-edge: #24283f;
@@ -453,15 +451,9 @@ button { cursor: pointer; }
 .talent-option.locked img { opacity: .5; }
 .talent-option img { width: 36px; height: 36px; border-radius: 6px; }
 .talent-option .description { display: block; margin-top: 2px; }
-@media (max-width: 640px) {
-  .army-board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .army-slot-leader { grid-row: auto; grid-column: span 2; }
-  .army-slot-leader .army-slot-body { min-height: 180px; }
-}
 
 /* Army pools, below the board */
 .army-pools { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 16px; margin-top: 16px; }
-@media (max-width: 860px) { .army-pools { grid-template-columns: 1fr; } }
 /* pools of equal height, the well filling its panel */
 .pool { margin: 0; display: flex; flex-direction: column; }
 .pool-well {
@@ -545,16 +537,11 @@ button { cursor: pointer; }
 /* title, search, files; the tag filters sit under the search field, from its left edge */
 .armory-toolbar { display: grid; grid-template-columns: auto minmax(220px, 420px) 1fr; gap: 10px 14px; align-items: center; }
 .armory-toolbar h2 { margin: 0; }
-#armorySearch { width: 100%; box-sizing: border-box; }
+#armorySearch { width: 100%; }
 .armory-tag-filters { grid-column: 2 / -1; grid-row: 2; }
-@media (max-width: 700px) {
-  .armory-toolbar { grid-template-columns: 1fr; }
-  .armory-tag-filters { grid-column: 1; grid-row: auto; }
-}
 .armory-files { display: flex; gap: 8px; align-items: center; justify-self: end; }
 .armory-files a { text-decoration: none; }
 .armory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 14px; }
-@media (max-width: 520px) { .armory-grid { grid-template-columns: 1fr; } }
 .armory-card { margin: 0; display: flex; flex-direction: column; gap: 8px; border-top: 4px solid var(--trim); }
 .armory-head { display: flex; gap: 8px; align-items: center; }
 .armory-name {
@@ -809,20 +796,13 @@ button { cursor: pointer; }
 .tree-cost { display: inline-flex; align-items: center; gap: 3px; font-weight: 800; font-size: 13px; color: #e8e2f6;
   font-variant-numeric: tabular-nums; }
 .tree-cost img { width: 16px; height: 16px; object-fit: contain; }
+.tree-goal { margin-left: 8px; }
 
 .cal-rules ul { list-style: none; margin: 0; padding: 0; display: grid;
   grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 6px 18px; }
 .cal-rules li { display: grid; grid-template-columns: 26px 170px 1fr; gap: 8px; align-items: center; font-size: 13px;
   padding: 4px 0; border-top: 1px solid rgb(255 220 160 / 10%); }
 .cal-rules li img { width: 26px; height: 26px; object-fit: contain; }
-@media (max-width: 700px) {
-  .cal-grid { grid-template-columns: 110px 1fr; }
-  .cal-days { font-size: 9px; }
-  .cal-bar { font-size: 0; padding: 0; }
-  .cal-rules ul { grid-template-columns: 1fr; }
-  .cal-rules li { grid-template-columns: 26px 1fr; }
-  .cal-rules li span { grid-column: 2; }
-}
 
 /* Progress tab */
 .progress-page { max-width: 1280px; margin: 0 auto; padding: 20px; display: grid; gap: 16px; }
@@ -844,10 +824,10 @@ button { cursor: pointer; }
 /* Report a problem */
 .report-button { position: relative; }
 .report-button.has-problems::after { content: ''; position: absolute; top: 2px; right: 2px; width: 9px; height: 9px;
-  border-radius: 50%; background: var(--error, #e5534b); box-shadow: 0 0 0 2px var(--panel); }
+  border-radius: 50%; background: var(--error); box-shadow: 0 0 0 2px var(--panel); }
 .report-form { padding: 16px 20px 20px; display: grid; gap: 10px; }
 .report-field { display: grid; gap: 4px; font-weight: 700; }
-.report-field input, .report-field textarea { font: inherit; font-weight: 500; width: 100%; box-sizing: border-box; resize: vertical; }
+.report-field input, .report-field textarea { font: inherit; font-weight: 500; width: 100%; resize: vertical; }
 .report-details summary { cursor: pointer; font-weight: 700; font-size: 13px; }
 .report-details pre { margin: 6px 0; padding: 8px 10px; max-height: 200px; overflow: auto; white-space: pre-wrap;
   word-break: break-word; font-size: 11.5px; line-height: 1.4; border-radius: 8px; background: rgb(0 0 0 / 25%); }
@@ -867,7 +847,7 @@ button { cursor: pointer; }
 .extra-row { align-items: center; gap: 12px; }
 .extra-state { font-size: 13px; opacity: .75; }
 .extra-state.good { color: #8fd98a; opacity: 1; }
-.game-folder input { display: block; width: 100%; box-sizing: border-box; margin-top: 4px; }
+.game-folder input { display: block; width: 100%; margin-top: 4px; }
 .notify-table { width: 100%; border-collapse: collapse; }
 .notify-table.off { opacity: .5; }
 .notify-table th { font-size: 11px; font-weight: 700; color: var(--muted); text-align: center; line-height: 1.15; }
@@ -880,7 +860,8 @@ button { cursor: pointer; }
 .dialog-actions { display: flex; align-items: center; gap: 10px; }
 .dialog-form h3 { margin: 6px 0 0; font-size: 14px; }
 .notify-log { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 180px; overflow: auto; }
-.tree-goal { margin-left: 8px; }
+
+/* The note about the game data, and the page's foot */
 .site-foot { max-width: 1280px; margin: 8px auto 24px; padding: 0 20px; font-size: 11.5px; color: var(--muted); text-align: center; }
 .data-banner { max-width: 1280px; margin: 14px auto 0; padding: 10px 16px; border-radius: 10px;
   background: rgb(255 154 98 / 14%); border: 1px solid rgb(255 154 98 / 50%); color: var(--ink); font-size: 13.5px; }
@@ -906,7 +887,6 @@ button { cursor: pointer; }
 .grid-timer { font-weight: 800; color: var(--gold-1); }
 .grid-currencies { flex-basis: 100%; margin: 2px 0 0; } /* own row below the timer */
 .grid-layout { display: grid; grid-template-columns: minmax(300px, 460px) 1fr; gap: 16px; align-items: start; }
-@media (max-width: 860px) { .grid-layout { grid-template-columns: 1fr; } }
 .grid-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .grid-slot {
   display: grid; justify-items: center; align-content: start; gap: 2px; padding: 10px 6px; text-align: center; min-height: 168px;
@@ -943,7 +923,7 @@ button { cursor: pointer; }
 .history-items img, .history-xp { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }
 .history-xp { display: grid; place-items: center; background: #1f3a5c; color: #bfe0ff; font-size: 10px; font-weight: 800; }
 
-/* Army slots */
+/* Collection tab: army slots, the planner, filters and cards */
 .army-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
 .army-cell { height: 8px; border-radius: 3px; background: var(--type-color); }
 .army-cell.wild { outline: 2px solid #8f7cf0; outline-offset: 1px; }
@@ -982,7 +962,6 @@ button { cursor: pointer; }
 .tier-button { width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel-2);
   font-size: 11px; font-weight: 700; padding: 0; }
 .tier-button[aria-pressed="true"] { background: var(--type-color); color: #1b1712; border-color: var(--type-color); }
-@media (max-width: 520px) { .army-grid { grid-template-columns: repeat(2, 1fr); } .slot.leader-slot { grid-row: auto; } }
 
 .planner-head { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .planner-head h2 { margin: 0; }
@@ -1024,18 +1003,14 @@ button { cursor: pointer; }
 .link { background: none; border: 0; padding: 0; font-weight: 600; color: var(--gold-1); }
 .trait-option { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 8px; cursor: pointer; }
 .trait-option:hover { background: var(--chip); }
-.trait-option[hidden] { display: none; }
 .trait-option small { margin-left: auto; color: var(--muted); }
 .trait-option .icon { width: 22px; height: 22px; }
-@media (max-width: 640px) { .filter-row { flex-direction: column; align-items: flex-start; } }
 .chip small { opacity: .7; margin-left: 4px; }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: 12px; }
 .card {
   text-align: left;
-  border-top: 4px solid var(--rarity-color, var(--line));
   gap: 6px;
-  border-top-width: 3px;
 }
 .card .art {
   width: 64px;
@@ -1043,8 +1018,7 @@ button { cursor: pointer; }
   border-radius: 50%;
   background: var(--chip);
   object-fit: cover;
-  border: 2px solid var(--rarity-color, var(--line));
-  border-width: 3px;
+  border: 3px solid var(--rarity-color, var(--line));
   box-shadow: 0 3px 0 rgb(0 0 0 / 40%);
 }
 .card .art.unknown { display: grid; place-items: center; font-size: 26px; color: var(--muted); }
@@ -1115,7 +1089,7 @@ button { cursor: pointer; }
 .talent.picked { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
 .trait { margin-bottom: 10px; display: flex; gap: 10px; align-items: flex-start; }
 .trait b { display: block; }
-/* Trait and tag icons are light on transparent, so they sit on a dark badge in both themes. */
+/* Trait and tag icons are light on transparent, so they sit on a dark badge. */
 .icon { width: 24px; height: 24px; padding: 3px; border-radius: 50%; background: #2c2620; flex: none; }
 .trait .icon { width: 30px; height: 30px; padding: 4px; }
 .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
@@ -1164,7 +1138,7 @@ button { cursor: pointer; }
 .pvp-stat { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 10px;
   border: 1px solid var(--line); background: rgb(10 12 26 / 25%); color: inherit; text-align: left; cursor: pointer; }
 .pvp-stat img { width: 28px; height: 28px; object-fit: contain; border-radius: 6px; }
-.pvp-stat.on { border-color: var(--gold-1, var(--accent)); background: rgb(255 209 102 / 14%); }
+.pvp-stat.on { border-color: var(--gold-1); background: rgb(255 209 102 / 14%); }
 .pvp-stat-sum { margin: 10px 0 4px; }
 .pvp-mod.big img { width: 52px; height: 52px; }
 .pvp-next { display: grid; gap: 6px; margin-top: 12px; }
@@ -1177,7 +1151,7 @@ button { cursor: pointer; }
 /* the match list shows its header and 8 rows, and the rest scrolls */
 .pvp-matches { margin-top: 10px; max-height: calc(28px + 8 * 33px); overflow-y: auto; }
 .pvp-matches th { position: sticky; top: 0; background: var(--panel); z-index: 1; }
-.pvp-matches td { height: 33px; box-sizing: border-box; white-space: nowrap; }
+.pvp-matches td { height: 33px; white-space: nowrap; }
 .pvp-road { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px 14px; }
 .pvp-step { display: flex; align-items: center; gap: 10px; padding: 4px 8px; border-radius: 8px; opacity: .65; }
 .pvp-step.got { opacity: 1; background: color-mix(in srgb, var(--good) 14%, transparent); }
@@ -1278,7 +1252,7 @@ select:focus, input:focus, textarea:focus { outline: 2px solid var(--gold-2); ou
 .army-slot.no-synergy .army-slot-head .medal { filter: grayscale(1) brightness(.7); border-color: #9aa0ad;
   box-shadow: 0 2px 0 rgb(0 0 0 / 35%); }
 .army-slot-head.has-icon .army-slot-label { position: absolute; width: 1px; height: 1px; overflow: hidden;
-  clip: rect(0 0 0 0); } /* icon only */
+  clip-path: inset(50%); } /* icon only */
 .army-slot-head .army-slot-label { font-size: 13px; color: #1d2140; text-shadow: none; }
 .army-slot.tier-0 .army-slot-head .army-slot-label { color: var(--ink); }
 .army-slot-head .boost-mark { position: absolute; right: 8px; top: 6px; font-size: 18px; filter: drop-shadow(0 1px 0 #000); }

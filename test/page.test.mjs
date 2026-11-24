@@ -142,6 +142,7 @@ test('formats numbers, dates, durations and day keys in en-US', () => {
   assert.match(when(new Date(2026, 10, 19, 19, 0)), /^Thu, Nov 19, 7:00\sPM$/);
   assert.equal(dayOnly(new Date(2026, 10, 19)), 'Nov 19');
   assert.equal(titleCase('MAJOR TOME'), 'Major Tome');
+  assert.equal(titleCase(' DUNGEON P.A.C.K.'), ' Dungeon P.A.C.K.', 'a part of a title, with its dots');
   assert.equal(titleCase('Major tome'), 'Major tome');
   assert.equal(plural(1, 'mini'), '1 mini');
   assert.equal(plural(1200, 'army', 'armies'), '1,200 armies');
