@@ -3,6 +3,15 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.3.7
+
+- After an update the tracker reads again only the parts of its game data that the update changed, and the parts
+  that depend on them only when they came out different. Most updates now take a few seconds instead of a minute.
+- The same goes for the rdmodule's data: an update that changes one part no longer draws everything again.
+- A read of the game data that was cut off, such as by the PC turning off, is noticed and done again in full.
+- After this update the tracker reads its game data again once, in the background; it takes about a minute. The
+  rdmodule's data shows as out of date once.
+
 ## 0.3.6
 
 - The rdmodule: back on the menu after a run, the leader's card shows the talent picked now, not the last run's.
