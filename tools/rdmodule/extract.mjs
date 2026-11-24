@@ -14,9 +14,10 @@
 // Only what render/sprites.json names is exported.
 //
 // A run does only what is due. Each step has a version, made of its own script and inputs (SOURCES): steps that
-// changed since the last extraction run again, with the steps that use what they make. The bulky exports (models,
-// animations, textures, decoded sounds: about 1 GB) are deleted once the pictures are drawn, and only their small
-// indexes are kept; a step that reads a bulky export (BULK) has it made again. Another version of the game runs
+// changed since the last extraction run again. A step that uses what one of them makes runs only when that came out
+// different from last time (each step's output is hashed into ready.json). The bulky exports (models, animations,
+// textures, decoded sounds: about 1 GB) are deleted once the pictures are drawn, and only their small indexes are
+// kept; a step that runs and reads a bulky export (REMADE) has it made again first. Another version of the game runs
 // everything.
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
@@ -25,8 +26,8 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, dirname, normalize, extname, sep } from 'node:path';
 import { availableParallelism, totalmem } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { BuildError, findGame, gameVersion, python, pythonVersions, runProgram, runScript, runSteps, versionsOf,
-  withDependents, withTools } from '../gamedata/build.mjs';
+import { BuildError, closeWork, findGame, gameVersion, openWork, outputHash, python, pythonVersions, runProgram, runScript,
+  runSteps, versionsOf, withTools, workWhole } from '../gamedata/build.mjs';
 import { POWERSHELL } from '../../server/system.mjs';
 import { replaceFolder } from '../../server/store.mjs';
 
@@ -75,9 +76,28 @@ const SOURCES = {
 const SETTINGS = { Animations: DONORS, 'Index of the sounds': SOUND_LANGUAGES, Sounds: SOUND_LANGUAGES };
 const PYTHON_STEPS = ['Index of the sounds', 'Index of the game files', 'Index of the effects', 'Tower models', 'Map', 'Animations',
   'Catalog of attacks', 'Effects', 'Sounds']; // the steps Python runs
-// The steps whose bulky export a step reads. Those exports are gone after an extraction, so when the step runs again
-// they are made again first.
-const BULK = { Sprites: ['Animations', 'Tower models'], Backdrops: ['Map'], 'Effect sprites': ['Effects'], 'Sounds picked': ['Sounds'] };
+// The steps whose output a step reads that is not there as they left it after an extraction: the bulky exports are
+// gone, and the index of the effects is written over by the effects' export. When the step runs, they are made again
+// first.
+const REMADE = { Sprites: ['Animations', 'Tower models'], Backdrops: ['Map'], 'Effect sprites': ['Effects'],
+  'Sounds picked': ['Sounds'], 'Catalog of attacks': ['Index of the effects'] };
+// What each step makes that a later step reads, in the working folder or (out:) the extraction: files, and folders
+// with everything in them. A split step's parts make its folder together. The steps nothing waits for have none.
+const MAKES = {
+  'List of minis': ['all_mini_definitions.json'],
+  'Index of the sounds': ['sounds/index.json'],
+  'Index of the game files': ['cab_index.json', 'asset_index.json', 'ext_index.json'],
+  'Index of the effects': ['effects/index.json'],
+  'Tower models': ['models'],
+  Map: ['maps'],
+  Animations: ['animations'],
+  'Catalog of attacks': ['unit_catalog.json'],
+  'Attack clips': ['sprites.json', 'out:sprites/unitfx.json'],
+  'Effects wanted': ['effect_prefabs.json'],
+  Effects: ['effects'],
+  'Sounds wanted': ['sound_files.json'],
+  Sounds: ['sounds'],
+};
 const base = (step) => step.replace(/ \d+\/\d+$/, ''); // "Animations 2/4" is a part of "Animations"
 
 /** Whether the extraction in `out` has steps due: the game or the tracker changed since. False when there is none. */
@@ -85,11 +105,12 @@ export const outOfDate = (out, gameFolder = '') => !!stampOf(out) && stepsDue(fi
 /** The stamp of the extraction in `out` (its ready.json), or null when there is none. */
 const stampOf = (out) => (existsSync(join(out, READY)) ? JSON.parse(readFileSync(join(out, READY), 'utf8')) : null);
 /**
- * The steps that are due for an extraction with this stamp: 'all' without one or for another version of the game
- * than the one in `game`, else the names of the steps whose version is another now ([] when nothing is due).
+ * The steps that are due for an extraction with this stamp: 'all' without one, with one from before the steps'
+ * output was hashed, or for another version of the game than the one in `game`, else the names of the steps whose
+ * version is another now ([] when nothing is due).
  */
 export function stepsDue(game, stamp) {
-  if (!stamp?.steps) return 'all';
+  if (!stamp?.steps || !stamp.hashes) return 'all';
   if (game && existsSync(join(game, '.build.info')) && stamp.gameBuild !== gameVersion(game)) return 'all';
   const now = stepVersions();
   return Object.keys(now).filter((name) => stamp.steps[name] !== now[name]);
@@ -104,24 +125,8 @@ export function stepVersions() {
   settings = withTools(settings, ['Sprites', 'Backdrops', 'Effect sprites'], fetched.three && { three: fetched.three });
   return versionsOf(SOURCES, HERE, settings);
 }
-/**
- * The names of the steps to run when `due` are (see stepsDue): those and what depends on them; then, as the bulky
- * exports are gone after an extraction, the steps that make the ones a running step reads (a split step with all its
- * parts). `steps` are [name, the names of the steps it waits for] as for runSteps.
- */
-export function stepsToRun(steps, due) {
-  const names = steps.map((x) => x[0]);
-  const run = withDependents(steps, names.filter((n) => due.includes(base(n))));
-  for (let grew = true; grew;) {
-    grew = false;
-    for (const n of [...run]) {
-      for (const b of BULK[base(n)] || []) {
-        for (const maker of names.filter((x) => base(x) === b)) if (!run.has(maker)) { run.add(maker); grew = true; }
-      }
-    }
-  }
-  return run.add('Python');
-}
+/** The steps (by name, a split step with all its parts) that `step` has made again before it runs. */
+export const remadeFor = (names, step) => names.filter((n) => (REMADE[base(step)] || []).includes(base(n)));
 
 const alt = (names) => `^(${[...new Set(names)].filter(Boolean).join('|')})$`;
 /** What to export, from the list of sprites (render/sprites.json): regular expressions for each export. */
@@ -241,7 +246,8 @@ function renderPage(url, profile) {
 /**
  * Extracts into `out` (sprites/, sounds/), with the exports in `work`. `gamedata` is the tracker's game data folder
  * (its minis table is read), `gameFolder` the game's folder when it was given by hand. Only what is due is done (see
- * stepsDue), on top of the extraction `out` already holds; `all` does everything.
+ * stepsDue), on top of the extraction `out` already holds, and after a step that is due, the steps that wait for it
+ * when what it made came out different from last time; `all` does everything.
  * onStep(done, total, label) as in runSteps. Resolves with the names of the steps that ran ([] when nothing was due).
  * Rejects with a BuildError for what the player can fix.
  */
@@ -249,9 +255,9 @@ export async function extractRdmodule({ gameFolder = '', gamedata, out, work, al
   const game = findGame(gameFolder);
   if (!game) throw new BuildError('Warcraft Rumble was not found on this PC.');
   if (!canExtract()) throw new BuildError('This tracker was built without the tools the extraction needs.');
-  // what is due: everything, unless the small files the last extraction kept are still there to go by
+  // what is due: everything, unless the small files the last extraction kept are still there, whole, to go by
   let due = all ? 'all' : stepsDue(game, stampOf(out));
-  if (due !== 'all' && !existsSync(join(work, 'asset_index.json'))) due = 'all';
+  if (due !== 'all' && !(existsSync(join(work, 'asset_index.json')) && workWhole(work))) due = 'all';
   if (!due.length) return [];
   // built beside the last extraction, which it replaces only when it is whole
   const stage = `${out}-new`;
@@ -259,6 +265,8 @@ export async function extractRdmodule({ gameFolder = '', gamedata, out, work, al
   await rm(stage, { recursive: true, force: true });
   if (due === 'all') await rm(work, { recursive: true, force: true });
   else await cp(out, stage, { recursive: true });
+  const hashes = due === 'all' ? {} : { ...stampOf(out).hashes }; // step -> the hash of what it made
+  openWork(work, due === 'all');
   // (parts of split steps that an interrupted run left would be put together with this run's)
   for (const d of ['index_parts', 'animations/parts', 'effects/parts']) await rm(join(work, d), { recursive: true, force: true });
   for (const d of [sprites, sounds, join(work, 'gamedata')]) await mkdir(d, { recursive: true });
@@ -327,13 +335,21 @@ export async function extractRdmodule({ gameFolder = '', gamedata, out, work, al
     ['Backdrops', ['Attack clips', 'Map'], page('render.html?backdrops', 'backdrops', /^bg-.*\.png$/)],
     ['Effect sprites', ['Effects'], page('fx/effects.html?capture', 'effects', /^fx-.*\.png$|^fx\.json$/)],
   ];
-  let only = null;
-  if (due !== 'all') {
-    only = stepsToRun(steps, due);
-    log(`Due: ${[...new Set([...only].map(base))].filter((n) => n !== 'Python').join(', ')}`);
-  }
+  const names = steps.map((x) => x[0]);
+  const only = due === 'all' ? null : new Set(names.filter((n) => due.includes(base(n))));
+  if (only) log(`Due: ${due.join(', ')}`);
+  // After a step: the hash of what it made, and whether that is another than last time's. (A part of a split step
+  // always has the step that puts the parts together run, which is the one hashed.)
+  const ran = [];
+  const hashed = async (step) => {
+    ran.push(step);
+    if (step !== base(step) || !MAKES[step]) return true;
+    const last = hashes[step];
+    hashes[step] = await outputHash(MAKES[step].map((f) => (f.startsWith('out:') ? join(stage, f.slice(4)) : join(work, f))));
+    return hashes[step] !== last;
+  };
   try {
-    const lines = await runSteps(steps, { onStep, log, atOnce: AT_ONCE, only });
+    const lines = await runSteps(steps, { onStep, log, atOnce: AT_ONCE, only, ran: hashed, remade: (step) => remadeFor(names, step) });
     for (const l of lines.filter((x) => /nothing for|missing|no sound banks/.test(x))) log(`  ${l}`);
     // what the pages could not draw
     for (const f of readdirSync(work).filter((x) => /^log-.*\.json$/.test(x))) {
@@ -348,10 +364,11 @@ export async function extractRdmodule({ gameFolder = '', gamedata, out, work, al
     await new Promise((resolve) => { server.close(resolve); server.closeAllConnections(); });
   }
   await writeFile(join(stage, READY), JSON.stringify({ extracted: new Date().toISOString(), gameBuild: gameVersion(game),
-    steps: stepVersions() }, null, 1) + '\n');
+    steps: stepVersions(), hashes }, null, 1) + '\n');
   await replaceFolder(stage, out);
   await prune(work).catch((e) => log(`  the working folder was not cleared: ${e.message}`));
-  return steps.map((x) => x[0]).filter((n) => !only || only.has(n));
+  closeWork(work);
+  return ran;
 }
 
 /**

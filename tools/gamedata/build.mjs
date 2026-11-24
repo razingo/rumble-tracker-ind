@@ -9,16 +9,19 @@
 // on first use.
 //
 //  1. Find the game (the folder given, RUMBLE_GAME_DIR, or where Windows says it is installed).
-//  2. Start from the tracker's own tables (seed/: the minis' keys, colors and slot names, the talent order).
+//  2. Start from the tracker's own tables (seed/: the minis' keys, colors and slot names, the talent order), which
+//     the steps that build on them put in place.
 //  3. Build the tables (rules, minis, army boards, events, store, PvP), then extract the images they name and no others
 //     (portraits, talent and trait icons, reward and store art, currency icons, the page's frames and boards: about
 //     700 small files, 5 MB).
-//  4. Write gamedata.json: the game's version and each step's.
+//  4. Write gamedata.json: the game's version, and each step's version and what it made.
 // A build runs only what is due. Each step has a version, made of its own script and inputs (SOURCES): after a new
-// version of the tracker, the steps that changed run again, with the steps that use what they make. Another version
-// of the game runs them all.
+// version of the tracker, the steps that changed run again. A step that uses what one of them makes runs only when
+// that came out different from last time (each step's output is hashed into gamedata.json). Another version of the
+// game runs them all.
 // It goes easy on the PC: the programs it starts run at low priority, and only a few steps at a time.
-import { readdirSync, readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync, rmSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync, rmSync, statSync } from 'node:fs';
+import { readFile, readdir, stat } from 'node:fs/promises';
 import { join, dirname, basename } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawn, spawnSync } from 'node:child_process';
@@ -37,11 +40,27 @@ const PROGRAM_MINUTES = 10; // a program still running by then hangs: it is stop
 // What each step is made of: its script and the files it reads besides the game's (in this folder), and its settings
 // below. A step's version is the contents of these, so a step changes exactly when one of them does.
 const TABLES = ['unityfs.mjs'], IMAGES = ['extract_reward_icons.py'];
+// The tracker's own tables (seed/) a step starts from: they are put in place each time it runs.
+const SEEDS = { Rules: ['rules.json'], Minis: ['minis.json', 'unit_ids.json', 'army_code_minis.json'] };
+// What the table steps make, in the game data or (work:) the working folder: what a later step may read. The image
+// steps' files are listed as they are made.
+export const TABLE_FILES = {
+  'Index of the game files': ['work:guid_index.json'],
+  Rules: ['rules.json'],
+  Minis: ['minis.json', 'unit_ids.json', 'army_code_minis.json', 'work:mini_art_sprites.json', 'work:mini_icons_sprites.json',
+    'work:mini_talents_sprites.json'],
+  'Army boards': ['minis.json'],
+  Events: ['events.json', 'work:event_reward_sprites.json'],
+  Store: ['store.json', 'work:store_sprites.json'],
+  PvP: ['pvp.json', 'work:pvp_sprites.json', 'work:pvp_reward_sprites.json'],
+};
+// A step that writes into a file another step made runs whenever that one did, whatever came out of it.
+const FOLLOWS = { Minis: ['Army boards'] };
 const SOURCES = {
-  'Starting tables': readdirSync(SEED).map((f) => `seed/${f}`),
   'Index of the game files': ['build_guid_index.mjs', ...TABLES],
-  Rules: ['build_rules.mjs', ...TABLES],
-  Minis: ['build_minis.mjs', 'factions.mjs', 'family_pair_sprites.json', ...TABLES],
+  Rules: ['build_rules.mjs', ...TABLES, 'seed/rules.json'],
+  Minis: ['build_minis.mjs', 'factions.mjs', 'family_pair_sprites.json', ...TABLES,
+    ...SEEDS.Minis.map((f) => `seed/${f}`)],
   'Army boards': ['army_boards.mjs', 'factions.mjs', ...TABLES],
   Events: ['build_events.mjs', 'event_icon_sprites.json', ...TABLES],
   Store: ['build_store.mjs', ...TABLES],
@@ -131,17 +150,16 @@ export function gameVersion(game) {
 
 /**
  * The steps that are due for game data with this stamp (its gamedata.json, or null when there is none): 'all' without
- * a stamp, for another version of the game than the one installed in `game`, or when the tracker's own tables
- * (seed/) changed; else the names of the steps whose version is another now ([] when nothing is due). Without the
- * game here, data that exists stays as it is.
+ * a stamp, with one from before the steps' output was hashed, or for another version of the game than the one
+ * installed in `game`; else the names of the steps whose version is another now ([] when nothing is due). Without
+ * the game here, data that exists stays as it is.
  */
 export function stepsDue(game, stamp) {
-  if (!stamp?.steps) return 'all';
+  if (!stamp?.steps || !stamp.hashes) return 'all';
   if (!game || !existsSync(join(game, '.build.info'))) return [];
   if (stamp.gameBuild !== gameVersion(game)) return 'all';
   const now = stepVersions();
-  const changed = Object.keys(now).filter((name) => stamp.steps[name] !== now[name]);
-  return changed.includes('Starting tables') ? 'all' : changed;
+  return Object.keys(now).filter((name) => stamp.steps[name] !== now[name]);
 }
 
 const lastLines = (out) => out.trim().split(/\r?\n/).slice(-6).join('\n');
@@ -226,23 +244,57 @@ export async function python(work, log) {
  * whenever a step starts or finishes, label naming the ones running. Resolves with all the output lines; when a step
  * fails, the ones still running finish first (so nothing writes into the next try), then it rejects with that error.
  * `only` (a set of names) runs just those steps, the others counting as done already.
+ * With `ran`, `only` is where the run starts: ran(name) is called after each step that ran and tells whether what
+ * the step made is different from last time. If so, the steps that wait for it run too, and so do the steps
+ * `follows` names for it ({ step: [steps] }) in any case. A step nothing woke is passed over once the steps it
+ * waits for are settled; the total then counts the steps not passed over so far.
+ * `remade(name)` gives the steps whose output a step reads that does not last until the next run: before the step
+ * runs, those that were passed over run after all.
  */
-export async function runSteps(steps, { onStep = () => {}, log = () => {}, atOnce = AT_ONCE, only = null } = {}) {
-  const lines = [], running = new Map();
-  const done = new Set(only ? steps.map((x) => x[0]).filter((name) => !only.has(name)) : []);
-  const skipped = done.size, total = steps.length - skipped;
-  let failed = null;
+export async function runSteps(steps, { onStep = () => {}, log = () => {}, atOnce = AT_ONCE, only = null, ran = null,
+  follows = {}, remade = () => [] } = {}) {
+  const lines = [], running = new Map(), over = new Set(); // (over: passed over)
+  const done = new Set(only && !ran ? steps.map((x) => x[0]).filter((name) => !only.has(name)) : []);
+  const woken = new Set(only || []);
+  let skipped = done.size, failed = null;
   while (done.size < steps.length && !failed) {
-    for (const [label, needs, step] of steps) {
-      if (done.has(label) || running.has(label) || running.size >= atOnce || !needs.every((n) => done.has(n))) continue;
-      log(`start  ${label}`);
-      running.set(label, Promise.resolve().then(step).then((out) => {
-        lines.push(...(out || []));
-        done.add(label);
-        log(`done   ${label} (${done.size - skipped}/${total})`);
-      }, (e) => { failed ??= e; }).finally(() => running.delete(label)));
+    for (let moved = true; moved;) {
+      moved = false;
+      for (const [label, needs, step] of steps) {
+        if (done.has(label) || running.has(label) || !needs.every((n) => done.has(n))) continue;
+        if (only && ran && !woken.has(label)) { // nothing it reads changed
+          done.add(label);
+          over.add(label);
+          skipped++;
+          moved = true;
+          continue;
+        }
+        const gone = remade(label).filter((name) => over.has(name));
+        if (gone.length) { // what it reads has to be made again first
+          for (const name of gone) {
+            done.delete(name);
+            over.delete(name);
+            woken.add(name);
+            skipped--;
+          }
+          moved = true;
+          continue;
+        }
+        if (!remade(label).every((name) => done.has(name)) || running.size >= atOnce) continue;
+        log(`start  ${label}`);
+        running.set(label, Promise.resolve().then(step).then(async (out) => {
+          lines.push(...(out || []));
+          if (ran) {
+            const wakes = await ran(label) ? steps.filter((x) => x[1].includes(label)).map((x) => x[0]) : [];
+            for (const name of [...wakes, ...(follows[label] || [])]) woken.add(name);
+          }
+          done.add(label);
+          log(`done   ${label} (${done.size - skipped}/${steps.length - skipped})`);
+        }).catch((e) => { failed ??= e; }).finally(() => running.delete(label)));
+      }
     }
-    onStep(done.size - skipped, total, [...running.keys()].join(', '));
+    if (!running.size) break; // all that was left was passed over
+    onStep(done.size - skipped, steps.length - skipped, [...running.keys()].join(', '));
     await Promise.race(running.values());
   }
   await Promise.all(running.values());
@@ -250,14 +302,61 @@ export async function runSteps(steps, { onStep = () => {}, log = () => {}, atOnc
   return lines;
 }
 
-/** Every step that waits, directly or not, for one of `names`, with those themselves. */
-export function withDependents(steps, names) {
-  const due = new Set(names);
-  for (let grew = true; grew;) {
-    grew = false;
-    for (const [name, needs] of steps) if (!due.has(name) && needs.some((n) => due.has(n))) { due.add(name); grew = true; }
+// What a build writes down in its working folder about the folder itself, for the next build: a marker while
+// everything is being built, and the sizes of the files that stay once a build is done.
+const STARTED = 'started.json', SIZES = 'sizes.json';
+/** The .json files under `dir` as { path from `work`: size }, without folders whose name starts with a dot (.venv). */
+function sizesIn(work, dir = work, at = '') {
+  const sizes = {};
+  for (const e of readdirSync(dir, { withFileTypes: true })) {
+    const p = join(dir, e.name), name = at + e.name;
+    if (e.isDirectory()) { if (!e.name.startsWith('.')) Object.assign(sizes, sizesIn(work, p, `${name}/`)); }
+    else if (e.name.endsWith('.json') && name !== STARTED && name !== SIZES) sizes[name] = statSync(p).size;
   }
-  return due;
+  return sizes;
+}
+/**
+ * Whether a build of only some steps can go by the working folder: not when a build of everything was started there
+ * and never finished, nor when a file the last build left is gone or of another size. A folder with neither marker nor
+ * sizes (from an older version of the tracker, or after a build of some steps that did not finish, whose steps are
+ * still due) is taken as it is.
+ */
+export function workWhole(work) {
+  if (existsSync(join(work, STARTED))) return false;
+  if (!existsSync(join(work, SIZES))) return true;
+  try {
+    const sizes = JSON.parse(readFileSync(join(work, SIZES), 'utf8'));
+    return Object.entries(sizes).every(([f, size]) => statSync(join(work, f), { throwIfNoEntry: false })?.size === size);
+  } catch {
+    return false; // the sizes themselves were cut off
+  }
+}
+/**
+ * The hash of what a step made: the files and folders given (a folder with everything under it, but the parts of a
+ * split step), by name and contents. A file that is not there counts as such.
+ */
+export async function outputHash(paths) {
+  const h = createHash('sha1');
+  const add = async (p, name) => {
+    const s = await stat(p).catch(() => null);
+    if (!s) h.update(name).update('none');
+    else if (!s.isDirectory()) h.update(name).update(await readFile(p));
+    else for (const f of (await readdir(p)).sort()) if (f !== 'parts') await add(join(p, f), `${name}/${f}`);
+  };
+  for (const p of paths) await add(p, basename(p));
+  return h.digest('hex').slice(0, 12);
+}
+
+/** A build begins in `work`: the sizes no longer hold, and a build of everything (`all`) leaves its marker. */
+export function openWork(work, all) {
+  mkdirSync(work, { recursive: true });
+  rmSync(join(work, SIZES), { force: true });
+  if (all) writeFileSync(join(work, STARTED), '{}\n');
+}
+/** A build is done in `work`: the sizes of what it leaves are written down, then the marker goes. */
+export function closeWork(work) {
+  writeFileSync(join(work, SIZES), JSON.stringify(sizesIn(work), null, 1) + '\n');
+  rmSync(join(work, STARTED), { force: true });
 }
 
 /**
@@ -291,8 +390,8 @@ export function checkTables(dir) {
 
 /**
  * Builds the game data into `out`, with its working files (and Python's environment) in `work`. `due` is what to
- * build: 'all', or the names of steps (from stepsDue), which then run with everything that depends on them, on top
- * of the data `out` already holds.
+ * build: 'all', or the names of steps (from stepsDue), which then run on top of the data `out` already holds; a step
+ * that waits for one of them runs when what that one made came out different from last time.
  * onStep(done, total, label) is called whenever a step starts or finishes (label: the ones running) and once more
  * when all are done.
  * Resolves with { gameBuild, steps: the names that ran, missing }; rejects with a BuildError for what the player can
@@ -308,15 +407,27 @@ export async function buildGameData({ game = findGame(), out, work, due = 'all',
   mkdirSync(work, { recursive: true });
   const stampFile = join(out, 'gamedata.json');
   const before = existsSync(stampFile) ? JSON.parse(readFileSync(stampFile, 'utf8')) : null;
-  // some steps need what earlier ones left in the working folder: without it, everything is built
-  if (due !== 'all' && !(before?.made && existsSync(join(work, 'guid_index.json')))) due = 'all';
+  // some steps need what earlier ones left in the working folder: without it, or with it half made, everything is built
+  if (due !== 'all' && !(before?.made && before.hashes && existsSync(join(work, 'guid_index.json')) && workWhole(work))) due = 'all';
+  openWork(work, due === 'all');
   const made = due === 'all' ? {} : { ...before.made }; // step -> the image files it wrote, to clear before it runs again
+  const hashes = due === 'all' ? {} : { ...before.hashes }; // step -> the hash of what it made
+  if (due === 'all') { // everything is built anew: the image folders go, so nothing unused stays
+    rmSync(stampFile, { force: true });
+    for (const e of readdirSync(out, { withFileTypes: true })) if (e.isDirectory()) rmSync(join(out, e.name), { recursive: true });
+  }
   const env = { ...process.env, RUMBLE_BUNDLES: bundles, RUMBLE_GAMEDATA: out, RUMBLE_WORK: work };
   // Python is set up once, by whichever step asks first
   let ready = null;
   const py = () => (ready ??= python(work, log));
   const QUIET = { background: true };
+  // (a table step starts from the tracker's own tables each time, so it makes the same whatever was there before)
   const table = (file, ...a) => () => runScript(join(HERE, file), a, env);
+  const seeded = (step, file) => () => {
+    for (const f of SEEDS[step]) copyFileSync(join(SEED, f), join(out, f));
+    return table(file)();
+  };
+  const listed = (dir, own = /./) => readdirSync(join(out, dir)).filter((f) => own.test(f)).sort().map((f) => `${dir}/${f}`);
   // An image step: the sprites a list names, into a folder. The list is beside the scripts when kept by hand, in the
   // working folder when a table builder wrote it. What the step wrote last time goes first, so nothing unused stays
   // and nothing old is taken for new.
@@ -334,40 +445,34 @@ export async function buildGameData({ game = findGame(), out, work, due = 'all',
   // are built while Python is set up, and each kind of image is extracted as soon as its table has named them.
   const steps = [
     ['Python', [], async () => { await py(); return []; }],
-    ['Starting tables', [], async () => {
-      // everything is built anew: the image folders go, so nothing unused stays
-      rmSync(stampFile, { force: true });
-      for (const e of readdirSync(out, { withFileTypes: true })) if (e.isDirectory()) rmSync(join(out, e.name), { recursive: true });
-      // a minis table already built stays, so its changes are reported against it
-      for (const f of readdirSync(SEED)) if (f !== 'minis.json' || !existsSync(join(out, f))) copyFileSync(join(SEED, f), join(out, f));
-      return [];
-    }],
-    ['Index of the game files', ['Starting tables'], table('build_guid_index.mjs')],
-    ['Rules', ['Starting tables'], table('build_rules.mjs')],
-    ['Minis', ['Starting tables'], table('build_minis.mjs')],
+    ['Index of the game files', [], table('build_guid_index.mjs')],
+    ['Rules', [], seeded('Rules', 'build_rules.mjs')],
+    ['Minis', [], seeded('Minis', 'build_minis.mjs')],
     ['Army boards', ['Index of the game files', 'Minis'], table('army_boards.mjs', join(work, 'guid_index.json'), '--write')],
     ['Events', ['Minis'], table('build_events.mjs')], // (it names reward minis by the keys Minis may add)
-    ['Store', ['Starting tables'], table('build_store.mjs')],
+    ['Store', [], table('build_store.mjs')],
     ['PvP', ['Index of the game files'], table('build_pvp.mjs')],
-    ['Event icons', ['Python', 'Starting tables'], async () => {
+    ['Event icons', ['Python'], async () => {
       rmSync(join(out, 'events'), { recursive: true, force: true });
-      return runProgram(await py(), ['-I', join(HERE, 'extract_event_icons.py'), join(out, 'events')], env, QUIET);
+      const lines = await runProgram(await py(), ['-I', join(HERE, 'extract_event_icons.py'), join(out, 'events')], env, QUIET);
+      made['Event icons'] = listed('events');
+      return lines;
     }],
     ['Event rewards', ['Python', 'Events'], images('Event rewards')],
     ['Store art', ['Python', 'Store'], images('Store art')],
     ['Portraits', ['Python', 'Minis'], images('Portraits')],
     ['Talent icons', ['Python', 'Minis'], images('Talent icons')],
     ['Trait icons', ['Python', 'Minis'], images('Trait icons')],
-    ['Leader and Wildcard icons', ['Python', 'Starting tables'], images('Leader and Wildcard icons')],
-    ['Family pair icons', ['Python', 'Starting tables'], images('Family pair icons')],
-    ['Currency icons', ['Python', 'Starting tables'], images('Currency icons')],
+    ['Leader and Wildcard icons', ['Python'], images('Leader and Wildcard icons')],
+    ['Family pair icons', ['Python'], images('Family pair icons')],
+    ['Currency icons', ['Python'], images('Currency icons')],
     ['PvP icons', ['Python', 'PvP'], images('PvP icons')],
     ['PvP rewards', ['Python', 'PvP'], images('PvP rewards')],
     // the page's own art: wood, key art and army boards as they are; the card frames are cut out of the game's slot
     // backgrounds (make_card_frames.py)
-    ['Interface art', ['Python', 'Starting tables'], images('Interface art')],
+    ['Interface art', ['Python'], images('Interface art')],
     // (the Cenarion army board is made from the interface art's Alliance one)
-    ['Card frames', ['Python', 'Starting tables', 'Interface art'], async () => {
+    ['Card frames', ['Python', 'Interface art'], async () => {
       const slots = join(work, 'frames');
       rmSync(slots, { recursive: true, force: true });
       const own = /^(frame-|fill-mask|board-cenarion)/; // what this step makes
@@ -378,20 +483,32 @@ export async function buildGameData({ game = findGame(), out, work, due = 'all',
         env, QUIET);
       const lines = await runProgram(await py(), ['-I', join(HERE, 'make_card_frames.py'), slots, join(out, 'ui')], env, QUIET);
       rmSync(slots, { recursive: true, force: true }); // (only needed to cut the frames from)
+      made['Card frames'] = listed('ui', own);
       return lines;
     }],
   ];
-  const only = due === 'all' ? null : new Set(['Python', ...withDependents(steps, due)]);
-  if (only) log(`Due: ${[...only].filter((n) => n !== 'Python').join(', ')}`);
+  const only = due === 'all' ? null : new Set(due);
+  if (only) log(`Due: ${due.join(', ')}`);
   // (two image steps may share a folder that neither has made yet)
   for (const dir of ['ui', 'icons', 'rewards']) mkdirSync(join(out, dir), { recursive: true });
-  const missing = (await runSteps(steps, { onStep, log, only })).filter((l) => /NOT FOUND/.test(l)).map((l) => l.trim());
+  // After a step: the hash of what it made, and whether that is another than last time's.
+  const ran = [];
+  const hashed = async (step) => {
+    ran.push(step);
+    const last = hashes[step];
+    hashes[step] = await outputHash(TABLE_FILES[step]?.map((f) => (f.startsWith('work:') ? join(work, f.slice(5)) : join(out, f)))
+      ?? (made[step] || []).map((f) => join(out, f)));
+    return hashes[step] !== last;
+  };
+  const missing = (await runSteps(steps, { onStep, log, only, ran: hashed, follows: FOLLOWS }))
+    .filter((l) => /NOT FOUND/.test(l)).map((l) => l.trim());
 
   checkTables(out);
   // the stamp: what the tracker reads to know the data is whole, and what a later build goes by
   const dataVersion = new Date().toISOString();
-  writeFileSync(stampFile, JSON.stringify({ format: 2, gameBuild: build, dataVersion, steps: stepVersions(), made }, null, 1) + '\n');
-  const ran = steps.map((x) => x[0]).filter((name) => !only || only.has(name));
+  writeFileSync(stampFile, JSON.stringify({ format: 3, gameBuild: build, dataVersion, steps: stepVersions(), made, hashes }, null, 1)
+    + '\n');
+  closeWork(work);
   onStep(ran.length, ran.length, 'Done');
   return { gameBuild: build, steps: ran, missing };
 }

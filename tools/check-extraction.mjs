@@ -1,5 +1,6 @@
 // Checks that the additional data comes out the same on every run: extracts it twice, each time from nothing, and
-// compares every file. A file that differs means a script draws or picks by chance, or by which step finished first.
+// compares every file, and the hash of what each step made on the way (the bulky exports are gone by the end). One
+// that differs means a script draws or picks by chance, or by which step finished first.
 // Pictures the graphics card drew may differ in a few pixels by its rounding; those are told apart from real
 // differences and do not fail the check.
 // It needs the game and the game data (npm run build-gamedata), so it is run by hand, not in CI:
@@ -50,16 +51,22 @@ async function hashes(dir, base = dir, out = {}) {
 const dir = await mkdtemp(join(tmpdir(), 'rumble-check-'));
 let code = 0;
 try {
-  const runs = [];
+  const runs = [], made = [];
   for (const n of [1, 2]) {
     const out = join(dir, `out-${n}`), started = Date.now();
     console.log(`Extraction ${n} of 2`);
     await extractRdmodule({ gameFolder: process.argv[2] || '', gamedata, out, work: join(dir, `work-${n}`), all: true,
       log: (line) => { if (/not drawn|nothing for|missing|no sound banks/.test(line)) console.log(line); } });
     runs.push(await hashes(out));
+    made.push(JSON.parse(await readFile(join(out, 'ready.json'), 'utf8')).hashes);
     console.log(`  ${Object.keys(runs.at(-1)).length} files in ${Math.round((Date.now() - started) / 1000)} s`);
   }
   const [a, b] = runs;
+  const steps = Object.keys(made[0]).filter((step) => made[0][step] !== made[1][step]);
+  if (steps.length) {
+    console.error(`What these steps made differs between the two extractions: ${steps.join(', ')}`);
+    code = 1;
+  }
   const names = [...new Set([...Object.keys(a), ...Object.keys(b)])].sort();
   let differ = names.filter((f) => a[f] !== b[f]);
   // the pictures among them: by how much?

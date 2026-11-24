@@ -3,9 +3,9 @@
 //   step, and the tracker starts when it is done. What the player can fix is shown there and tried again every 15
 //   seconds; when the game is not found, the page asks for its folder (game/folder.mjs).
 //   Later, it is read again when the installed game is another version than the one it was read from. After a new
-//   version of the tracker, only the steps that changed are run again, with what depends on them. Either happens in
-//   the background, at low priority, while the tracker shows what it has; the new data takes the old one's place once
-//   it is whole, and the open page loads it.
+//   version of the tracker, only the steps that changed are run again, and the ones after them whose input came out
+//   different. Either happens in the background, at low priority, while the tracker shows what it has; the new data
+//   takes the old one's place once it is whole, and the open page loads it.
 // A build goes into a folder beside the data and replaces it at the end, so a failed one leaves the data as it was.
 import http from 'node:http';
 import path from 'node:path';

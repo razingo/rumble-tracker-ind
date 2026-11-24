@@ -7,7 +7,8 @@ import net from 'node:net';
 import os from 'node:os';
 import { readFile, writeFile, mkdtemp, mkdir, rm } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { stepsDue, stepVersions, stepsToRun, renderServer } from '../tools/rdmodule/extract.mjs';
+import { stepsDue, stepVersions, remadeFor, renderServer } from '../tools/rdmodule/extract.mjs';
+import { runSteps } from '../tools/gamedata/build.mjs';
 import { createRdmodule } from '../server/rdmodule.mjs';
 import { createHttpServer } from '../server/http/server.mjs';
 import { testContext } from './helpers.mjs';
@@ -57,20 +58,36 @@ test('a step is due when its script or inputs changed, everything without a stam
   const steps = stepVersions();
   assert.equal(stepsDue(null, null), 'all');
   assert.equal(stepsDue(null, { extracted: '2026-01-02T03:04:05.000Z' }), 'all', 'a stamp from before steps had versions');
-  assert.deepEqual(stepsDue(null, { steps }), []);
-  assert.deepEqual(stepsDue(null, { steps: { ...steps, Sprites: 'older', Sounds: undefined } }), ['Sounds', 'Sprites']);
+  assert.equal(stepsDue(null, { steps }), 'all', 'a stamp from before the output was hashed');
+  const hashes = {};
+  assert.deepEqual(stepsDue(null, { steps, hashes }), []);
+  assert.deepEqual(stepsDue(null, { hashes, steps: { ...steps, Sprites: 'older', Sounds: undefined } }), ['Sounds', 'Sprites']);
 });
 
-test('a step that runs again takes what depends on it, and the bulky exports it reads are made again', () => {
-  const steps = [['Python', []], ['Animations 1/2', ['Python']], ['Animations 2/2', ['Python']],
-    ['Animations', ['Animations 1/2', 'Animations 2/2']], ['Tower models', ['Python']],
-    ['Sprites', ['Animations', 'Tower models']], ['Sounds', ['Python']], ['Sounds picked', ['Sounds']]];
-  const run = (due) => [...stepsToRun(steps, due)].sort();
-  // the sprite page changed: nothing depends on it, but the models and animations it draws were deleted
-  assert.deepEqual(run(['Sprites']), ['Animations', 'Animations 1/2', 'Animations 2/2', 'Python', 'Sprites', 'Tower models']);
-  // a split step is due as a whole, with what is drawn from it
-  assert.deepEqual(run(['Animations']), ['Animations', 'Animations 1/2', 'Animations 2/2', 'Python', 'Sprites', 'Tower models']);
-  assert.deepEqual(run(['Sounds picked']), ['Python', 'Sounds', 'Sounds picked']);
+test('a step runs after one that made something else, and the bulky exports it reads are made again first', async () => {
+  const run = async (due, changed) => {
+    const order = [];
+    const step = (name) => async () => { order.push(name); };
+    const steps = [['Python', []], ['Animations 1/2', ['Python']], ['Animations 2/2', ['Python']],
+      ['Animations', ['Animations 1/2', 'Animations 2/2']], ['Tower models', ['Python']], ['Catalog', ['Animations']],
+      ['Sprites', ['Catalog', 'Animations', 'Tower models']], ['Sounds', ['Python']], ['Sounds picked', ['Sounds']]]
+      .map(([name, needs]) => [name, needs, step(name)]);
+    const names = steps.map((x) => x[0]);
+    await runSteps(steps, { atOnce: 1, only: new Set(names.filter((n) => due.includes(n.replace(/ \d+\/\d+$/, '')))),
+      ran: (name) => / \d/.test(name) || changed.includes(name), remade: (name) => remadeFor(names, name) });
+    return order;
+  };
+  // the sprite page changed: the models and animations it draws were deleted, and nothing else runs
+  assert.deepEqual(await run(['Sprites'], []), ['Animations 1/2', 'Animations 2/2', 'Animations', 'Tower models', 'Sprites']);
+  // the catalog's script changed, the catalog did not: nothing is drawn, nothing is made again
+  assert.deepEqual(await run(['Catalog'], []), ['Catalog']);
+  assert.deepEqual(await run(['Catalog'], ['Catalog']), ['Catalog', 'Animations 1/2', 'Animations 2/2', 'Animations',
+    'Tower models', 'Sprites']);
+  // a split step is due as a whole; what is drawn from it only when it made something else
+  assert.deepEqual(await run(['Animations'], []), ['Animations 1/2', 'Animations 2/2', 'Animations']);
+  assert.deepEqual(await run(['Animations'], ['Animations']), ['Animations 1/2', 'Animations 2/2', 'Animations', 'Catalog',
+    'Tower models', 'Sprites']);
+  assert.deepEqual(await run(['Sounds picked'], []), ['Sounds', 'Sounds picked']);
 });
 
 test('the list of what is drawn and the code name the same sprites and effects', async () => {

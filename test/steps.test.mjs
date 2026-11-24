@@ -3,8 +3,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { writeFile, readFile } from 'node:fs/promises';
-import { runSteps, runProgram, versionsOf, withTools, stepsDue, stepVersions, checkTables } from '../tools/gamedata/build.mjs';
+import { writeFile, readFile, mkdir, rm } from 'node:fs/promises';
+import { runSteps, runProgram, versionsOf, withTools, stepsDue, stepVersions, checkTables, workWhole, openWork,
+  closeWork } from '../tools/gamedata/build.mjs';
 import { slugOf } from '../tools/gamedata/unityfs.mjs';
 import { testContext, fakeGame } from './helpers.mjs';
 
@@ -44,7 +45,30 @@ test('a failed step stops the rest, once the running ones have finished', async 
 test('the real builder: everything is due without a stamp; data is kept when the game is not here', () => {
   assert.equal(stepsDue(null, null), 'all');
   assert.equal(stepsDue('C:\\game', { gameBuild: '1.0.0.1' }), 'all', 'a stamp from before steps had versions');
-  assert.deepEqual(stepsDue('C:\\no\\such\\game', { gameBuild: '1.0.0.1', steps: stepVersions() }), []);
+  assert.deepEqual(stepsDue('C:\\no\\such\\game', { gameBuild: '1.0.0.1', steps: stepVersions(), hashes: {} }), []);
+});
+
+test('a step that waits for one that ran runs only when that one made something else', async () => {
+  const run = async (only, changed, follows = {}) => {
+    const order = [];
+    const step = (name) => async () => { order.push(name); };
+    await runSteps([
+      ['index', [], step('index')],
+      ['minis', [], step('minis')],
+      ['boards', ['index', 'minis'], step('boards')],
+      ['events', ['minis'], step('events')],
+      ['rewards', ['events'], step('rewards')],
+      ['store', [], step('store')],
+    ], { atOnce: 1, only: only && new Set(only), ran: (name) => changed.includes(name), follows });
+    return order;
+  };
+  assert.deepEqual(await run(['minis'], []), ['minis'], 'the same came out: nothing after it runs');
+  assert.deepEqual(await run(['minis'], ['minis']), ['minis', 'boards', 'events']);
+  assert.deepEqual(await run(['minis'], ['minis', 'events']), ['minis', 'boards', 'events', 'rewards']);
+  assert.deepEqual(await run(['minis'], [], { minis: ['boards'] }), ['minis', 'boards'], 'a step that follows runs anyway');
+  assert.deepEqual(await run(['store', 'index'], ['store']), ['index', 'store']);
+  assert.deepEqual(await run(null, []), ['index', 'minis', 'boards', 'events', 'rewards', 'store'], 'everything, when asked');
+  assert.deepEqual(await run([], ['minis']), []);
 });
 
 test('the real builder: a step is due when its own script or inputs changed, everything when the game did', async () => {
@@ -53,12 +77,43 @@ test('the real builder: a step is due when its own script or inputs changed, eve
     const game = await fakeGame(dir);
     await writeFile(path.join(game, '.build.info'), 'Branch!STRING:0|Active!DEC:1|Version!STRING:0\neu|1|2.0.0.1\n');
     const steps = stepVersions();
-    assert.deepEqual(stepsDue(game, { gameBuild: '2.0.0.1', steps }), []);
-    assert.equal(stepsDue(game, { gameBuild: '1.9.9.9', steps }), 'all');
-    assert.deepEqual(stepsDue(game, { gameBuild: '2.0.0.1', steps: { ...steps, Store: 'older', 'Card frames': undefined } }),
+    const hashes = {};
+    assert.deepEqual(stepsDue(game, { gameBuild: '2.0.0.1', steps, hashes }), []);
+    assert.equal(stepsDue(game, { gameBuild: '1.9.9.9', steps, hashes }), 'all');
+    assert.deepEqual(stepsDue(game, { gameBuild: '2.0.0.1', hashes, steps: { ...steps, Store: 'older', 'Card frames': undefined } }),
       ['Store', 'Card frames']);
-    assert.equal(stepsDue(game, { gameBuild: '2.0.0.1', steps: { ...steps, 'Starting tables': 'older' } }), 'all',
-      'the tracker\'s own tables feed every step');
+    assert.equal(stepsDue(game, { gameBuild: '2.0.0.1', steps }), 'all', 'a stamp from before the output was hashed');
+  } finally {
+    await cleanup();
+  }
+});
+
+test('a working folder is gone by only when the last build left it whole', async () => {
+  const { dir, cleanup } = await testContext();
+  try {
+    const work = path.join(dir, 'work');
+    await mkdir(path.join(work, 'effects'), { recursive: true });
+    await mkdir(path.join(work, '.venv'));
+    await writeFile(path.join(work, 'index.json'), '{"a":1}');
+    await writeFile(path.join(work, 'effects', 'index.json'), '[1,2,3]');
+    await writeFile(path.join(work, '.venv', 'pip.json'), '{}');
+    assert.equal(workWhole(work), true, 'a folder from before sizes were written down is taken as it is');
+    // a build of everything that never finished
+    openWork(work, true);
+    assert.equal(workWhole(work), false);
+    closeWork(work);
+    assert.equal(workWhole(work), true);
+    assert.deepEqual(JSON.parse(await readFile(path.join(work, 'sizes.json'), 'utf8')), { 'effects/index.json': 7, 'index.json': 7 });
+    // a file cut off, then gone
+    await writeFile(path.join(work, 'effects', 'index.json'), '[1,');
+    assert.equal(workWhole(work), false);
+    await rm(path.join(work, 'effects', 'index.json'));
+    assert.equal(workWhole(work), false);
+    // a build of some steps that did not finish: its steps are still due, and write their files again
+    openWork(work, false);
+    assert.equal(workWhole(work), true);
+    await writeFile(path.join(work, 'sizes.json'), '{"index.js');
+    assert.equal(workWhole(work), false, 'the sizes themselves cut off');
   } finally {
     await cleanup();
   }

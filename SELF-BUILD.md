@@ -34,11 +34,11 @@ leaves replacing the exe to you. Only exes built by this repository's release wo
 It needs Warcraft Rumble for PC installed, and nothing else: no Python, and no internet connection for its game data.
 
 - **First start:** the window shows a loading bar while the game data is read from the game install. The bar fills as
-  each of the 22 steps finishes and names the ones running. This takes about a minute.
+  each of the 21 steps finishes and names the ones running. This takes about a minute.
 - **After a game patch:** the tracker sees that the installed game is a newer version than its data and reads the data
   again in the background, while it stays usable. It looks at start, when the game closes and every half hour.
 - **After a tracker update:** if the new version reads something more or differently, only that part is read again,
-  in the background; all of it when the tracker's own starting tables changed.
+  in the background.
 - **Otherwise:** it starts straight away.
 
 Reading goes easy on the PC: the programs it starts run at low priority, and only a few steps run at a time. A step
@@ -79,8 +79,9 @@ The level and upgrade rules and the army code numbers are read from the game too
 
 Each step of the reading has a version, made of its own script, its inputs, its settings (an image size, for
 example) and the versions of the tools it uses (Python and its packages). After a new version of the tracker, only
-the steps that changed run again, with the steps that use what they make; the rest of the data stays as it is. A
-new version of the game runs all of them, and so does a change to the starting tables.
+the steps that changed run again. What each step makes is hashed: a step that uses what another makes runs again
+only when that came out different from last time, and the rest of the data stays as it is. A change to one of the
+starting tables counts for the steps that start from it. A new version of the game runs all of them.
 
 ## From source
 
@@ -94,8 +95,11 @@ version is unchanged, and a game folder can be given, as in `npm run build-gamed
 Both use the private Python if `fetch-python` was run, and otherwise a Python 3.11 to 3.14 on the PC, whose packages
 are then downloaded on first use.
 
+`npm run check-gamedata` checks what skipping steps relies on: it reads the game data twice, each time from nothing,
+compares every file, and makes sure every file belongs to a step. It needs the game and takes about two minutes.
+
 `npm run check-extraction` checks that the additional data comes out the same on every run: it extracts twice, each
-time from nothing, and compares every file (about four minutes; it needs the game and `build-gamedata`, so it is run
+time from nothing, and compares every file and what each step made on the way (about four minutes; it needs the game and `build-gamedata`, so it is run
 by hand before a release, not in CI). Effect pictures may differ in a few pixels by the graphics card's rounding; it
 tells those apart from real differences, and keeps both versions of a file that really differs.
 
