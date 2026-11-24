@@ -661,14 +661,16 @@ function quitFromTray(reason) {
 /**
  * Uninstall in Settings: desktop/uninstall.ps1 waits for the tracker to stop, then removes it from this PC. It's
  * started through cmd's start, so it outlives the tracker even when a job ends the tracker's child processes with it
- * (a plain detached child didn't survive that).
+ * (a plain detached child didn't survive that). cmd itself is not started detached: it would have no console then,
+ * and Windows would open one, in view, for PowerShell.
  */
 function uninstall() {
   console.log('Uninstalling');
   spawn(path.join(SYSTEM32, 'cmd.exe'), ['/d', '/c', 'start', '""', '/b', POWERSHELL, ...psArgs(PS_RUN_FILE)], {
-    detached: true, stdio: 'ignore', windowsHide: true,
+    stdio: 'ignore', windowsHide: true,
     env: { ...process.env, RT_SCRIPT: path.join(APP_DIR, 'desktop', 'uninstall.ps1'), RT_PARENT: String(process.pid),
-      RT_EXE: process.execPath, RT_DATA: DATA, RT_HOME: HOME, RT_NOTE: FIXED_DATA ? '' : NOTE_DIR, RT_TITLE: TITLE },
+      RT_EXE: process.execPath, RT_DATA: DATA, RT_HOME: HOME, RT_NOTE: FIXED_DATA ? '' : NOTE_DIR,
+      RT_LOCAL: FIXED_DATA ? '' : DEFAULT_HOME, RT_TITLE: TITLE },
   }).unref();
   quitFromTray('Uninstall from Settings');
 }

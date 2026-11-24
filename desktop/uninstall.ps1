@@ -6,8 +6,10 @@
 # are removed whole. A data folder set with RUMBLE_DATA_DIR is outside the tracker's folder and may hold other
 # files, so it's left as it is.
 # Environment: RT_PARENT (the tracker's process id), RT_EXE, RT_HOME (the tracker's folder), RT_NOTE (the folder of
-# the note, empty when there is none), RT_TITLE (the shortcut's name), RT_FILES_ONLY (leave the shortcut, link, Start
-# with Windows and notification settings, for the tests).
+# the note in %APPDATA%) and RT_LOCAL (the usual place of the tracker's folder, in %LOCALAPPDATA%), which go whether
+# the tracker's folder is there or elsewhere, as an earlier version may have left files in them (both empty when the
+# data folder was set with RUMBLE_DATA_DIR), RT_TITLE (the shortcut's name), RT_FILES_ONLY (leave the shortcut, link,
+# Start with Windows and notification settings, for the tests).
 $ErrorActionPreference = 'SilentlyContinue'
 $ProgressPreference = 'SilentlyContinue'
 
@@ -25,7 +27,7 @@ if (-not $env:RT_FILES_ONLY) {
 $exe = $env:RT_EXE
 $folder = Split-Path -Parent $exe
 $notices = Join-Path $folder 'THIRD-PARTY-NOTICES'
-$own = @($env:RT_HOME, $env:RT_NOTE) | Where-Object { $_ -and (Split-Path -Leaf $_) -eq 'RumbleTracker' }
+$own = @($env:RT_HOME, $env:RT_NOTE, $env:RT_LOCAL) | Where-Object { $_ -and (Split-Path -Leaf $_) -eq 'RumbleTracker' }
 # (the launcher's pop-up script and font, written to the temporary folder to be run)
 $targets = @($own) + @($exe, "$exe.old", "$exe.failed", (Join-Path $env:TEMP 'RumbleTracker-launcher')) +
   @('README.md', 'LICENSE.txt', 'NOTICE.md' | ForEach-Object { Join-Path $folder $_ }) +

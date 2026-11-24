@@ -122,8 +122,11 @@ folder.
 
 ## Uninstalling
 
-**⚙ Settings → Uninstall the tracker…** does it all. The tracker stops (writing its last backup, as always), and a
-moment later the exe, the tracker's folder, the note in `%APPDATA%\RumbleTracker`, the Start menu shortcut, the
+**⚙ Settings → Uninstall the tracker…** does it all. It asks first whether to keep a backup: **Uninstall, keep a
+backup** saves the same file as *Backup → Export backup* where you choose, and nothing is uninstalled if that file
+isn't saved. The tracker then stops (writing its last backup, as always), and a moment later the exe, the tracker's
+folder, `%APPDATA%\RumbleTracker` and `%LOCALAPPDATA%\RumbleTracker` (whichever of them are there), the Start menu
+shortcut, the
 `rumble-tracker:` link (`HKEY_CURRENT_USER\Software\Classes\rumble-tracker`), Start with Windows and the notification
 settings Windows keeps for the tracker are removed. Next to the exe, only the files from the release zip go; the folder
 goes too if nothing else is left in it. Of the folder you picked, only the `RumbleTracker` folder in it is removed.
@@ -133,8 +136,8 @@ By hand:
 
 1. In **⚙ Settings**, untick *Start with Windows* if you ticked it.
 2. Quit the tracker.
-3. Delete `RumbleTracker.exe`, the tracker's folder (**⚙ Settings** shows where it is; look before you quit) and
-   `%APPDATA%\RumbleTracker`.
+3. Delete `RumbleTracker.exe`, the tracker's folder (**⚙ Settings** shows where it is; look before you quit),
+   `%APPDATA%\RumbleTracker` and `%LOCALAPPDATA%\RumbleTracker`.
 4. Delete the Start menu shortcut *Rumble Collection Tracker* (in the Start menu, right-click it → *Open file
    location*) and, if you like, the registry keys `HKEY_CURRENT_USER\Software\Classes\rumble-tracker` and
    `HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\razingo.RumbleCollectionTracker`

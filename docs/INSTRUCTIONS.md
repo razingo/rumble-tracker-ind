@@ -190,7 +190,8 @@ it right away.
 
 **Uninstall the tracker…**, at the bottom, removes the tracker from this PC: it stops, then deletes
 `RumbleTracker.exe`, its data and backups, the game data it read, the Start menu shortcut and Start with Windows.
-Export a backup first if you might come back.
+It asks first: **Uninstall, keep a backup** saves your names, armies, goals, history and settings to a file where you
+choose (*Backup → Import backup* in a new tracker brings them back), and **Uninstall everything** keeps nothing.
 
 ### Notifications
 

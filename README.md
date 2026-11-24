@@ -78,8 +78,8 @@ exe by hand. Either way your data stays where it is. The check can be turned off
 
 ### Uninstalling
 
-**⚙ Settings → Uninstall the tracker…** removes the exe, the two `RumbleTracker` folders above, the Start menu shortcut
-and Start with Windows. Export a backup first if you might come back.
+**⚙ Settings → Uninstall the tracker…** removes the exe, the tracker's folder, the Start menu shortcut and Start with
+Windows. It offers to keep a backup of your data first, in a file where you choose, for if you come back.
 [How the tracker works](docs/HOW-IT-WORKS.md#uninstalling) has the details, including how to do it by hand, along with
 everything the tracker does in the background and every place it stores something.
 

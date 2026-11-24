@@ -17,7 +17,7 @@ export function showDialog({ title, message, buttons }) {
       ${title ? `<div class="dialog-head"><h2>${esc(title)}</h2></div>` : ''}
       ${message ? `<div class="message-body dialog-card">${paragraphs}</div>` : ''}
       <div class="message-actions">${buttons.map((b, i) => `<button value="${i}"
-        class="${b.primary ? `button${b.danger ? ' danger' : ''}` : 'chip'}">${esc(b.label)}</button>`).join('')}</div>
+        class="${b.primary ? 'button' : 'chip'}${b.danger ? ' danger' : ''}">${esc(b.label)}</button>`).join('')}</div>
     </form>`;
     dlg.addEventListener('close', () => {
       const i = Number(dlg.returnValue);

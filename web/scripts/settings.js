@@ -212,10 +212,39 @@ async function extractExtra(dlg) {
 
 const UNINSTALL_MESSAGE = 'This removes RumbleTracker.exe and everything the tracker keeps on this PC: your names, '
   + 'armies, goals, history and settings, the automatic backups, the game data, the Start menu shortcut and Start '
-  + 'with Windows. It can\'t be undone.\n\nIf you might come back, first save a backup with Backup → Export backup.';
+  + 'with Windows. It can\'t be undone.\n\nIf you might come back, keep a backup: your names, armies, goals, history '
+  + 'and settings are saved to a file where you choose, and Backup → Import backup in a new tracker brings them back.';
+
+/**
+ * Saves the backup (what Backup → Export backup gives) to a file the user picks. Returns whether it was saved; when
+ * the user cancels the choice of a file, nothing is said.
+ */
+async function saveBackupAs() {
+  try {
+    const res = await fetch('/api/backup');
+    if (!res.ok) throw new Error(`The tracker answered ${res.status}.`);
+    const text = await res.text();
+    const name = /filename="([^"]+)"/.exec(res.headers.get('content-disposition') || '')?.[1] || 'rumble-tracker-backup.json';
+    const file = await window.showSaveFilePicker({ suggestedName: name,
+      types: [{ description: 'Tracker backup', accept: { 'application/json': ['.json'] } }] });
+    const out = await file.createWritable();
+    await out.write(text);
+    await out.close();
+    return true;
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      await alertDialog(`The backup was not saved (${err.message}), so nothing was uninstalled. Save one with Backup → `
+        + 'Export backup, then uninstall.', { title: 'Not uninstalled' });
+    }
+    return false;
+  }
+}
 
 async function uninstall(dlg) {
-  if (!(await confirmDialog(UNINSTALL_MESSAGE, { title: 'Uninstall the tracker?', ok: 'Uninstall', danger: true }))) return;
+  const choice = await showDialog({ title: 'Uninstall the tracker?', message: UNINSTALL_MESSAGE, buttons: [
+    { label: 'Cancel', value: null }, { label: 'Uninstall everything', value: 'all', danger: true },
+    { label: 'Uninstall, keep a backup', value: 'keep', primary: true }] });
+  if (!choice || (choice === 'keep' && !(await saveBackupAs()))) return;
   try {
     await post('/api/uninstall', {});
   } catch (err) {
