@@ -1149,7 +1149,7 @@
     if (r.banner > 0 && o.elemental) n *= 1.5; // Lasting Legacy
     // Soulshatter: a frozen enemy that is already hurt dies; with Necrotic Plague a poisoned one too
     if (isLeader('arthas-menethil') && !tower && e.hp < e.max
-      && ((e.hold > 0 && e.holdKind === 'frost') || (tal('arthas-menethil', 1) && e.burn > 0))) n = Math.max(n, e.hp);
+      && ((e.hold > 0 && e.holdKind === 'frost') || (tal('arthas-menethil', 1) && e.burn > 0 && e.poisoned))) n = Math.max(n, e.hp);
     if (e.holdKind === 'sleep') { e.hold = 0; e.holdKind = null; }
     e.hp -= n;
     e.flash = 0.12;
@@ -1370,6 +1370,7 @@
       strike(e, dt);
       if (e.burn > 0) {
         e.burn -= dt;
+        if (e.burn <= 0) e.poisoned = false;
         e.burnT += dt;
         if (e.burnT >= 1) { e.burnT = 0; damage(e, 0.5, { elemental: true }); if (e.hp <= 0) continue; }
       }

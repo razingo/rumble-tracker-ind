@@ -5,7 +5,8 @@
 // Which minis: every entry of gamedata/unit_ids.json (save id -> slug; the slug is the tracker's key), and the minis
 // the game lists for army codes that are not in it yet: those get their key from their name, and are written back
 // to unit_ids.json. The code numbers and the code's prefix go to army_code_minis.json.
-// Kept from the current minis.json: fixedArmySlots / armySlotUpgrades (army_boards.mjs) and alwaysOwned.
+// Kept from the current minis.json: fixedArmySlots / armySlotUpgrades (army_boards.mjs), alwaysOwned and, for a mini
+// of two factions, which of them it is filed under (family).
 // Talent order: the order the tracker has always stored picks in (army_code_minis.json talentOrder maps the game's
 // order onto it), so saved talent picks and armies stay valid.
 // Stats: each StatData with a growth type grows x1.1001 per level, rounded (the game's displayed values); level 1..31.

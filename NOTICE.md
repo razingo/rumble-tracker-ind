@@ -20,7 +20,8 @@ your collection in a recognizable way.
 Read by the tracker from the Warcraft Rumble installed on your own PC, into its data folder (and by
 `npm run build-gamedata` into `gamedata/`). None of it is in this repository or in the release downloads, apart from
 the app's icon (`web/favicon.ico`, drawn from the Kobold Miner's portrait) and the tracker's list of the minis it
-knows (`tools/gamedata/seed/`: each mini's save ID, its faction and a leader's fixed army slots):
+knows (`tools/gamedata/seed/`: each mini's save ID, the faction a mini of two factions is filed under
+and a leader's fixed army slots):
 
 - images: mini portraits, talent icons, card frames, boards and textures, faction, trait and tag icons, event tickets,
   event reward icons, shop art and currency icons;
