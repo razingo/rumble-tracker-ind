@@ -189,8 +189,10 @@ export function allTraits() {
 function passes(m, skip) {
   const f = view.filters;
   if (skip !== 'types' && f.types.length && !f.types.includes(m ? m.category : 'unknown')) return false;
-  // dual-faction leaders match either faction
-  if (skip !== 'families' && f.families.length && !(m && familiesOf(m).some((x) => f.families.includes(x)))) return false;
+  // dual-faction leaders match either faction (a faction without a filter button, as on game data read by an
+  // earlier version of the tracker, filters nothing)
+  const fams = f.families.filter((x) => FAMILIES.includes(x));
+  if (skip !== 'families' && fams.length && !(m && familiesOf(m).some((x) => fams.includes(x)))) return false;
   if (skip !== 'traits' && f.traits.length) {
     if (!m) return false;
     const has = new Set(m.traits.map((t) => t.name));

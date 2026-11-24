@@ -33,11 +33,12 @@ function poolItems(kind) {
   const d = builder.draft;
   const used = new Set([d.leader, ...d.minis].filter(Boolean));
   const q = p.q.trim().toLowerCase();
+  const fams = p.fam.filter((f) => FAMILIES.includes(f)); // (a faction without a button filters nothing)
   const items = state.units
     .map((u) => ({ u, m: miniOf(u) }))
     .filter(({ u, m }) => m && !u.synthetic && (kind === 'leaders' ? m.category === 'Leader' : m.category !== 'Leader'))
     .filter(({ m }) => !q || m.name.toLowerCase().includes(q))
-    .filter(({ m }) => !p.fam.length || familiesOf(m).some((f) => p.fam.includes(f)))
+    .filter(({ m }) => !fams.length || familiesOf(m).some((f) => fams.includes(f)))
     .filter(({ m }) => kind === 'leaders' || !p.type.length || p.type.includes(m.category))
     .filter(({ m }) => !p.traits.length || p.traits[p.traitMode === 'any' ? 'some' : 'every']((t) => m.traits.some((x) => x.name === t)))
     .map((x) => ({ ...x, used: used.has(x.u.slug), level: kind === 'leaders' ? totalLevel(x.u) : x.u.level,
@@ -69,14 +70,16 @@ export function renderPool(kind) {
   const el = $(`#pool-${kind}`);
   if (!el) return;
   const p = pools()[kind];
-  const famChips = FAMILIES.map((f) => `<button class="chip small-chip" aria-pressed="${p.fam.includes(f)}"
+  const inKind = (m) => (kind === 'leaders' ? m.category === 'Leader' : m.category !== 'Leader');
+  // the factions of this pool's minis (the minis every player has are not in it)
+  const here = new Set(state.units.filter((u) => !u.synthetic).map(miniOf).filter((m) => m && inKind(m)).flatMap(familiesOf));
+  const famChips = FAMILIES.filter((f) => here.has(f)).map((f) => `<button class="chip small-chip" aria-pressed="${p.fam.includes(f)}"
     data-pool-family="${f}" data-pool="${kind}" title="${f}">${iconImage(TAG_ICONS[f], f)}</button>`);
   const typeChips = kind === 'units' ? [['Unit', 'Units'], ['Spell', 'Spells']].map(([k, l]) =>
     `<button class="chip small-chip" aria-pressed="${p.type.includes(k)}" data-pool-type="${k}"
     data-pool="${kind}">${l}</button>`).join('') : '';
   const sorts = [['level', 'Level'], ['name', 'Name'], ['cost', 'Cost'], ...(kind === 'units' ? [['match', 'Fits slots']] : [])];
   // traits present in this pool
-  const inKind = (m) => (kind === 'leaders' ? m.category === 'Leader' : m.category !== 'Leader');
   const inPane = new Set(state.units.map(miniOf).filter((m) => m && inKind(m)).flatMap((m) => m.traits.map((t) => t.name)));
   const traits = allTraits().filter((t) => inPane.has(t.name));
   const picker = traitPicker({

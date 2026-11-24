@@ -22,7 +22,7 @@ const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'Ju
 const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const ordinal = (n) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : { 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th'}`;
 
-export async function loadEvents() {
+async function loadEvents() {
   if (EVENTS) return EVENTS;
   EVENTS = await getJson('/static/events.json', 'the event schedule');
   return EVENTS;

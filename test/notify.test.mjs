@@ -81,11 +81,15 @@ test('the first run notifies about nothing, and the run after it does, even when
   const user = { notifySettings: defaultSettings(), sentLog: { sent: {}, pending: [], log: [] }, notifyBaseline: true,
     plans: {}, names: { accounts: {}, units: {} }, save: async () => {} };
   const app = { user, tables: { minis: [], builtinUnits: {}, events: null, store: null, rules: null, pvp: null },
-    accounts: new Map(), appUpdate: { newVersion: null } };
+    accounts: new Map(), scan: { lastScan: null }, appUpdate: { newVersion: null } };
   const shown = [];
   const notifier = createNotifier(app, { gameRunning: async () => false, toast: async (title) => shown.push(title) });
-  await notifier.tick(); // no account read yet: the first run is still to come
+  await notifier.tick(); // the save was not read yet: the first run is still to come
   assert.equal(user.notifyBaseline, true);
+  app.scan.lastScan = '2026-05-06T12:00:00Z';
+  await notifier.tick(); // a save without an account ends it too
+  assert.equal(user.notifyBaseline, false);
+  user.notifyBaseline = true;
   // (notifications are for another account, one this PC has not read: the first run still ends)
   user.notifySettings.account = 'b'.repeat(32);
   app.accounts.set('a'.repeat(32), { snapshot: { currencies: [], units: [] }, shop: null });

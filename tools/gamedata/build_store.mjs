@@ -67,8 +67,10 @@ for (const o of Object.values(objs)) {
   const banner = String(o.m_bannerImage || '').split(',')[1] || null;
   offers[saveIdOf(o.guid)] = {
     name: o.name,
-    // art: the offer's own banner; the free gift (unit XP) has none, so it gets the XP gem pile
-    icon: banner || (/^FreeGift_Dynamic/.test(o.name) ? 'Store_Tex_XP_Gem_Pile' : undefined),
+    // art: the offer's own banner, else its product's picture (cores, the Modest Star Tome); the free gift (unit XP)
+    // has neither, so it gets the XP gem pile
+    icon: banner || String(product?.m_checkoutImage || '').split(',')[1]
+      || (/^FreeGift_Dynamic/.test(o.name) ? 'Store_Tex_XP_Gem_Pile' : undefined),
     title: titleOf(o, product),
     cost: vc ? { coins: vc.m_currencyType === COINS, currency: CURRENCY_NAMES[vc.m_currencyType] || vc.m_currencyType,
       amount: int(vc.m_priceAmount) } : null,

@@ -34,12 +34,12 @@ export function createNotifier(ctx, { gameRunning, toast = showToast }) {
       pvp: ctx.tables.pvp, plans: u().plans, settings,
       multi: list.length > 1, newVersion: ctx.appUpdate.newVersion,
     }).filter((n) => !log.sent[n.key]);
-    // (an account of this PC, whichever ones the notifications are for)
-    const read = [...ctx.accounts.values()].some((acc) => acc.snapshot);
+    // (an account of this PC, whichever ones the notifications are for; or a save that was read and has none)
+    const read = [...ctx.accounts.values()].some((acc) => acc.snapshot) || (!!ctx.scan.lastScan && !ctx.accounts.size);
     if (!(u().notifyBaseline && read) && !due.length && !(log.pending.length && !inQuietHours(settings.quiet))) return;
     const stamp = new Date(now).toISOString();
     for (const n of due) log.sent[n.key] = stamp;
-    // On the first run with an account read, what is already due is recorded without a notification. That run is
+    // On the first run with the save read, what is already due is recorded without a notification. That run is
     // over even when nothing was due.
     if (u().notifyBaseline) {
       if (read) u().notifyBaseline = false;
