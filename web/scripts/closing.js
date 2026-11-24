@@ -1,5 +1,5 @@
 // The window's close button, in RumbleTracker.exe. The window (desktop/window.ps1) asks the page before it closes, and
-// the page answers "close", or "stay" when the question below was cancelled. With "Ask me", it first asks whether to
+// the page answers "close", or "stay" when the question below was canceled. With "Ask me", it first asks whether to
 // keep running in the tray or quit, and saves the answer, which the server then follows (server/main.mjs). An army
 // edit not saved yet is saved before the window closes.
 import { flushDraft } from './army.js';

@@ -1,6 +1,7 @@
 """Hornless card frames: cut a rounded-rectangle window into each faction frame (same thickness on all
-sides), add a soft dark bevel along the cut, and write one matching fill mask.
-usage: python make_card_frames.py <slots_dir> <out_dir>"""
+sides), add a soft dark bevel along the cut, and write one matching fill mask. The game has no Cenarion frame and no
+Cenarion army board: both are its Alliance ones, shifted from blue to green.
+usage: python make_card_frames.py <slots_dir> <out_dir>   (out_dir holds board-alliance.webp, from the interface art)"""
 import os, sys
 from PIL import Image, ImageDraw, ImageFilter, ImageChops
 
@@ -37,12 +38,17 @@ fams = {'alliance': 'Alliance', 'horde': 'Horde', 'undead': 'Scourge', 'beast': 
 for k, v in fams.items():
     make(k, Image.open(os.path.join(src, f'Inventory_SlotBG_{v}.png')).convert('RGBA'))
 
-al = Image.open(os.path.join(src, 'Inventory_SlotBG_Alliance.png')).convert('RGBA')
-r, g, b, a = al.split()
-H, Sat, V = Image.merge('RGB', (r, g, b)).convert('HSV').split()
-green = Image.merge('HSV', (H.point(lambda x: (x - 60) % 256), Sat, V)).convert('RGB')
-green.putalpha(a)
-make('cenarion', green)
+def green(img):
+    """An Alliance picture in Cenarion's green: its hue turned back by 60 of 256."""
+    r, g, b, a = img.convert('RGBA').split()
+    H, Sat, V = Image.merge('RGB', (r, g, b)).convert('HSV').split()
+    shifted = Image.merge('HSV', (H.point(lambda x: (x - 60) % 256), Sat, V)).convert('RGB')
+    shifted.putalpha(a)
+    return shifted
+make('cenarion', green(Image.open(os.path.join(src, 'Inventory_SlotBG_Alliance.png'))))
+board = os.path.join(out, 'board-alliance.webp')
+if os.path.exists(board):
+    green(Image.open(board)).save(os.path.join(out, 'board-cenarion.webp'), 'WEBP', quality=90)
 
 # shared fill: the same window grown 5px so it tucks under every frame
 w, h = 270, 408

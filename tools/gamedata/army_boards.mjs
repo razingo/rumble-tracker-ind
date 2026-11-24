@@ -5,6 +5,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readBundle, bundleFiles, jsonObjectAt } from './unityfs.mjs';
+import { FACTIONS } from './factions.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DATA = process.env.RUMBLE_GAMEDATA || join(HERE, '..', '..', 'gamedata'); // the game data being built
@@ -17,14 +18,12 @@ const files = bundleFiles(DIR, (n) => /^unitdata_unit_/.test(n));
 function balanced(text, i) { return jsonObjectAt(text, i, 1e6); } // (no object here is longer)
 
 // game-internal names -> the tracker's slot type names
-const FAMILY = { Alliance: 'Alliance', Horde: 'Horde', Undead: 'Undead', Scourge: 'Undead', Beast: 'Beast',
-  Beasts: 'Beast', Blackrock: 'Blackrock', Cenarion: 'Cenarion' };
 const RENAME = { AOE: 'AoE' };
 function label(guid) {
   const n = IDX[guid]?.name || `?${guid.slice(0, 8)}`;
   const base = n.replace(/_(Trait|BalanceRole|BalanceType|Family|MiniFamily|AspectTrait)$/i, '').replace(/^(Trait|Family)[_ ]/, '');
   const pretty = base.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^Family /, '');
-  return FAMILY[pretty] || RENAME[pretty] || pretty;
+  return FACTIONS[pretty] || RENAME[pretty] || pretty;
 }
 
 const boards = {};

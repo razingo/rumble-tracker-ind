@@ -66,7 +66,7 @@ If the game is not installed at all, installing it is enough: the loading window
 
 ## What is read from the game
 
-About 690 small files, 5 MB: the minis' portraits, talent and trait icons, reward and store art, PvP and currency
+About 700 small files, 5 MB: the minis' portraits, talent and trait icons, reward and store art, PvP and currency
 icons, the page's own card frames, army boards and backgrounds, and the tables behind them. Only what the tracker
 shows is extracted, and a step that runs again first clears what it wrote before, so nothing unused stays behind.
 

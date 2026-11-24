@@ -105,9 +105,9 @@ function tomeIcon(name) {
 function offerTitle(o) {
   const info = STORE?.offers?.[o.offer];
   const minis = (o.slugs || []).map((s) => BY_SLUG.get(s)?.name).filter(Boolean);
-  let t = info?.title || 'Offer';
-  t = t.replace('{mini}', minis.join(' + ') || 'Mini').replace('{tome}', offerTome(o) || 'Tome');
-  return titleCase(t);
+  const filled = { '{mini}': minis.join(' + ') || 'Mini', '{tome}': offerTome(o) || 'Tome' };
+  // (each stretch of the game's capitals is put in title case; what is filled in stays as it is)
+  return (info?.title || 'Offer').split(/(\{mini\}|\{tome\})/).map((part) => filled[part] ?? titleCase(part)).join('');
 }
 // The save's timed store slots and limited offers, with titles and prices from static/store.json. Permanent packs
 // have no timer and aren't listed.
@@ -124,7 +124,7 @@ function renderShopOffers(now) {
     const price = isFree ? 'Free' : info.cost ? `${fmt(info.cost.amount)}
       ${info.cost.coins ? '<span class="gold">●</span>' : esc(info.cost.currency || '')}` : info.realMoney ? 'Real money' : '';
     const minis = (o.slugs || []).map((s) => s && BY_SLUG.get(s)).filter(Boolean);
-    // The offered minis' art, else the tome, else the offer banner.
+    // The offered minis' art, else the tome, else the offer's own picture.
     const tIcon = o.tome ? tomeIcon(offerTome(o)) : null;
     const art = minis.length ? minis.slice(0, 2).map((m) => `<img src="/static/${m.art}" alt="">`).join('')
       : tIcon ? `<img class="tome" src="${tIcon}" alt="">`

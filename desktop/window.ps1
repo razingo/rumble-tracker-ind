@@ -7,7 +7,7 @@
 # tray icon it shows how to install WebView2; for the log), "no-webview-closed" (that was closed: the tracker stops).
 # From the launcher, one line each on standard input: "show" (open the window, or bring it to the front).
 # With the page: the close button sends it "close?", and the window closes when it answers "close". It answers "asking"
-# while it asks what closing should do, and "stay" when that was cancelled. A page that doesn't answer (still loading)
+# while it asks what closing should do, and "stay" when that was canceled. A page that doesn't answer (still loading)
 # lets the window close after CLOSE_WAIT. The page sends "rdmodule" to open the rdmodule (RT_RDMODULE) in a window of
 # its own.
 # Environment: RT_TITLE, RT_AUMID (app ID for the taskbar), RT_PAGE (the page's address), RT_DATA (data folder), RT_EXE

@@ -127,7 +127,7 @@ function planRow(u, pct, label, togo, togoUnit, extra = '') {
 export function renderPlanner() {
   // The type and faction filters apply here; the trait filters only affect the grid.
   const pool = state.units.filter((u) => !u.synthetic && passes(miniOf(u), 'traits'));
-  const narrowed = view.filters.types.length + view.filters.families.length > 0;
+  const narrowed = view.filters.types.length + shownFamilies().length > 0;
 
   const byXp = pool
     .filter((u) => u.xpLevel < RULES.maxXpLevel && u.xpNeeded > 0)
@@ -170,7 +170,7 @@ export function renderPlanner() {
       <span class="small">${narrowed ? `Filtered: ${pool.length} of ${state.units.length} minis`
         : `All ${state.units.length} minis`}</span></div>
     <div class="planner-cols">
-      <div><h3>Next level (XP)</h3>${xpHtml || empty('Every mini here is at XP level 20.')}</div>
+      <div><h3>Next level (XP)</h3>${xpHtml || empty(`Every mini here is at XP level ${RULES.maxXpLevel}.`)}</div>
       <div><h3>Next rarity (stars)</h3>${starsHtml || empty('Every mini here is Legendary.')}</div>
     </div>
     ${moreAvailable ? `<div class="planner-more"><button class="chip" data-planner-toggle
@@ -185,13 +185,15 @@ export function allTraits() {
   return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
+/** The factions the Collection is filtered by: the chosen ones that have a filter button. */
+const shownFamilies = () => view.filters.families.filter((x) => FAMILIES.includes(x));
 /** Whether a mini (null when unidentified) passes the filters. `skip` leaves out one group, for the filter counts. */
 function passes(m, skip) {
   const f = view.filters;
   if (skip !== 'types' && f.types.length && !f.types.includes(m ? m.category : 'unknown')) return false;
   // dual-faction leaders match either faction (a faction without a filter button, as on game data read by an
   // earlier version of the tracker, filters nothing)
-  const fams = f.families.filter((x) => FAMILIES.includes(x));
+  const fams = shownFamilies();
   if (skip !== 'families' && fams.length && !(m && familiesOf(m).some((x) => fams.includes(x)))) return false;
   if (skip !== 'traits' && f.traits.length) {
     if (!m) return false;
@@ -212,7 +214,7 @@ function gridPool() {
   return pool;
 }
 
-const filtersActive = () => view.filters.types.length + view.filters.families.length + view.filters.traits.length > 0;
+const filtersActive = () => view.filters.types.length + shownFamilies().length + view.filters.traits.length > 0;
 
 function saveFilters() { store.set('collectionFilters', view.filters); }
 
@@ -263,7 +265,7 @@ const frameCls = (m) => `frame-${String(m?.family || 'neutral').toLowerCase()}`;
 const plainCard = (m, open, note, cls = '') => `<button class="card${cls} ${frameCls(m)}" ${open}>
     <img class="art" src="/static/${m.art}" alt="" loading="lazy">
     <div class="name">${esc(m.name)}</div>
-    <div class="meta">${esc(m.category)} · ${esc(m.family)}</div>
+    <div class="meta">${esc(m.category)} · ${esc(familiesOf(m).join(' + '))}</div>
     <div class="small">${note}</div>
   </button>`;
 
@@ -279,7 +281,7 @@ function cardForUnit(u) {
   if (isLeader(u) && armyOf(u).some((s) => s.type === 'Wildcard')) flags.push(`<span
     class="flag wild">${iconImage(TAG_ICONS.Wildcard, 'Wildcard')}Wildcard</span>`);
   if (hasBoost(u)) flags.push('<span class="flag boost" title="Its army has a Boost slot, so that mini plays at XP '
-    + 'level 20"><svg class="boost-bolt" viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 0 2 9h5l-1.5 7L14 '
+    + `level ${RULES.maxXpLevel}"><svg class="boost-bolt" viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 0 2 9h5l-1.5 7L14 `
     + '6.5H8.8z"/></svg>Boost</span>');
   const xpPct = u.xpLevel >= RULES.maxXpLevel ? 100 : Math.round((u.xp / Math.max(1, u.xpNeeded)) * 100);
   const starsTxt = up ? `${u.stars}/${up.stars} stars` : 'Max rarity';
@@ -291,7 +293,7 @@ function cardForUnit(u) {
     <div class="name">${esc(unitName(u))}</div>
     <div class="meta">${rarityName(u.rarity)}${m ? ` · ${m.category}` : ''}</div>
     <div class="bar"><span style="width:${xpPct}%"></span></div>
-    <div class="small">${u.xpLevel >= RULES.maxXpLevel ? 'XP level 20 (max)'
+    <div class="small">${u.xpLevel >= RULES.maxXpLevel ? `XP level ${RULES.maxXpLevel} (max)`
       : `XP level ${u.xpLevel} · ${fmt(u.xp)}/${fmt(u.xpNeeded)}`}</div>
     <div class="bar stars"><span style="width:${starsPct}%"></span></div>
     <div class="small">${starsTxt} · talents ${u.talents}/${slots}</div>

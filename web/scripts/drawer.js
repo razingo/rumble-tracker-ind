@@ -46,12 +46,12 @@ function armyEditor(u, m) {
       title="${tt.name}${tt.bonus ? ` +${tt.bonus}` : ''}">${tt.name[0]}</button>`).join('');
     const boostCtl = i === A.boostSlot
       ? `<button class="boost-button" aria-pressed="${s.boost}" data-army-boost="${i}"
-        title="The mini here plays at XP level 20">${s.boost ? '⚡ Boost' : '+ Boost'}</button>`
+        title="The mini here plays at XP level ${RULES.maxXpLevel}">${s.boost ? '⚡ Boost' : '+ Boost'}</button>`
       : '';
     return `<div class="slot${isLeaderSlot ? ' leader-slot' : ''}${s.boost ? ' boosted' : ''}" style="--type-color:${t.color}">
       ${typeCtl}
       <div class="slot-tier">${t.name}${t.bonus ? ` · +${plural(t.bonus, 'level')}` : ''}${s.boost
-        ? ' · XP level 20' : ''}</div>
+        ? ` · XP level ${RULES.maxXpLevel}` : ''}</div>
       <div class="tier-btns">${tierBtns}</div>
       ${boostCtl}
     </div>`;
@@ -100,7 +100,7 @@ function progressSection(u) {
   return `<h3>Progress</h3><dl class="key-values">
     <dt>Level</dt><dd>${totalLevel(u)} = XP level ${u.xpLevel} + ${u.rarity} rarity + ${plural(u.talents, 'talent')}${leaderSlot}</dd>
     <dt>XP</dt><dd>${u.xpLevel >= RULES.maxXpLevel ? 'Max XP level'
-      : `${fmt(u.xp)} / ${fmt(u.xpNeeded)} · ${fmt(xpToMax(u))} XP to level 20`}</dd>
+      : `${fmt(u.xp)} / ${fmt(u.xpNeeded)} · ${fmt(xpToMax(u))} XP to level ${RULES.maxXpLevel}`}</dd>
     <dt>Stars</dt><dd>${up ? `${u.stars} / ${up.stars}` : `${u.stars} (max rarity)`}</dd>
     <dt>Talent slots</dt><dd>${u.talents} bought of ${slots} unlocked${nextTalent}</dd>
   </dl>`;

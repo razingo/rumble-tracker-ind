@@ -12,7 +12,7 @@
 //  2. Start from the tracker's own tables (seed/: the minis' keys, colors and slot names, the talent order).
 //  3. Build the tables (rules, minis, army boards, events, store, PvP), then extract the images they name and no others
 //     (portraits, talent and trait icons, reward and store art, currency icons, the page's frames and boards: about
-//     690 small files, 4.8 MB).
+//     700 small files, 5 MB).
 //  4. Write gamedata.json: the game's version and each step's.
 // A build runs only what is due. Each step has a version, made of its own script and inputs (SOURCES): after a new
 // version of the tracker, the steps that changed run again, with the steps that use what they make. Another version
@@ -41,8 +41,8 @@ const SOURCES = {
   'Starting tables': readdirSync(SEED).map((f) => `seed/${f}`),
   'Index of the game files': ['build_guid_index.mjs', ...TABLES],
   Rules: ['build_rules.mjs', ...TABLES],
-  Minis: ['build_minis.mjs', 'family_pair_sprites.json', ...TABLES],
-  'Army boards': ['army_boards.mjs', ...TABLES],
+  Minis: ['build_minis.mjs', 'factions.mjs', 'family_pair_sprites.json', ...TABLES],
+  'Army boards': ['army_boards.mjs', 'factions.mjs', ...TABLES],
   Events: ['build_events.mjs', 'event_icon_sprites.json', ...TABLES],
   Store: ['build_store.mjs', ...TABLES],
   PvP: ['build_pvp.mjs', ...TABLES],
@@ -366,10 +366,12 @@ export async function buildGameData({ game = findGame(), out, work, due = 'all',
     // the page's own art: wood, key art and army boards as they are; the card frames are cut out of the game's slot
     // backgrounds (make_card_frames.py)
     ['Interface art', ['Python', 'Starting tables'], images('Interface art')],
-    ['Card frames', ['Python', 'Starting tables'], async () => {
+    // (the Cenarion army board is made from the interface art's Alliance one)
+    ['Card frames', ['Python', 'Starting tables', 'Interface art'], async () => {
       const slots = join(work, 'frames');
       rmSync(slots, { recursive: true, force: true });
-      for (const f of readdirSync(join(out, 'ui'), { withFileTypes: true }).filter((e) => /^(frame-|fill-mask)/.test(e.name))) {
+      const own = /^(frame-|fill-mask|board-cenarion)/; // what this step makes
+      for (const f of readdirSync(join(out, 'ui'), { withFileTypes: true }).filter((e) => own.test(e.name))) {
         rmSync(join(out, 'ui', f.name));
       }
       await runProgram(await py(), ['-I', join(HERE, 'extract_reward_icons.py'), slots, join(HERE, 'frame_sprites.json'), FRAME_SIZE],

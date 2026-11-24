@@ -13,6 +13,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readBundle, bundleFiles, jsonObjectAt, saveIdOf, guidOfSaveId, englishStrings, slugOf } from './unityfs.mjs';
+import { FACTIONS } from './factions.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DATA = process.env.RUMBLE_GAMEDATA || join(HERE, '..', '..', 'gamedata'); // the game data being built
@@ -54,8 +55,8 @@ const text = (id) => {
     ' ').replace(/ *\n */g, '\n').trim();
 };
 const shortName = (o, suffix) => (o?.name || '').replace(new RegExp(`_?${suffix}$`), '');
-const FAMILY = { FamilyAlliance: 'Alliance', FamilyHorde: 'Horde', FamilyUndead: 'Undead', FamilyScourge: 'Undead',
-  FamilyBeast: 'Beast', FamilyBeasts: 'Beast', FamilyBlackrock: 'Blackrock', FamilyCenarion: 'Cenarion' };
+// a Family object's faction as the tracker names it (the object is named Family<faction>), or nothing
+const factionOf = (f) => FACTIONS[(f?.name || '').replace(/^Family/, '')];
 const DMG = { Squad: 'Squad', AOE: 'AOE', AoE: 'AOE', OneTarget: 'OneTarget', Single: 'OneTarget' };
 const num = (v) => (v == null ? null : typeof v === 'number' ? v : typeof v === 'string'
   ? parseFloat(v) : typeof v === 'object' && 'm_value' in v ? num(v.m_value) : null);
@@ -158,11 +159,11 @@ for (const [saveId, slug] of Object.entries(unitIds)) {
   // earlier choice when it is one of them (frame color), else the first part
   const famObj = objs[m.m_family];
   // (no faction is Neutral, and so is one the tracker doesn't know yet: it has no color or board for it)
-  const famName = (f) => FAMILY[f?.name] || 'Neutral';
+  const famName = (f) => factionOf(f) || 'Neutral';
   const parts = (famObj?.m_subFamilies || []).map((g) => objs[typeof g === 'string' ? g : g?.m_family || g?.guid]).filter(Boolean);
   const families = parts.length ? parts.map(famName) : [famName(famObj)];
   const family = families.includes(prev.family) ? prev.family : families[0];
-  for (const f of parts.length ? parts : [famObj]) if (FAMILY[f?.name]) tagIcons[famName(f)] ??= iconPath(sprite(f.m_icon),
+  for (const f of parts.length ? parts : [famObj]) if (factionOf(f)) tagIcons[famName(f)] ??= iconPath(sprite(f.m_icon),
     famName(f).replace(/\W/g, ''));
   const roles = (m.m_balanceRoles || []).map((g) => objs[g]).filter(Boolean);
   const role = roles.map((r) => text(r.m_displayNameRef) || text(r.m_infoNameRef) || shortName(r, 'BalanceRole')).join(',');
@@ -249,7 +250,7 @@ writeFileSync(OUT, JSON.stringify({
   stats: { format: 'single value = same at all levels; array = levels 1..31 (index 0 = level 1)',
     scaling: `stats with a growth type: round(level 1 value x ${GROWTH}^(level-1))` },
   // the factions the game's minis are of, in the order the page shows their filters; Neutral comes last
-  families: [...new Set(Object.values(FAMILY)), 'Neutral']
+  families: [...new Set(Object.values(FACTIONS)), 'Neutral']
     .filter((f) => minis.some((m) => (m.families || [m.family]).includes(f))),
   // the faction pairs that have a combined icon (icons/fam/<pair>.png), from the list those icons are read by
   familyPairs: Object.keys(JSON.parse(readFileSync(join(HERE, 'family_pair_sprites.json'), 'utf8'))).map((f) => f.replace(/\.png$/, '')),

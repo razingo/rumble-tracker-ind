@@ -31,7 +31,7 @@ export const BACKUP_KEYS = {
 /** App settings with unknown or missing values replaced by the defaults. */
 export const cleanAppSettings = (s) => ({
   closeWindow: Object.hasOwn(CLOSE_CHOICES, s?.closeWindow ?? '') ? s.closeWindow : 'ask',
-  checkUpdates: s?.checkUpdates !== false, // asks GitHub for the latest version once a day
+  checkUpdates: s?.checkUpdates !== false, // whether GitHub is asked for the latest version (update/checker.mjs)
 });
 
 /** The name the user gave an account, else a short form of its ID. */

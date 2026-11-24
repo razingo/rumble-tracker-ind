@@ -1,5 +1,5 @@
 // The Army tab's two pools, Leaders and Units & Spells: their filters, sorting and cards.
-import { builder, draftUnit, addFromPool } from './army.js';
+import { builder, draftLeader, addFromPool } from './army.js';
 import { allTraits, toggleIn } from './collection.js';
 import { $, store, TAG_ICONS, FAMILIES, state } from './core.js';
 import { iconImage } from './drawer.js';
@@ -22,21 +22,29 @@ export const savePools = () => store.set('armyPools', builder.pools);
 
 /** The current leader's slots (1-6) this mini matches, Wildcard slots only when asked for. */
 export function matchingSlots(m, includeWildcard = false) {
-  const L = draftUnit(0);
+  const L = draftLeader();
   if (!L || !m) return [];
   return armyOf(L).map((s, i) => (i > 0 && (includeWildcard || s.type !== 'Wildcard') && slotMatches(s.type, m)
     ? i : null)).filter((x) => x != null);
 }
 
+const inPool = (kind) => (m) => (kind === 'leaders' ? m.category === 'Leader' : m.category !== 'Leader');
+/** The factions of a pool's minis, which get a filter button (the minis every player has are not in the pools). */
+function poolFactions(kind) {
+  const here = new Set(state.units.filter((u) => !u.synthetic).map(miniOf).filter((m) => m && inPool(kind)(m)).flatMap(familiesOf));
+  return FAMILIES.filter((f) => here.has(f));
+}
+/** The factions a pool is filtered by: the chosen ones that have a button. */
+const chosenFactions = (kind) => pools()[kind].fam.filter((f) => poolFactions(kind).includes(f));
 function poolItems(kind) {
   const p = pools()[kind];
   const d = builder.draft;
   const used = new Set([d.leader, ...d.minis].filter(Boolean));
   const q = p.q.trim().toLowerCase();
-  const fams = p.fam.filter((f) => FAMILIES.includes(f)); // (a faction without a button filters nothing)
+  const fams = chosenFactions(kind);
   const items = state.units
     .map((u) => ({ u, m: miniOf(u) }))
-    .filter(({ u, m }) => m && !u.synthetic && (kind === 'leaders' ? m.category === 'Leader' : m.category !== 'Leader'))
+    .filter(({ u, m }) => m && !u.synthetic && inPool(kind)(m))
     .filter(({ m }) => !q || m.name.toLowerCase().includes(q))
     .filter(({ m }) => !fams.length || familiesOf(m).some((f) => fams.includes(f)))
     .filter(({ m }) => kind === 'leaders' || !p.type.length || p.type.includes(m.category))
@@ -54,7 +62,7 @@ function poolItems(kind) {
 
 function poolCard(x, kind) {
   const { u, m } = x;
-  const L = draftUnit(0);
+  const L = draftLeader();
   const tip = kind === 'units' && L ? (x.slots.length ? `Matches slot ${x.slots.join(', ')}` : 'No matching slot') : '';
   return `<button class="pool-card${x.used ? ' used' : ''}${x.slots.length ? ' fits' : ''}" draggable="true"
     data-pool-slug="${u.slug}" data-pool-kind="${kind}" style="--rarity-color:${rarityColor(u.rarity)}"
@@ -66,14 +74,17 @@ function poolCard(x, kind) {
   </button>`;
 }
 
+/** Whether a pool is searched or filtered, for its Clear filters button. */
+export function poolFiltered(kind) {
+  const p = pools()[kind];
+  return !!(p.q || chosenFactions(kind).length || p.type?.length || p.traits.length);
+}
 export function renderPool(kind) {
   const el = $(`#pool-${kind}`);
   if (!el) return;
   const p = pools()[kind];
-  const inKind = (m) => (kind === 'leaders' ? m.category === 'Leader' : m.category !== 'Leader');
-  // the factions of this pool's minis (the minis every player has are not in it)
-  const here = new Set(state.units.filter((u) => !u.synthetic).map(miniOf).filter((m) => m && inKind(m)).flatMap(familiesOf));
-  const famChips = FAMILIES.filter((f) => here.has(f)).map((f) => `<button class="chip small-chip" aria-pressed="${p.fam.includes(f)}"
+  const inKind = inPool(kind);
+  const famChips = poolFactions(kind).map((f) => `<button class="chip small-chip" aria-pressed="${p.fam.includes(f)}"
     data-pool-family="${f}" data-pool="${kind}" title="${f}">${iconImage(TAG_ICONS[f], f)}</button>`);
   const typeChips = kind === 'units' ? [['Unit', 'Units'], ['Spell', 'Spells']].map(([k, l]) =>
     `<button class="chip small-chip" aria-pressed="${p.type.includes(k)}" data-pool-type="${k}"
@@ -93,7 +104,7 @@ export function renderPool(kind) {
     ${(() => {
       const sortSel = `<select data-pool-sort="${kind}" aria-label="Sort">${sorts.map(([k, l]) =>
         `<option value="${k}" ${p.sort === k ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
-      const active = !!(p.q || p.fam.length || p.type?.length || p.traits.length);
+      const active = poolFiltered(kind);
       const clearBtn = `<button class="chip small-chip clear-filters" data-pool-clear="${kind}"
         ${active ? '' : 'disabled'}>✕ Clear filters</button>`;
       if (kind !== 'leaders') return `<div class="pool-filters">${typeChips}${famChips.join('')}${picker}${clearBtn}${sortSel}</div>`;

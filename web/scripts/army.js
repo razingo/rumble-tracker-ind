@@ -1,7 +1,7 @@
 // Army tab: the army builder, a leader and six minis, with the level each mini plays at in its slot.
 import { poll } from './app.js';
 import { encodeArmyCode, decodeArmyCode } from './army-code.js';
-import { pools, savePools, matchingSlots, renderPool, renderPoolGrid, updatePool, poolClick } from './army-pools.js';
+import { pools, savePools, matchingSlots, renderPool, renderPoolGrid, updatePool, poolClick, poolFiltered } from './army-pools.js';
 import { toggleIn } from './collection.js';
 import { $, post, copyText, RULES, BY_SLUG, TAG_ICONS, FAMILY_PAIRS, state } from './core.js';
 import { confirmDialog, alertDialog } from './dialogs.js';
@@ -113,6 +113,14 @@ export function draftUnit(i) {
   return ownedUnit(draftSlug(i));
 }
 
+/**
+ * An army's leader for its board: the player's unit, or for a leader the account doesn't own (an imported army) a
+ * stand-in with the slots every such leader has. Nothing for an empty leader slot.
+ */
+const boardLeader = (slug) => ownedUnit(slug)
+  || (BY_SLUG.get(slug)?.category === 'Leader' ? { id: null, slug, army: null, unowned: true } : null);
+/** The draft's leader, as boardLeader gives it. */
+export const draftLeader = () => boardLeader(builder.draft.leader);
 const equippedTalent = (u) => talentIndex(builder.draft, miniOf(u), u);
 
 /**
@@ -120,7 +128,7 @@ const equippedTalent = (u) => talentIndex(builder.draft, miniOf(u), u);
  * talent; and the average level and cost, and the minis the account doesn't own.
  */
 export function armyStats(army) {
-  const leader = ownedUnit(army.leader);
+  const leader = boardLeader(army.leader);
   const slots = [army.leader, ...army.minis].map((slug, i) => {
     const m = slug ? BY_SLUG.get(slug) : null;
     const u = slug ? ownedUnit(slug) : null;
@@ -209,7 +217,7 @@ function armySlot(i, s, leader) {
 /** Hints under the board about missing slot setup, minis that miss a slot's bonus and minis the account doesn't own. */
 function armyNotes(stats, leader) {
   const notes = [];
-  if (leader && !leader.army) {
+  if (leader && !leader.army && !leader.unowned) {
     notes.push(`${esc(miniOf(leader).name)}'s army slots aren't set yet. Set their types and tiers in the leader's panel.`);
   }
   if (leader) {
@@ -234,7 +242,7 @@ export function renderArmy() {
     builder.draftAccount = state.account;
   }
   const d = builder.draft;
-  const leader = draftUnit(0);
+  const leader = draftLeader();
   const stats = armyStats(d);
   $('#tab-army').innerHTML = `${armyToolbar(d)}
     <div class="army-wrap panel board-${leader ? String(familiesOf(miniOf(leader))[0]).toLowerCase() : 'neutral'}">
@@ -250,7 +258,7 @@ export function renderArmy() {
       ${armyNotes(stats, leader)}
       <div class="small muted">Drag or click cards to add them, drag between slots to swap, or drag back down to remove.
         A mini's level in a slot is its XP level + rarity + talents, plus the slot's tier bonus if it matches the slot
-        type (Wildcard matches all). A Boost slot counts as XP level 20.</div>
+        type (Wildcard matches all). A Boost slot counts as XP level ${RULES.maxXpLevel}.</div>
     </div>
     <div class="army-pools" data-army-drop-remove>
       <section class="panel pool" id="pool-leaders"></section>
@@ -479,7 +487,7 @@ function bindTyping(page) {
     // Only the tiles are redrawn while typing, so Clear filters is updated here.
     renderPoolGrid(kind);
     const clear = $(`#pool-${kind} [data-pool-clear]`);
-    if (clear) clear.disabled = !(p.q || p.fam.length || p.type?.length || p.traits.length);
+    if (clear) clear.disabled = !poolFiltered(kind);
   });
 }
 
@@ -490,7 +498,7 @@ function bindDragAndDrop(page) {
     if (!drag) return false;
     if (drag.fromSlot != null) return i > 0 && i !== drag.fromSlot;
     if (drag.kind === 'leaders') return i === 0;
-    return i > 0 && !!draftUnit(0);
+    return i > 0 && !!draftLeader();
   };
   page.addEventListener('dragstart', (e) => {
     const card = e.target.closest('[data-pool-slug]');

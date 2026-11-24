@@ -610,6 +610,10 @@ button { cursor: pointer; }
   --event-arthas: #3f8fd9;
   --event-family: #c23a2f;
   --event-highlight: #5f9a3a;
+  --event-anniversary: #d9a441;
+  --event-cenarionfestival: #3f9b6b;
+  --event-pc: #6f7fe0;
+  --event-windsofchange: #3fa7a0;
   --event-dungeon: #4f8a7a;
   --event-raid: #c4552b;
   --event-siege: #6d7fa8;

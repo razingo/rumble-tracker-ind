@@ -103,7 +103,7 @@ const rules = ss && {
   specialMinis: (ss.m_superSpecialAwesomeMinis || []).map(saveIdOf),
 };
 
-// sprites to extract (extract_reward_icons.py store_sprites.json gamedata/store): banners of offers that can
+// sprites to extract (extract_reward_icons.py store_sprites.json gamedata/store): pictures of offers that can
 // show up on the Calendar (no deprecated or old PvP-season offers), XP boost statues, the free gift's gem pile
 const shownOffer = (n) => !/^(zDeprecated|Pvp_Season|archive)/i.test(n);
 const sprites = new Set([

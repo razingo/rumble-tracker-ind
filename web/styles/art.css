@@ -153,6 +153,7 @@ body {
 .board-undead    { --board: url("/static/ui/board-undead.webp"); }
 .board-beast     { --board: url("/static/ui/board-beast.webp"); }
 .board-blackrock { --board: url("/static/ui/board-blackrock.webp"); }
+.board-cenarion  { --board: url("/static/ui/board-cenarion.webp"); }
 
 /* title plate for the army name */
 .panel h2.army-title {
