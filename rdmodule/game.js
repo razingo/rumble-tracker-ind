@@ -1147,8 +1147,9 @@
     if (e.hp <= 0) return;
     if (isLeader('general-drakkisath') && o.elemental) n *= 1.5; // Banner of Flame
     if (r.banner > 0 && o.elemental) n *= 1.5; // Lasting Legacy
-    // Soulshatter: a frozen enemy that is already hurt dies; with Necrotic Plague a poisoned one too
-    if (isLeader('arthas-menethil') && !tower && e.hp < e.max
+    // Soulshatter: a frozen enemy that is already hurt dies from a hit; with Necrotic Plague a poisoned one too.
+    // Poison and fire eating at it (o.tick) are not hits.
+    if (isLeader('arthas-menethil') && !tower && !o.tick && e.hp < e.max
       && ((e.hold > 0 && e.holdKind === 'frost') || (tal('arthas-menethil', 1) && e.burn > 0 && e.poisoned))) n = Math.max(n, e.hp);
     if (e.holdKind === 'sleep') { e.hold = 0; e.holdKind = null; }
     e.hp -= n;
@@ -1372,7 +1373,7 @@
         e.burn -= dt;
         if (e.burn <= 0) e.poisoned = false;
         e.burnT += dt;
-        if (e.burnT >= 1) { e.burnT = 0; damage(e, 0.5, { elemental: true }); if (e.hp <= 0) continue; }
+        if (e.burnT >= 1) { e.burnT = 0; damage(e, 0.5, { elemental: true, tick: true }); if (e.hp <= 0) continue; }
       }
       e.daze = Math.max(0, e.daze - dt);
       if (e.hold > 0 && (e.hold -= dt) <= 0) {
@@ -1542,7 +1543,10 @@
       scroll(s, s.vx);
       if (s.x < -60 || s.x > W + 60) { s.done = true; continue; }
       const m = r.minis.find((o) => !o.air && o.hp > 0 && overlap(s, o));
-      if (m) { if (!s.art) burstOn('curse', m); hurtMini(m, s.dmg, null, true); s.done = true; continue; }
+      if (m) {
+        if (s.kind === 'bolt' && !s.art) burstOn('curse', m); // the witch doctor's bolt
+        hurtMini(m, s.dmg, null, true); s.done = true; continue;
+      }
       if (overlap(s, p) && !['burrow', 'stealth'].includes(r.unhurtKind)) { hurtPlayer(s.dmg); s.done = true; }
     }
 
@@ -2418,6 +2422,8 @@
     sfx(`${run.leader.id}.ready`, 0.6);
   }
 
+  // Back to the menu: the run is over with, so the menu's cards show what is picked now, not what the run had.
+  function toMenu() { run = null; mode = 'menu'; }
   function pickTalent(i) { talents[LEADERS[pick].id] = i; store.set('talents', talents); sfx('ui.click'); }
   function openDeck() { draft = [...deck]; note = null; mode = 'deck'; }
   function closeDeck() {
@@ -2455,10 +2461,10 @@
       else if (k === 'p' || k === 'P' || k === 'Escape') mode = 'pause';
     } else if (mode === 'pause') {
       if (k === 'p' || k === 'P' || k === 'Escape' || k === 'Enter') mode = 'play';
-      else if (k === 'm' || k === 'M') mode = 'menu';
+      else if (k === 'm' || k === 'M') toMenu();
     } else if (mode === 'over') {
       if (k === 'Enter' || k === ' ') start();
-      else if (k === 'm' || k === 'M' || k === 'Escape') mode = 'menu';
+      else if (k === 'm' || k === 'M' || k === 'Escape') toMenu();
     }
   });
   addEventListener('blur', () => { if (mode === 'play') mode = 'pause'; });
