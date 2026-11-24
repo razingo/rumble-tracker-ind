@@ -3,6 +3,13 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.3.4
+
+- The rdmodule: enemies that are poisoned are tinted green and show the poison effect; burning ones stay orange. The
+  Fire Elemental sets enemies on fire instead of poisoning them.
+- In a narrow browser window the page keeps its layout and scrolls sideways, instead of rearranging some tabs.
+- The rdmodule's data shows as out of date once after this update.
+
 ## 0.3.3
 
 - Army: a Cenarion leader's army has a green board of its own.
