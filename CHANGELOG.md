@@ -3,6 +3,17 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.3.3
+
+- Army: a Cenarion leader's army has a green board of its own.
+- Army: an army with a leader you don't own, from an imported code or armory, keeps its board: the slots have their
+  types and minis can be added.
+- Calendar: Anniversary, Cenarion Festival, the PC launch and Winds of Change have their own colors.
+- Calendar: shop offer titles no longer keep part of their name in capitals.
+- Collection: a not-owned mini of two factions shows both.
+- Fixed: on the Army tab, a faction filter chosen earlier could hide every mini once its button was gone.
+- After this update the tracker reads most of its game data again once, in the background; it takes about a minute.
+
 ## 0.3.2
 
 - Calendar: shop offers for cores and the Modest Star Tome show their pictures.
