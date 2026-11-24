@@ -3,6 +3,13 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.3.8
+
+- Settings: each section is in a box of its own under a gold title, so they are easier to tell apart. Uninstall
+  stands out in orange.
+- Settings: the additional data has a section of its own, above Uninstall. It says how much free disk space
+  extracting needs and how much is free.
+
 ## 0.3.7
 
 - After an update the tracker reads again only the parts of its game data that the update changed, and the parts
