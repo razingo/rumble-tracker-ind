@@ -3,6 +3,12 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.3.6
+
+- The rdmodule: back on the menu after a run, the leader's card shows the talent picked now, not the last run's.
+- The rdmodule: with Arthas, poison and fire eating at an enemy no longer count as hits for Soulshatter.
+- The rdmodule: a dragon tower's fire no longer shows the witch doctor's curse on the mini it hits.
+
 ## 0.3.5
 
 - The rdmodule: with Arthas's Necrotic Plague, Soulshatter works on poisoned enemies only, no longer on burning ones.
