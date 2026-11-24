@@ -63,6 +63,7 @@ const APP_FILES = [
   ['web', ['.html', '.js', '.css', '.ico', '.woff2', '.txt']],
   // PowerShell scripts the launcher runs: the window and tray icon, Windows integration and uninstalling
   ['desktop/window.ps1', []],
+  ['desktop/LilitaOne-Regular.ttf', []], // the title bar's font
   ['desktop/integration.ps1', []],
   ['desktop/uninstall.ps1', []],
   ...WEBVIEW2_LIBS.map((lib) => [`desktop/webview2/${lib}`, []]),
@@ -238,7 +239,9 @@ await writeFile(path.join(BUILD, 'sea-config.json'), JSON.stringify({
   disableExperimentalSEAWarning: true,
   useCodeCache: false,
   useSnapshot: false,
-  assets: { 'app.bin': 'app.bin' },
+  // (the launcher's pop-ups are shown before the app's files are unpacked, so they are in the exe on their own)
+  assets: { 'app.bin': 'app.bin', 'popup.ps1': path.join(DESKTOP, 'popup.ps1'),
+    'LilitaOne-Regular.ttf': path.join(DESKTOP, 'LilitaOne-Regular.ttf') },
 }, null, 2));
 execFileSync(process.execPath, ['--build-sea', 'sea-config.json'], { cwd: BUILD, stdio: 'inherit' });
 // The file details Windows shows, which code signing needs too, name the product and its version instead of Node's.

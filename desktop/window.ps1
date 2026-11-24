@@ -1,6 +1,6 @@
 # The tracker's window and tray icon in one process (Windows Forms, the page in WebView2), started by
-# desktop/launcher.cjs. The window is built when it's opened and disposed when it's closed, so the tracker in the tray
-# doesn't keep a browser engine running.
+# desktop/launcher.cjs. The window has a title bar of its own, in the page's look. It is built when it's opened and
+# disposed when it's closed, so the tracker in the tray doesn't keep a browser engine running.
 # To the launcher, one line each on standard output: "ready" (tray icon shown), "closed" (the user closed the window),
 # "quit" (Quit the tracker), "shutdown" (Windows is signing out or shutting down), "game 1" / "game 0" (whether
 # Warcraft Rumble runs; sent when it changes), "no-webview <reason>" (WebView2 can't run, so instead of the window and
@@ -14,7 +14,8 @@
 # (icon), RT_PARENT (tracker process id), RT_GAME (the game's process name), RT_LIB (folder with the WebView2
 # libraries), RT_PROFILE (WebView2's data folder), RT_CACHE (where to keep the compiled helpers below), RT_SHOW ("1":
 # open the window right away), RT_CHECK (build everything without showing it, for the tests), RT_RDMODULE (the
-# rdmodule's address), RT_RDMODULE_PROFILE (its window's WebView2 data folder).
+# rdmodule's address), RT_RDMODULE_PROFILE (its window's WebView2 data folder), RT_FONT (the title bar's font file;
+# Segoe UI without it).
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.Windows.Forms, System.Drawing
@@ -47,6 +48,49 @@ public static class RtWin {
     if (SetForegroundWindow(hwnd)) return;
     ShowWindow(hwnd, 6); // SW_MINIMIZE
     ShowWindow(hwnd, 9); // SW_RESTORE
+  }
+}
+// A window without Windows' own title bar and frame: the tracker draws its title bar itself (Add-Caption below). The
+// window stays a sizable one to Windows, so resizing by the edges, snapping, maximizing and its shadow work as usual:
+// only the frame's room is given to the window's own content, and the pointer is told what is under it.
+public class RtFrame : Form {
+  [DllImport("user32.dll")] static extern int GetSystemMetrics(int index);
+  [DllImport("user32.dll")] static extern bool IsZoomed(IntPtr hwnd);
+  [StructLayout(LayoutKind.Sequential)] struct Rect { public int Left, Top, Right, Bottom; }
+  public int Grip = 6;          // how far in from an edge the window is resized
+  public int CaptionHeight = 36; // the strip on top that drags the window
+  public bool Maximized { get { return IsHandleCreated && IsZoomed(Handle); } }
+  protected override void WndProc(ref Message m) {
+    if (m.Msg == 0x83 && m.WParam != IntPtr.Zero) { // WM_NCCALCSIZE: no frame around the content
+      if (IsZoomed(Handle)) {
+        // a maximized window reaches past the screen by its frame's width
+        var r = (Rect)Marshal.PtrToStructure(m.LParam, typeof(Rect));
+        int f = GetSystemMetrics(32) + GetSystemMetrics(92); // SM_CXSIZEFRAME + SM_CXPADDEDBORDER
+        r.Left += f; r.Top += f; r.Right -= f; r.Bottom -= f;
+        Marshal.StructureToPtr(r, m.LParam, false);
+      }
+      m.Result = IntPtr.Zero;
+      return;
+    }
+    if (m.Msg == 0x84) { // WM_NCHITTEST: an edge, a corner, the title bar or the content
+      long l = m.LParam.ToInt64();
+      var p = PointToClient(new System.Drawing.Point((short)(l & 0xFFFF), (short)((l >> 16) & 0xFFFF)));
+      int g = IsZoomed(Handle) ? 0 : Grip, w = ClientSize.Width, h = ClientSize.Height;
+      bool left = p.X < g, right = p.X >= w - g, top = p.Y < g, bottom = p.Y >= h - g;
+      m.Result = (IntPtr)(top && left ? 13 : top && right ? 14 : bottom && left ? 16 : bottom && right ? 17
+        : left ? 10 : right ? 11 : top ? 12 : bottom ? 15 : p.Y < CaptionHeight ? 2 : 1);
+      return;
+    }
+    if (m.Msg == 0x86) m.LParam = (IntPtr)(-1); // WM_NCACTIVATE: Windows draws no frame of its own
+    base.WndProc(ref m);
+  }
+}
+// The title bar's strip: the pointer goes through it to the window, which drags by it; its buttons take their clicks.
+public class RtCaption : Panel {
+  public RtCaption() { DoubleBuffered = true; ResizeRedraw = true; }
+  protected override void WndProc(ref Message m) {
+    if (m.Msg == 0x84) { m.Result = (IntPtr)(-1); return; } // HTTRANSPARENT
+    base.WndProc(ref m);
   }
 }
 // The window runs in powershell.exe, so the taskbar would show it as PowerShell. Giving it the tracker's app ID groups
@@ -112,14 +156,15 @@ public class RtEndSession : NativeWindow {
 $cache = $env:RT_CACHE
 if ($cache -and -not (Test-Path $cache)) {
   try {
-    Add-Type -ReferencedAssemblies System.Windows.Forms -TypeDefinition $helpers -OutputAssembly "$cache.tmp" -OutputType Library
+    Add-Type -ReferencedAssemblies System.Windows.Forms, System.Drawing -TypeDefinition $helpers -OutputAssembly "$cache.tmp" `
+      -OutputType Library
     Move-Item -Force "$cache.tmp" $cache
   } catch {
     Remove-Item -ErrorAction SilentlyContinue "$cache.tmp"
   }
 }
 if ($cache -and (Test-Path $cache)) { Add-Type -Path $cache }
-else { Add-Type -ReferencedAssemblies System.Windows.Forms -TypeDefinition $helpers }
+else { Add-Type -ReferencedAssemblies System.Windows.Forms, System.Drawing -TypeDefinition $helpers }
 
 $lib = $env:RT_LIB
 $script:webview = $null # why WebView2 can't run, once that's known; $null while it may
@@ -166,6 +211,85 @@ try {
 }
 $background = [System.Drawing.ColorTranslator]::FromHtml('#161a2e')
 
+# The windows' own title bar, in the page's look: a dark strip with the icon, the title in gold, and buttons to
+# minimize, maximize and close. The strip also is the window's edge on the other three sides, where it is resized.
+$frameColor = [System.Drawing.ColorTranslator]::FromHtml('#1b2036')
+$titleColor = [System.Drawing.ColorTranslator]::FromHtml('#ffd76a')
+$titleLine = [System.Drawing.ColorTranslator]::FromHtml('#6b5632')
+$titleFont = New-Object System.Drawing.Font('Segoe UI Semibold', 10.5)
+try {
+  if ($env:RT_FONT -and (Test-Path -LiteralPath $env:RT_FONT)) {
+    $script:fonts = New-Object System.Drawing.Text.PrivateFontCollection
+    $script:fonts.AddFontFile($env:RT_FONT)
+    $titleFont = New-Object System.Drawing.Font($script:fonts.Families[0], 11.5)
+  }
+} catch {
+  # Segoe UI
+}
+$EDGE = 5 # px of the window's own edge at the sides and the bottom
+
+function New-Frame($title) {
+  $f = New-Object RtFrame
+  $f.Text = $title
+  $f.Icon = $icon
+  $f.BackColor = $frameColor
+  $f.Padding = New-Object System.Windows.Forms.Padding($EDGE, 0, $EDGE, $EDGE)
+  $f
+}
+
+# Adds the title bar to a frame that already holds its content (the content stays the first control).
+function Add-Caption($f) {
+  $bar = New-Object RtCaption
+  $bar.Dock = 'Top'
+  $bar.Height = $f.CaptionHeight
+  $bar.BackColor = $frameColor
+  $bar.add_Paint({
+    param($s, $e)
+    $form = $s.FindForm()
+    $e.Graphics.TextRenderingHint = 'AntiAliasGridFit'
+    $e.Graphics.DrawIcon((New-Object System.Drawing.Icon($form.Icon, 16, 16)), (New-Object System.Drawing.Rectangle(8, 10, 16, 16)))
+    $format = New-Object System.Drawing.StringFormat
+    $format.LineAlignment = 'Center'; $format.Trimming = 'EllipsisCharacter'; $format.FormatFlags = 'NoWrap'
+    $room = New-Object System.Drawing.RectangleF(32, 0, ($s.Width - 32 - 3 * 46), $s.Height)
+    $e.Graphics.DrawString($form.Text, $titleFont, (New-Object System.Drawing.SolidBrush $titleColor), $room, $format)
+    $e.Graphics.DrawLine((New-Object System.Drawing.Pen $titleLine), 0, ($s.Height - 1), $s.Width, ($s.Height - 1))
+  })
+  # (Segoe MDL2 Assets has Windows' own signs for these)
+  $button = {
+    param($sign, $tip, $over)
+    $b = New-Object System.Windows.Forms.Button
+    $b.Text = [string][char]$sign
+    $b.Font = New-Object System.Drawing.Font('Segoe MDL2 Assets', 7.5)
+    $b.Dock = 'Right'; $b.Width = 46; $b.FlatStyle = 'Flat'; $b.TabStop = $false
+    $b.FlatAppearance.BorderSize = 0
+    $b.FlatAppearance.MouseOverBackColor = [System.Drawing.ColorTranslator]::FromHtml($over)
+    $b.FlatAppearance.MouseDownBackColor = [System.Drawing.ColorTranslator]::FromHtml($over)
+    $b.BackColor = $frameColor
+    $b.ForeColor = [System.Drawing.ColorTranslator]::FromHtml('#f3efe6')
+    $b.AccessibleName = $tip
+    $b
+  }
+  $min = & $button 0xE921 'Minimize' '#2c3256'
+  $max = & $button 0xE922 'Maximize' '#2c3256'
+  $close = & $button 0xE8BB 'Close' '#c42b1c'
+  $min.add_Click({ $this.FindForm().WindowState = 'Minimized' })
+  $max.add_Click({ $w = $this.FindForm(); $w.WindowState = if ($w.WindowState -eq 'Maximized') { 'Normal' } else { 'Maximized' } })
+  $close.add_Click({ $this.FindForm().Close() })
+  # (docked from the right in the order they are last in the strip)
+  $bar.Controls.AddRange(@($min, $max, $close))
+  $bar.Tag = $max
+  $f.Controls.Add($bar)
+  $f.add_TextChanged({ param($s) $s.Controls[1].Invalidate() })
+  # maximized, the window has no edge of its own, and the middle button puts it back
+  $f.add_Resize({
+    param($s)
+    $full = $s.WindowState -eq 'Maximized'
+    $edge = if ($full) { 0 } else { $EDGE }
+    if ($s.Padding.Left -ne $edge) { $s.Padding = New-Object System.Windows.Forms.Padding($edge, 0, $edge, $edge) }
+    $s.Controls[1].Tag.Text = [string][char]$(if ($full) { 0xE923 } else { 0xE922 })
+  })
+}
+
 # The window
 $script:form = $null
 $script:firstShow = $true
@@ -195,21 +319,19 @@ function Close-TrackerWindow {
 }
 
 function New-TrackerWindow {
-  $f = New-Object System.Windows.Forms.Form
-  $f.Text = $env:RT_TITLE
-  $f.Icon = $icon
+  $f = New-Frame $env:RT_TITLE
   $f.ClientSize = New-Object System.Drawing.Size(1440, 900)
-  # room for the page's minimum width (1280 px, style.css) and its scrollbar inside the frame
-  $frame = $f.Size.Width - $f.ClientSize.Width
-  $f.MinimumSize = New-Object System.Drawing.Size((1280 + [System.Windows.Forms.SystemInformation]::VerticalScrollBarWidth + $frame), 600)
+  # room for the page's minimum width (1280 px, style.css) and its scrollbar inside the window's edges
+  $scrollbar = [System.Windows.Forms.SystemInformation]::VerticalScrollBarWidth
+  $f.MinimumSize = New-Object System.Drawing.Size((1280 + $scrollbar + 2 * $EDGE), 600)
   $f.StartPosition = 'CenterScreen'
-  $f.BackColor = $background
   $view = New-Object Microsoft.Web.WebView2.WinForms.WebView2
   $view.Dock = 'Fill'
   $view.DefaultBackgroundColor = $background
   $view.CreationProperties = New-Object Microsoft.Web.WebView2.WinForms.CoreWebView2CreationProperties
   $view.CreationProperties.UserDataFolder = $env:RT_PROFILE
   $f.Controls.Add($view)
+  Add-Caption $f
   $view.add_CoreWebView2InitializationCompleted({
     param($s, $e)
     if (-not $e.IsSuccess) {
@@ -243,7 +365,6 @@ function New-TrackerWindow {
       }
     })
   })
-  $f.add_HandleCreated({ param($s) [RtWin]::DarkTitle($s.Handle) })
   $f.add_Shown({ param($s) $s.Controls[0].Source = [Uri]$env:RT_PAGE })
   # The close button asks the page first, which may ask what closing should do (web/scripts/closing.js)
   $f.add_FormClosing({
@@ -311,19 +432,17 @@ text-decoration:none">Retry</a></body>
 '@
 
 function New-RdmoduleWindow {
-  $f = New-Object System.Windows.Forms.Form
-  $f.Text = 'rdmodule'
-  $f.Icon = $icon
+  $f = New-Frame 'rdmodule'
   $f.ClientSize = New-Object System.Drawing.Size(1280, 620)
   $f.MinimumSize = New-Object System.Drawing.Size(640, 400)
   $f.StartPosition = 'CenterScreen'
-  $f.BackColor = $rdmoduleBackground
   $view = New-Object Microsoft.Web.WebView2.WinForms.WebView2
   $view.Dock = 'Fill'
   $view.DefaultBackgroundColor = $rdmoduleBackground
   $view.CreationProperties = New-Object Microsoft.Web.WebView2.WinForms.CoreWebView2CreationProperties
   $view.CreationProperties.UserDataFolder = $env:RT_RDMODULE_PROFILE
   $f.Controls.Add($view)
+  Add-Caption $f
   $view.add_CoreWebView2InitializationCompleted({
     param($s, $e)
     if (-not $e.IsSuccess) { $script:rdmodule.Close(); return }
@@ -343,7 +462,6 @@ function New-RdmoduleWindow {
       }
     })
   })
-  $f.add_HandleCreated({ param($s) [RtWin]::DarkTitle($s.Handle) })
   $f.add_Shown({ param($s) $s.Controls[0].Source = [Uri]$env:RT_RDMODULE })
   $f.add_FormClosed({ param($s) $script:rdmodule = $null; $s.Dispose() })
   $f

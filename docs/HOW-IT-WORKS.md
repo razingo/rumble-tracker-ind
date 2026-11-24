@@ -116,6 +116,7 @@ folder.
 | `%APPDATA%\RumbleTracker\location.json` | The note of where the tracker's folder is. It stays here wherever the folder is |
 | `data` | Your data: what you entered, the history, settings, the game data read from your game install (`gamedata`, with the reading's working files in `gamedata-build`), the game's folder if you gave one (`config.json`), automatic backups (`backups`), a downloaded update (`update`, removed once installed) and the log (`tracker.log`, `tracker.previous.log`) |
 | `data\state` | The last read of each account's save (rebuilt by the next read; not in backups) |
+| `%TEMP%\RumbleTracker-launcher` | The script and the title font of the pop-ups the tracker shows before its window can open (the folder question, a message that it can't start). Written again at each use, removed by Uninstall |
 | `app` | The program's files, unpacked from the exe once per version |
 | `webview2` | The window's WebView2 data (Microsoft Edge WebView2 shows the page). The files there are WebView2's own (cache, settings); the tracker stores nothing of yours in it, and deleting the folder only resets the window |
 

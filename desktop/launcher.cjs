@@ -131,7 +131,7 @@ const psArgs = (script) => ['-NoProfile', '-NonInteractive', '-Sta', '-Execution
 const PS_RUN_FILE = '. ([ScriptBlock]::Create([IO.File]::ReadAllText($env:RT_SCRIPT)))';
 
 /**
- * Shows a start-up error in a message box, then exits. With `rollback`, the new version failed to start right after an
+ * Shows a start-up error in a pop-up, then exits. With `rollback`, the new version failed to start right after an
  * app update, so the previous exe is put back and started instead.
  */
 function fatal(message, { rollback = false } = {}) {
@@ -150,10 +150,7 @@ ${message}`;
       console.log(`App update: could not restore the previous version: ${e.message}`);
     }
   }
-  const script = 'Add-Type -AssemblyName System.Windows.Forms; '
-    + "[void][System.Windows.Forms.MessageBox]::Show($env:RT_MSG, $env:RT_TITLE, 'OK', 'Warning')";
-  execFile(POWERSHELL, psArgs(script), { windowsHide: true, env: { ...process.env, RT_MSG: message,
-    RT_TITLE: TITLE } }, () => process.exit(1));
+  popup('message', 'The tracker stopped', message).then(() => process.exit(1));
 }
 
 /** Opens an address with the program Windows has for it (here, Windows' snipping overlay). */
@@ -180,7 +177,8 @@ function startWindowHost(onQuit, show = !NO_WINDOW) {
     env: { ...process.env, RT_SCRIPT: path.join(APP_DIR, 'desktop', 'window.ps1'), RT_TITLE: TITLE, RT_AUMID: AUMID,
       RT_PAGE: PAGE, RT_DATA: DATA, RT_EXE: process.execPath,
       RT_PARENT: String(process.pid), RT_GAME: 'WarcraftRumble', RT_LIB: path.join(APP_DIR, 'desktop', 'webview2'),
-      RT_PROFILE: path.join(HOME, 'webview2'), RT_CACHE: path.join(APP_DIR, 'desktop', 'window-helpers.dll'),
+      RT_PROFILE: path.join(HOME, 'webview2'), RT_FONT: path.join(APP_DIR, 'desktop', 'LilitaOne-Regular.ttf'),
+      RT_CACHE: path.join(APP_DIR, 'desktop', 'window-helpers.dll'),
       RT_SHOW: show ? '1' : '', RT_RDMODULE: `${PAGE}rdmodule/`, RT_RDMODULE_PROFILE: path.join(HOME, 'webview2-rdmodule') },
   });
   windowHost = child;
@@ -398,52 +396,39 @@ async function findPort() {
 
 // Where the tracker keeps its files: asked on the first start, moved when the answer changes
 
-/** Runs a PowerShell script that shows a window, and resolves to what it printed. */
-function psWindow(script, env) {
-  return new Promise((resolve) => {
-    execFile(POWERSHELL, psArgs(script), { windowsHide: true, env: { ...process.env, RT_TITLE: TITLE, ...env } },
-      (err, out) => resolve(String(out || '').trim()));
-  });
+// The launcher's own pop-ups (desktop/popup.ps1): the question of where the files go, the wait while they are moved,
+// and messages. They are needed before the program's files are unpacked, so the script and the title's font are in
+// the exe beside those files, and are written to the temporary folder to be run.
+let popupFiles = null;
+function popupSources() {
+  if (popupFiles) return popupFiles;
+  const dir = path.join(os.tmpdir(), 'RumbleTracker-launcher');
+  popupFiles = { script: path.join(dir, 'popup.ps1'), font: path.join(dir, 'LilitaOne-Regular.ttf') };
+  for (const f of Object.values(popupFiles)) {
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(f, Buffer.from(sea.getAsset(path.basename(f))));
+    } catch {
+      // in use by a pop-up that is open, so it is there already
+    }
+  }
+  return popupFiles;
 }
 
-const ASK_FOLDER = `Add-Type -AssemblyName System.Windows.Forms, System.Drawing
-[System.Windows.Forms.Application]::EnableVisualStyles()
-$f = New-Object System.Windows.Forms.Form
-$f.Text = $env:RT_TITLE; $f.StartPosition = 'CenterScreen'; $f.FormBorderStyle = 'FixedDialog'
-$f.MaximizeBox = $false; $f.MinimizeBox = $false; $f.ClientSize = New-Object System.Drawing.Size(520, 250)
-$f.Font = New-Object System.Drawing.Font('Segoe UI', 9.5); $f.TopMost = $true
-$l = New-Object System.Windows.Forms.Label
-$l.SetBounds(16, 14, 488, 96); $l.Text = $env:RT_TEXT
-$t = New-Object System.Windows.Forms.TextBox
-$t.SetBounds(16, 116, 392, 26); $t.Text = $env:RT_FOLDER
-$b = New-Object System.Windows.Forms.Button
-$b.SetBounds(416, 114, 88, 28); $b.Text = 'Browse...'
-$b.Add_Click({
-  $d = New-Object System.Windows.Forms.FolderBrowserDialog
-  $d.Description = 'The tracker makes a folder named RumbleTracker in the folder you pick.'
-  if (Test-Path -LiteralPath $t.Text) { $d.SelectedPath = $t.Text }
-  if ($d.ShowDialog($f) -eq 'OK') { $t.Text = $d.SelectedPath }
-})
-$e = New-Object System.Windows.Forms.Label
-$e.SetBounds(16, 150, 488, 40); $e.ForeColor = [System.Drawing.Color]::Firebrick; $e.Text = $env:RT_PROBLEM
-$ok = New-Object System.Windows.Forms.Button
-$ok.SetBounds(320, 204, 88, 30); $ok.Text = 'OK'; $ok.DialogResult = 'OK'
-$no = New-Object System.Windows.Forms.Button
-$no.SetBounds(416, 204, 88, 30); $no.Text = 'Cancel'; $no.DialogResult = 'Cancel'
-$f.Controls.AddRange(@($l, $t, $b, $e, $ok, $no)); $f.AcceptButton = $ok; $f.CancelButton = $no
-if ($f.ShowDialog() -eq 'OK') { [Console]::Out.Write('ok ' + $t.Text.Trim()) }`;
+/** What starts a pop-up of a kind (ask, wait or message): PowerShell's arguments and environment. */
+function popupStart(kind, head, text, more = {}) {
+  const { script, font } = popupSources();
+  return [psArgs(PS_RUN_FILE), { windowsHide: true, env: { ...process.env, RT_SCRIPT: script, RT_FONT: font, RT_KIND: kind,
+    RT_TITLE: TITLE, RT_HEAD: head, RT_TEXT: text, RT_EXE: process.execPath, ...more } }];
+}
 
-const WAIT_WINDOW = `Add-Type -AssemblyName System.Windows.Forms, System.Drawing
-[System.Windows.Forms.Application]::EnableVisualStyles()
-$f = New-Object System.Windows.Forms.Form
-$f.Text = $env:RT_TITLE; $f.StartPosition = 'CenterScreen'; $f.FormBorderStyle = 'FixedDialog'; $f.ControlBox = $false
-$f.ClientSize = New-Object System.Drawing.Size(420, 96); $f.Font = New-Object System.Drawing.Font('Segoe UI', 9.5)
-$l = New-Object System.Windows.Forms.Label
-$l.SetBounds(16, 14, 388, 40); $l.Text = $env:RT_TEXT
-$p = New-Object System.Windows.Forms.ProgressBar
-$p.SetBounds(16, 60, 388, 18); $p.Style = 'Marquee'
-$f.Controls.AddRange(@($l, $p))
-[void]$f.ShowDialog()`;
+/** Shows a pop-up and resolves to what it printed once it is closed ("ok", with the folder for ask, or nothing). */
+function popup(kind, head, text, more) {
+  const [args, options] = popupStart(kind, head, text, more);
+  return new Promise((resolve) => {
+    execFile(POWERSHELL, args, options, (err, out) => resolve(String(out || '').trim()));
+  });
+}
 
 /**
  * Asks where the tracker should keep its files, until the answer is a folder it can use. Resolves to the tracker's
@@ -453,10 +438,11 @@ async function askFolder(existing) {
   let folder = LOCAL;
   let problem = '';
   for (;;) {
-    const text = `Where should the tracker keep its files?\n\nThe tracker makes a folder of its own named ${FOLDER_NAME} `
+    const text = `The tracker makes a folder of its own named ${FOLDER_NAME} `
       + 'in the folder you pick, and keeps everything in it: your data, what it reads from the game and its own program '
       + `files.${existing ? ' The files it has now are moved there.' : ''} You can change this later in Settings.`;
-    const out = await psWindow(ASK_FOLDER, { RT_TEXT: text, RT_FOLDER: folder, RT_PROBLEM: problem });
+    const out = await popup('ask', 'Where should the tracker keep its files?', text,
+      { RT_FOLDER: folder, RT_PROBLEM: problem });
     if (!out.startsWith('ok')) return null;
     folder = out.slice(2).trim();
     const home = folder && path.isAbsolute(folder) ? homeIn(folder) : folder;
@@ -471,8 +457,8 @@ function moveNow(note) {
   const { needed, free } = roomFor(pairs);
   const gb = (bytes) => (bytes / 2 ** 30).toFixed(1);
   if (free != null && needed > free) return `It needs ${gb(needed)} GB there, and ${gb(free)} GB is free.`;
-  const wait = spawn(POWERSHELL, psArgs(WAIT_WINDOW), { windowsHide: true, stdio: 'ignore',
-    env: { ...process.env, RT_TITLE: TITLE, RT_TEXT: 'Moving the tracker\'s files. This can take a few minutes.' } });
+  const [args, options] = popupStart('wait', 'Moving the tracker\'s files', 'This can take a few minutes.');
+  const wait = spawn(POWERSHELL, args, { ...options, stdio: 'ignore' });
   try {
     moveFiles(pairs);
     return null;
@@ -529,9 +515,7 @@ async function locate() {
   useHome(note.folder);
   if (failed) {
     console.log(`The files stay in ${note.folder}`);
-    await psWindow('Add-Type -AssemblyName System.Windows.Forms; '
-      + "[void][System.Windows.Forms.MessageBox]::Show($env:RT_MSG, $env:RT_TITLE, 'OK', 'Warning')",
-    { RT_MSG: `The tracker's files could not be moved: ${failed}\n\nThey stay in ${note.folder}.` });
+    await popup('message', 'The files were not moved', `${failed}\n\nThey stay in ${note.folder}.`);
   }
   return true;
 }

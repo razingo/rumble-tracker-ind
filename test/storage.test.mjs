@@ -14,6 +14,14 @@ const source = /\/\/ The tracker's folder\n[\s\S]*?\n\/\/ Starting up\n/.exec(fs
 const launcher = new Function('fs', 'path', 'FOLDER_NAME', `${source}
   return { homeIn, readNote, writeNote, movePairs, moveFiles, roomFor, tidyOld, homeProblem };`)(fs, path, 'RumbleTracker');
 
+test('the launcher\'s own windows use up the hidden start before they are shown', () => {
+  // (PowerShell is started hidden, and Windows hides the first window shown: a window nobody sees can't be answered)
+  const popup = fs.readFileSync(path.join(path.dirname(LAUNCHER), 'popup.ps1'), 'utf8');
+  assert.match(popup, /ShowWindow\(\$f\.Handle, 0\)\r?\n[^\n]*\$f\.ShowDialog\(\)/);
+  // every window the launcher shows itself is that script's
+  assert.doesNotMatch(fs.readFileSync(LAUNCHER, 'utf8'), /Windows\.Forms|ShowDialog/);
+});
+
 function scratch() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rt-storage-'));
   const file = (rel, text = 'x') => {
