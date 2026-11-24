@@ -3,6 +3,22 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.4.0
+
+- You choose where the tracker keeps its files. Everything is now in one folder named RumbleTracker: your data,
+  what is read from the game and the program's own files. The first start asks where to put it, and the tracker
+  makes its RumbleTracker folder in the folder you pick.
+- After this update the tracker asks that question once, then moves the files it has from `%APPDATA%` and
+  `%LOCALAPPDATA%` into the one folder.
+- Settings: "The tracker's folder" shows where the files are and moves them. Type another folder, and the tracker
+  closes, moves its files there and starts again.
+- Settings: a button beside each folder opens it in Explorer.
+- Uninstall removes only the tracker's own RumbleTracker folder, never what else is in the folder you picked.
+- Pop-ups: the title and the close button stay on top while the rest scrolls, and every pop-up has the look of
+  Settings.
+- The tracker no longer shares its data with the earlier tracker that had a browser window, and no longer asks
+  that one to quit.
+
 ## 0.3.8
 
 - Settings: each section is in a box of its own under a gold title, so they are easier to tell apart. Uninstall
