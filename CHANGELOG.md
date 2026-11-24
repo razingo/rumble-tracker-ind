@@ -3,6 +3,17 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.4.1
+
+- Fixed: after updating to 0.4.0 the tracker did not open. It was waiting for an answer to the question of where
+  to keep its files, in a window that could not be seen. If you have 0.4.0, the tracker can't update itself:
+  download this version and put its `RumbleTracker.exe` in place of yours. Nothing was moved, so your data is as
+  it was.
+- The window has a title bar of its own, in the tracker's look, with its own buttons to minimize, maximize and
+  close. Resizing by the edges and snapping work as before.
+- The pop-ups the tracker shows before its window opens (where to keep the files, moving them, a message that it
+  can't start) have the tracker's look too.
+
 ## 0.4.0
 
 - You choose where the tracker keeps its files. Everything is now in one folder named RumbleTracker: your data,
