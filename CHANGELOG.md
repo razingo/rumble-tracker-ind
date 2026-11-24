@@ -3,6 +3,12 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.3.5
+
+- The rdmodule: with Arthas's Necrotic Plague, Soulshatter works on poisoned enemies only, no longer on burning ones.
+- The rdmodule: an enemy stops showing as poisoned once the poison has worn off.
+- After this update the tracker reads its game data again once, in the background; it takes about a minute.
+
 ## 0.3.4
 
 - The rdmodule: enemies that are poisoned are tinted green and show the poison effect; burning ones stay orange. The
