@@ -3,6 +3,17 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.4.6
+
+- Collection: the flag on a card that can be upgraded reads UPG and has the same width on every card.
+- Fixed: a data file that holds something else than the tracker keeps in it, as after a hand edit or disk damage,
+  could stop the tracker from starting. Such a file is now moved aside like a damaged one, and the tracker starts
+  without it.
+- An account whose data can't be updated no longer stops the other accounts from being read.
+- A shop offer that the game gives no amount no longer stops the shop's game data from being read.
+- After this update the tracker reads the tables of its game data again once, in the background; it takes under a
+  minute, and the pictures stay as they are. The rdmodule's data shows as out of date once.
+
 ## 0.4.5
 
 - Fixed: a game patch that set a PvP match's Victory Points to zero would have frozen the tracker. Such a change now
@@ -12,7 +23,7 @@ GitHub release notes.
 - The rdmodule: a Neutral leader's faction shows its icon on the menu.
 - Building from source installs the same version of Pillow as the released exe carries.
 - After this update the tracker reads the tables of its game data again once, in the background; it takes under a
-  minute, and the pictures stay as they are.
+  minute, and the pictures stay as they are. The rdmodule's data shows as out of date once.
 
 ## 0.4.4
 
