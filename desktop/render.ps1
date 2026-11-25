@@ -4,7 +4,7 @@
 # The window is real but off the screen and out of the taskbar, as a hidden one would not be drawn at all.
 # To the caller, one line each on standard output: "title <text>" whenever the page's title changes (pages report
 # their progress in it), and "failed <reason>" before exit code 1. It ends with exit code 0 when the title is DONE, and
-# when its parent (RT_PARENT) is gone.
+# when its parent (RT_PARENT) is gone; with exit code 1 when the title starts with FAILED.
 # Environment: RT_URL (the page), RT_LIB (folder with the WebView2 libraries), RT_PROFILE (WebView2's data folder),
 # RT_PARENT (process id of the caller).
 $ErrorActionPreference = 'Stop'
@@ -44,6 +44,8 @@ $view.add_CoreWebView2InitializationCompleted({
     param($c, $x)
     Say "title $($c.DocumentTitle)"
     if ($c.DocumentTitle -eq 'DONE') { $f.Close() }
+    # (a page that failed says so in its title: it is not waited for any longer)
+    elseif ($c.DocumentTitle -like 'FAILED*') { $script:code = 1; $f.Close() }
   })
   $core.add_ProcessFailed({ param($c, $x) Say "failed the page's process ended ($($x.ProcessFailedKind))"; $script:code = 1; $f.Close() })
 })

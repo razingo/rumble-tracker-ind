@@ -8,6 +8,11 @@
 // { cell: [w, h], cols, frames, seconds, at: [x, y] (the effect's own origin, within a cell), unit (pixels per game unit) }.
 const FX_OUT = 256; // the longer side of a frame
 const FX_RATE = 24; // frames a second
+// Sends a picture or a list to the helper server; one it does not take is an error, not a file silently missing.
+const saveFile = async (name, body) => {
+  const r = await fetch(`/save/${name}`, { method: 'POST', body });
+  if (!r.ok) throw new Error(`not saved (HTTP ${r.status})`);
+};
 
 // The particles' random numbers (the page's `random`) come from the effect's name, so an effect is drawn the same
 // on every run, whichever effects are drawn before it.
@@ -115,12 +120,12 @@ if (params.has('capture')) {
         try { out = await captureEffect(spec); } catch (e) { if (tries >= 2 || e.message !== 'nothing drawn') throw e; await new Promise((r) => setTimeout(r, 300)); }
       }
       const blob = await new Promise((r) => out.sheet.toBlob(r, 'image/png'));
-      await fetch(`/save/fx-${key}.png`, { method: 'POST', body: blob });
+      await saveFile(`fx-${key}.png`, blob);
       infos[key] = out.info;
       say(`${key}: ${out.sheet.width}x${out.sheet.height} ${JSON.stringify(out.info)}`);
     } catch (e) { say(`${key}: FAILED ${e.message}`); }
   }
-  await fetch('/save/fx.json', { method: 'POST', body: JSON.stringify(infos) });
+  await saveFile('fx.json', JSON.stringify(infos));
   say('DONE');
   window.__done = true;
 }

@@ -3,7 +3,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-export function lz4(src, outSize) {
+function lz4(src, outSize) {
   const dst = Buffer.alloc(outSize);
   let s = 0, d = 0;
   while (s < src.length) {

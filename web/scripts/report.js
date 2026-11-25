@@ -152,8 +152,13 @@ export function bindReport() {
       if (await copyText(`${title}\n\n${body}`)) msg('Copied.', true);
       else msg('Copying was blocked by the browser.', false);
     } else if (e.target.closest('[data-report-clear]')) {
-      await post('/api/report/clear', {});
-      REPORT.data = await getJson('/api/report', 'the report details');
+      try {
+        await post('/api/report/clear', {});
+        REPORT.data = await getJson('/api/report', 'the report details');
+      } catch (err) {
+        msg(err.message, false);
+        return;
+      }
       if (state) state.problems = 0;
       renderReportBadge();
       renderReportDialog('Cleared.');

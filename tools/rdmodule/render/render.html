@@ -32,6 +32,11 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 THREE.ColorManagement.enabled = false;
 const log = (t) => { document.getElementById('log').textContent += t + '\n'; window.__log = (window.__log || '') + t + '\n'; };
 const params = new URLSearchParams(location.search);
+// Sends a picture or a list to the helper server; one it does not take is an error, not a file silently missing.
+const save = async (name, body) => {
+  const r = await fetch(`/save/${name}`, { method: 'POST', body });
+  if (!r.ok) throw new Error(`not saved (HTTP ${r.status})`);
+};
 const SIZE = 1024; // render size before cropping
 const OUT_H = Number(params.get('height') || 128); // height of a figure of scale 1
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
@@ -416,7 +421,7 @@ async function renderBackdrop(name, spec) {
   if (params.has('sheet')) {
     const im = new Image(); im.src = URL.createObjectURL(blob); im.style.cssText = 'height:auto;width:100%';
     document.getElementById('sheet').append(im);
-  } else await fetch(`/save/bg-${name}.png`, { method: 'POST', body: blob });
+  } else await save(`bg-${name}.png`, blob);
   renderer.setSize(SIZE, SIZE, false);
   renderer.clippingPlanes = [];
   log(`bg-${name}: ${cut.width}x${cut.height}`);
@@ -440,7 +445,7 @@ if (params.has('backdrops')) {
       cx.translate(0, w); cx.rotate(-Math.PI / 2);
       cx.drawImage(im, x, y, w, h, 0, 0, w, h);
       const blob = await new Promise((r) => c.toBlob(r, 'image/png'));
-      await fetch(`/save/bg-${name}.png`, { method: 'POST', body: blob });
+      await save(`bg-${name}.png`, blob);
       log(`bg-${name}: ${c.width}x${c.height}`);
     } catch (e) { log(`bg-${name}: FAILED ${e.message}`); }
   }
@@ -461,13 +466,13 @@ for (const [id, spec] of Object.entries(config.sprites)) {
       document.getElementById('sheet').append(fig);
     } else {
       const blob = await new Promise((r) => out.sheet.toBlob(r, 'image/png'));
-      await fetch(`/save/${id}.png`, { method: 'POST', body: blob });
+      await save(`${id}.png`, blob);
       infos[id] = out.info;
     }
     log(`${id}: ${out.sheet.width}x${out.sheet.height} ${JSON.stringify(out.info.anims)}`);
   } catch (e) { log(`${id}: FAILED ${e.message}`); }
 }
-if (infos) await fetch('/save/index.json', { method: 'POST', body: JSON.stringify(infos) });
+if (infos) await save('index.json', JSON.stringify(infos));
 
 }
 log('DONE');

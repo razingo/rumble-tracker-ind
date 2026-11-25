@@ -3,10 +3,13 @@
 // (a copied folder, a second install), the player gives the folder by hand: on the loading page when the game is not
 // found, or in Settings. It is kept in the data folder's config.json as gameFolder.
 import path from 'node:path';
-import { stat, readFile, writeFile, mkdir } from 'node:fs/promises';
+import { stat, readFile, mkdir } from 'node:fs/promises';
+import { writeJson } from '../store.mjs';
 
 const configFile = (ctx) => path.join(ctx.paths.DATA, 'config.json');
-const readConfig = (ctx) => readFile(configFile(ctx), 'utf8').then((t) => JSON.parse(t.replace(/^\uFEFF/, '')), () => ({}));
+// (a file that is not there, was cut off or is not what the tracker wrote counts as empty: the game is looked for)
+const readConfig = (ctx) => readFile(configFile(ctx), 'utf8').then((t) => JSON.parse(t.replace(/^\uFEFF/, '')))
+  .then((c) => (c && typeof c === 'object' && !Array.isArray(c) ? c : {}), () => ({}));
 
 /** What a typed or pasted folder becomes: no quotes around it, no slash at its end. */
 const clean = (dir) => String(dir || '').trim().replace(/^"(.*)"$/, '$1').replace(/[\\/]+$/, '');
@@ -34,6 +37,6 @@ export async function setGameFolder(ctx, given) {
   if (dir) config.gameFolder = dir;
   else delete config.gameFolder;
   await mkdir(ctx.paths.DATA, { recursive: true });
-  await writeFile(configFile(ctx), JSON.stringify(config, null, 1) + '\n');
+  await writeJson(configFile(ctx), config); // (whole or not at all)
   return dir;
 }

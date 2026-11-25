@@ -36,13 +36,24 @@ function send(res, status, body, headers = {}) {
 // The rdmodule plays its sounds from memory (blob: addresses), which the tracker's own page never does.
 const RDMODULE_HEADERS = { 'content-security-policy': `${SECURITY_HEADERS['content-security-policy']}; media-src 'self' blob:` };
 
-async function serveFile(res, base, rel, headers = {}) {
+/**
+ * Sends a file. Its size and the time it was last changed go along as its tag; a window that already has the file
+ * with that tag asks with it, and is told the file is the same (304) without it being read or sent again.
+ */
+async function serveFile(req, res, base, rel, headers = {}) {
   const file = path.resolve(base, `.${rel}`);
   if (!file.startsWith(base + path.sep)) return send(res, 403, { error: 'That file is outside the tracker\'s folders.' });
   try {
+    const { size, mtimeMs } = await stat(file);
+    const etag = `"${size.toString(36)}-${Math.round(mtimeMs).toString(36)}"`;
+    const head = { ...SECURITY_HEADERS, 'content-type': TYPES[path.extname(file)] || 'application/octet-stream',
+      'cache-control': 'no-cache', etag, ...headers };
+    if (req.headers['if-none-match'] === etag) {
+      res.writeHead(304, head);
+      return res.end();
+    }
     const body = await readFile(file);
-    res.writeHead(200, { ...SECURITY_HEADERS, 'content-type': TYPES[path.extname(file)] || 'application/octet-stream',
-      'cache-control': 'no-cache', ...headers });
+    res.writeHead(200, head);
     res.end(body);
   } catch {
     send(res, 404, { error: 'The tracker has no such file.' });
@@ -73,8 +84,8 @@ export function createHttpServer(ctx, deps) {
       const rd = deps.rdmodule?.folders;
       if (rd && p.startsWith('/rdmodule/')) {
         const rel = p.slice('/rdmodule'.length);
-        if (/^\/(sprites|sounds)\//.test(rel)) return serveFile(res, rd.extracted, rel, RDMODULE_HEADERS);
-        return serveFile(res, rd.code, rel === '/' ? '/index.html' : rel, RDMODULE_HEADERS);
+        if (/^\/(sprites|sounds)\//.test(rel)) return serveFile(req, res, rd.extracted, rel, RDMODULE_HEADERS);
+        return serveFile(req, res, rd.code, rel === '/' ? '/index.html' : rel, RDMODULE_HEADERS);
       }
       if (p.startsWith('/static/')) {
         // What the tracker read from the game comes first, then what npm run build-gamedata left in gamedata/.
@@ -83,14 +94,14 @@ export function createHttpServer(ctx, deps) {
         if (read.startsWith(GAMEDATA + path.sep)) {
           try {
             await stat(read);
-            return serveFile(res, GAMEDATA, rel);
+            return serveFile(req, res, GAMEDATA, rel);
           } catch {
             // not there
           }
         }
-        return serveFile(res, STATIC, rel);
+        return serveFile(req, res, STATIC, rel);
       }
-      return serveFile(res, PUBLIC, p === '/' ? '/index.html' : p);
+      return serveFile(req, res, PUBLIC, p === '/' ? '/index.html' : p);
     } catch (e) {
       if (!e.status || e.status >= 500) ctx.errorLog.add('server', `${req.method} ${req.url?.split('?')[0]}: ${e.message}`);
       send(res, e.status || 500, { error: e.message });

@@ -29,6 +29,11 @@ test('keeps a game folder given by hand, and refuses one that is not the game', 
     await writeFile(file, JSON.stringify({ gameFolder: game, other: 1 }));
     assert.equal(await setGameFolder(ctx, ''), '');
     assert.deepEqual(JSON.parse(await readFile(file, 'utf8')), { other: 1 });
+    // a file that was cut off counts as empty, and the next folder given is kept
+    await writeFile(file, '{"gameFolder": "D:');
+    assert.equal(await givenGameFolder(ctx), '');
+    assert.equal(await setGameFolder(ctx, game), game);
+    assert.equal(await givenGameFolder(ctx), game);
   } finally {
     await cleanup();
   }

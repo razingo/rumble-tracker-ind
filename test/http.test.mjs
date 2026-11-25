@@ -69,7 +69,13 @@ test('state, and "unchanged" for a revision the page already has', async () => {
 
 test('the page, game data and refused requests', async () => {
   assert.equal((await fetch(`${base}/`)).status, 200);
-  assert.equal((await fetch(`${base}/static/rules.json`)).status, 200);
+  const rules = await fetch(`${base}/static/rules.json`);
+  assert.equal(rules.status, 200);
+  // a file the window already has is not sent again; one it has another version of is
+  const again = (tag) => fetch(`${base}/static/rules.json`, { headers: { 'if-none-match': tag } });
+  const same = await again(rules.headers.get('etag'));
+  assert.deepEqual([same.status, await same.text()], [304, '']);
+  assert.equal((await again('"other"')).status, 200);
   assert.equal((await fetch(`${base}/static/../../data/names.json`)).status, 404);
   assert.equal((await fetch(`${base}/%E0%A4%A`)).status, 400);
   assert.equal((await api('POST', '/api/name', { kind: 'account', id: ACC, value: 'x' }, { origin: 'https://evil.example' })).status, 403);

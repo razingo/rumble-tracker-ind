@@ -73,7 +73,7 @@ async function saveArmy(u, slots) {
     await post('/api/army', { account: state.account, unitId: u.id, slots });
     u.army = slots;
     await poll();
-    renderDrawer();
+    if (panel.open) renderDrawer(); // (it may have been closed meanwhile)
   } catch (err) {
     alertDialog(err.message, { title: 'Not saved' });
   }
@@ -264,7 +264,7 @@ export function bindDrawer() {
         await post('/api/talents', { account: state.account, unitId: u.id, picks });
         u.talentPicks = picks;
         await poll();
-        renderDrawer();
+        if (panel.open) renderDrawer();
       } catch (err) { alertDialog(err.message, { title: 'Not saved' }); }
     }
   });

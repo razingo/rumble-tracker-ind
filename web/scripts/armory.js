@@ -231,7 +231,13 @@ async function cardClick(e) {
     editArmy(army);
     setTab('army');
   } else if (act.dataset.armoryAction === 'copy') await copyCode(army, card.querySelector('.armory-message'));
-  else if (act.dataset.armoryAction === 'delete' && await deleteSavedArmy(army)) renderArmory();
+  else if (act.dataset.armoryAction === 'delete') {
+    try {
+      if (await deleteSavedArmy(army)) renderArmory();
+    } catch (err) {
+      alertDialog(err.message, { title: 'Not deleted' });
+    }
+  }
 }
 
 export function bindArmory() {

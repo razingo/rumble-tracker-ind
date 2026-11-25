@@ -154,16 +154,21 @@ public class RtEndSession : NativeWindow {
 '@
 # Compiling the helpers takes a moment, so they are compiled once per version into RT_CACHE (in the unpacked app)
 $cache = $env:RT_CACHE
-if ($cache -and -not (Test-Path $cache)) {
+if ($cache -and -not (Test-Path -LiteralPath $cache)) {
+  # (compiled in the temporary folder, then moved: Add-Type can't write to a path with [ or ] in it)
+  $made = Join-Path ([IO.Path]::GetTempPath()) "RumbleTracker-helpers-$PID.dll"
   try {
-    Add-Type -ReferencedAssemblies System.Windows.Forms, System.Drawing -TypeDefinition $helpers -OutputAssembly "$cache.tmp" `
+    Add-Type -ReferencedAssemblies System.Windows.Forms, System.Drawing -TypeDefinition $helpers -OutputAssembly $made `
       -OutputType Library
-    Move-Item -Force "$cache.tmp" $cache
+    [IO.File]::Copy($made, "$cache.tmp", $true)
+    [IO.File]::Move("$cache.tmp", $cache)
   } catch {
-    Remove-Item -ErrorAction SilentlyContinue "$cache.tmp"
+    # not kept: compiled in memory below
+  } finally {
+    Remove-Item -ErrorAction SilentlyContinue -LiteralPath $made, "$cache.tmp"
   }
 }
-if ($cache -and (Test-Path $cache)) { Add-Type -Path $cache }
+if ($cache -and (Test-Path -LiteralPath $cache)) { Add-Type -LiteralPath $cache }
 else { Add-Type -ReferencedAssemblies System.Windows.Forms, System.Drawing -TypeDefinition $helpers }
 
 $lib = $env:RT_LIB
@@ -231,6 +236,7 @@ $titleBrush = New-Object System.Drawing.SolidBrush $titleColor
 $titlePen = New-Object System.Drawing.Pen $titleLine
 $titleFormat = New-Object System.Drawing.StringFormat
 $titleFormat.LineAlignment = 'Center'; $titleFormat.Trimming = 'EllipsisCharacter'; $titleFormat.FormatFlags = 'NoWrap'
+$captionFont = New-Object System.Drawing.Font('Segoe MDL2 Assets', 7.5) # (Windows' own signs for the title bar's buttons)
 $EDGE = 5 # px of the window's own edge at the sides and the bottom
 
 function New-Frame($title) {
@@ -259,12 +265,11 @@ function Add-Caption($f) {
     $e.Graphics.DrawString($s.FindForm().Text, $titleFont, $titleBrush, $room, $titleFormat)
     $e.Graphics.DrawLine($titlePen, 0, ($s.Height - 1), $s.Width, ($s.Height - 1))
   })
-  # (Segoe MDL2 Assets has Windows' own signs for these)
   $button = {
     param($sign, $tip, $over)
     $b = New-Object System.Windows.Forms.Button
     $b.Text = [string][char]$sign
-    $b.Font = New-Object System.Drawing.Font('Segoe MDL2 Assets', 7.5)
+    $b.Font = $captionFont
     $b.Dock = 'Right'; $b.Width = 46; $b.FlatStyle = 'Flat'; $b.TabStop = $false
     $b.FlatAppearance.BorderSize = 0
     $b.FlatAppearance.MouseOverBackColor = [System.Drawing.ColorTranslator]::FromHtml($over)
@@ -622,9 +627,12 @@ $timer.add_Tick({
     Close-TrackerWindow
   }
   if (++$script:ticks % 20) { return }
-  try { [void][System.Diagnostics.Process]::GetProcessById($parent) }
+  # (what is found is let go of at once, not left for .NET to collect)
+  try { [System.Diagnostics.Process]::GetProcessById($parent).Dispose() }
   catch { $tray.Visible = $false; [System.Windows.Forms.Application]::Exit(); return }
-  $game = if ([System.Diagnostics.Process]::GetProcessesByName($env:RT_GAME).Length) { 'game 1' } else { 'game 0' }
+  $found = [System.Diagnostics.Process]::GetProcessesByName($env:RT_GAME)
+  $game = if ($found.Length) { 'game 1' } else { 'game 0' }
+  foreach ($p in $found) { $p.Dispose() }
   if ($game -ne $script:lastGame) { $script:lastGame = $game; Say $game }
 })
 $timer.Start()

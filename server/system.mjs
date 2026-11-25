@@ -6,7 +6,7 @@ const SYSTEM32 = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32');
 export const POWERSHELL = path.join(SYSTEM32, 'WindowsPowerShell', 'v1.0', 'powershell.exe');
 export const REG = path.join(SYSTEM32, 'reg.exe');
 export const TASKLIST = path.join(SYSTEM32, 'tasklist.exe');
-export const EXPLORER = path.join(process.env.SystemRoot || 'C:\Windows', 'explorer.exe');
+export const EXPLORER = path.join(process.env.SystemRoot || 'C:\\Windows', 'explorer.exe');
 
 /** PowerShell's arguments for running `script` without the user's profile or any prompt. */
 export const powershellArgs = (script) => ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script];

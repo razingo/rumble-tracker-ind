@@ -806,9 +806,10 @@ function showStartQuestion() {
 
 /**
  * Asks where the tracker should keep its files, until the answer is a folder it can use. Resolves to the tracker's
- * own folder there, or null when the user pressed Cancel.
+ * own folder there, or null when the user pressed Cancel. `made` is given the folders that were made for it: the
+ * tracker's own, and those above it that were not there.
  */
-async function askFolder(existing) {
+async function askFolder(existing, made = []) {
   let folder = LOCAL;
   let problem = '';
   for (;;) {
@@ -820,8 +821,12 @@ async function askFolder(existing) {
     if (!out.startsWith('ok')) return null;
     folder = out.slice(2).trim();
     const home = folder && path.isAbsolute(folder) ? homeIn(folder) : folder;
+    const missing = folder && path.isAbsolute(folder) ? notThere(home) : [];
     problem = folder ? homeProblem(home, NOTE_DIR) : 'Pick a folder.';
-    if (!problem) return home;
+    if (!problem) {
+      made.push(...missing);
+      return home;
+    }
   }
 }
 
@@ -941,9 +946,11 @@ async function locate() {
     // files from before there was a choice: the data folder was the note's own folder
     const legacy = fs.existsSync(NOTE_DIR) && fs.readdirSync(NOTE_DIR).some((n) => !n.startsWith('location.json'));
     if (legacy) oldLog = path.join(NOTE_DIR, 'tracker.log');
-    const to = await askFolder(legacy);
+    const made = [];
+    const to = await askFolder(legacy, made);
     if (!to) return false;
-    if (legacy) note = { moving: { legacy: true, from: DEFAULT_HOME, to } };
+    // (`made`: the folders made for the pick, which go again if the move can't be done)
+    if (legacy) note = { moving: { legacy: true, from: DEFAULT_HOME, to, ...(made.length && { made }) } };
     else {
       // a tracker's folder found there is used, with what the tracker makes again by itself made fresh
       if (inUse(to)) takeOver(to, false);

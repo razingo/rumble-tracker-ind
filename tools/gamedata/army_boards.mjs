@@ -34,7 +34,7 @@ for (const p of files) {
     for (const m of t.matchAll(/\{\s*"\$type": "Gryphon\.Data\.ArmyBoard,/g)) {
       const js = balanced(t, m.index);
       let o; try { o = JSON.parse(js); } catch { continue; }
-      if (!/^Player_/.test(o.name)) continue;
+      if (!o || !/^Player_/.test(o.name)) continue; // (one that does not close is read as nothing)
       boards[o.m_leaderMini] = {
         board: o.name,
         leader: IDX[o.m_leaderMini]?.name,

@@ -11,8 +11,10 @@ const SCRIPT = `
 $parent = [int]$env:RT_PARENT
 $last = $null
 while ($true) {
-  try { [void][System.Diagnostics.Process]::GetProcessById($parent) } catch { exit 0 }
-  $now = if ([System.Diagnostics.Process]::GetProcessesByName($env:RT_GAME).Length) { '1' } else { '0' }
+  try { [System.Diagnostics.Process]::GetProcessById($parent).Dispose() } catch { exit 0 }
+  $found = [System.Diagnostics.Process]::GetProcessesByName($env:RT_GAME)
+  $now = if ($found.Length) { '1' } else { '0' }
+  foreach ($p in $found) { $p.Dispose() }
   if ($now -ne $last) {
     [Console]::Out.WriteLine($now)
     [Console]::Out.Flush()

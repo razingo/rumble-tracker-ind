@@ -2518,6 +2518,7 @@
 
   let last = performance.now();
   function frame(now) {
+    requestAnimationFrame(frame); // asked for first: an error in this frame must not stop the ones after it
     const dt = Math.min(0.033, (now - last) / 1000);
     last = now;
     clock += dt;
@@ -2537,7 +2538,6 @@
       reveal -= dt;
       ctx.fillStyle = `rgba(27,31,46,${clamp(reveal / 0.6, 0, 1)})`; ctx.fillRect(0, 0, W, H);
     }
-    requestAnimationFrame(frame);
   }
   loadToday();
   requestAnimationFrame(frame);

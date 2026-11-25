@@ -326,8 +326,8 @@ async function sendTest(dlg) {
   } catch (err) {
     result = [err.message, 'warn'];
   }
-  await loadSettings();
-  renderSettings();
+  // (the list of what was sent is read again; if that fails, the one shown stays)
+  await loadSettings().then(renderSettings, () => {});
   showMessage(notifyMessage(dlg), ...result);
 }
 

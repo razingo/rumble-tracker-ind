@@ -43,7 +43,9 @@ export function createRdmodule(ctx) {
      */
     async status() {
       const t = await load();
-      const extracted = await readFile(path.join(out, 'ready.json'), 'utf8').then((s) => JSON.parse(s).extracted || true, () => null);
+      // (a stamp that is not there, or damaged, is no extraction)
+      const extracted = await readFile(path.join(out, 'ready.json'), 'utf8').then((s) => JSON.parse(s).extracted || true)
+        .catch(() => null);
       // (finding the game asks Windows where it is: the answer is kept for half a minute, as the page asks often)
       if (extracted && Date.now() - due.at > DUE_MS) {
         Object.assign(due, { at: Date.now(), is: !!t?.outOfDate(out, await givenGameFolder(ctx)) });

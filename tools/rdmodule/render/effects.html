@@ -511,7 +511,8 @@ const first = index.units.priestess ? 'priestess' : Object.keys(index.units)[0];
 ui('unit').value = params.get('unit') && index.units[params.get('unit')] ? params.get('unit') : first;
 fillEffects();
 if (params.get('prefab') && rowFor(params.get('prefab'))) ui('effect').value = params.get('prefab');
-await loadEffect(rowFor(ui('effect').value));
+const opening = rowFor(ui('effect').value);
+if (opening) await loadEffect(opening); // (the unit it opens on may have nothing to show)
 if (params.has('t')) { paused = true; ui('loop').checked = false; const T = Number(params.get('t')); for (let x = 0; x < T; x += 1 / 60) step(1 / 60); }
 window.__ready = true;
 </script>

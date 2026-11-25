@@ -7,7 +7,7 @@ const ctx = (extra = {}) => ({ now: Date.UTC(2026, 4, 6, 12), accounts: [], even
   plans: {}, settings: defaultSettings(), multi: false, ...extra });
 const keys = (c) => dueNotifications(c).map((n) => n.key);
 
-test('a new tracker version is announced once', () => {
+test('a new tracker version is announced', () => {
   assert.deepEqual(keys(ctx({ newVersion: '0.2.0' })), ['app-version-0.2.0']);
 });
 

@@ -362,9 +362,9 @@ export function renderEvents() {
     : '<li class="muted">No changes yet. Play a battle or upgrade a mini and it shows up here.</li>';
 }
 
-// What a click on the Collection tab can act on: the filters, the trait picker and the planner.
+// What a click on the Collection tab can act on: the filters and the planner (the trait picker has its own handlers).
 const CLICKABLE = [
-  'data-filter-type', 'data-filter-family', 'data-filter-trait', 'data-filter-clear', 'data-planner-toggle',
+  'data-filter-type', 'data-filter-family', 'data-filter-clear', 'data-planner-toggle',
 ].map((a) => `[${a}]`).join(',');
 
 /** Saves the filters and redraws what they affect. */
@@ -385,7 +385,7 @@ function filterClick(e) {
     return renderPlanner();
   }
   const group = t.dataset.filterType ? ['types', t.dataset.filterType] : t.dataset.filterFamily
-    ? ['families', t.dataset.filterFamily] : t.dataset.filterTrait ? ['traits', t.dataset.filterTrait] : null;
+    ? ['families', t.dataset.filterFamily] : null;
   if (group) toggleIn(view.filters[group[0]], group[1]);
   else if (t.hasAttribute('data-filter-clear')) {
     view.filters = { types: [], families: [], traits: [], traitMode: view.filters.traitMode };

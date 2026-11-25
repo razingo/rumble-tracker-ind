@@ -101,9 +101,21 @@ const MAKES = {
 const base = (step) => step.replace(/ \d+\/\d+$/, ''); // "Animations 2/4" is a part of "Animations"
 
 /** Whether the extraction in `out` has steps due: the game or the tracker changed since. False when there is none. */
-export const outOfDate = (out, gameFolder = '') => !!stampOf(out) && stepsDue(findGame(gameFolder), stampOf(out)).length > 0;
-/** The stamp of the extraction in `out` (its ready.json), or null when there is none. */
-const stampOf = (out) => (existsSync(join(out, READY)) ? JSON.parse(readFileSync(join(out, READY), 'utf8')) : null);
+export function outOfDate(out, gameFolder = '') {
+  try {
+    return !!stampOf(out) && stepsDue(findGame(gameFolder), stampOf(out)).length > 0;
+  } catch {
+    return false; // (the game's version can't be read just now, as while a patch rewrites it: looked at again later)
+  }
+}
+/** The stamp of the extraction in `out` (its ready.json), or null when there is none or it is damaged. */
+function stampOf(out) {
+  try {
+    return JSON.parse(readFileSync(join(out, READY), 'utf8'));
+  } catch {
+    return null;
+  }
+}
 /**
  * The steps that are due for an extraction with this stamp: 'all' without one, with one from before the steps'
  * output was hashed, or for another version of the game than the one in `game`, else the names of the steps whose

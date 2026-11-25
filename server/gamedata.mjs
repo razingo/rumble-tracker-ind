@@ -175,7 +175,14 @@ ${page.error ? `<p>${esc(page.error)}</p>${ask || '<p style="opacity:.7">Trying 
   async function run() {
     if (!builder || Date.now() - failedAt < AFTER_FAILURE_MS) return;
     const game = await findGame();
-    const due = builder.stepsDue(game, ctx.tables.gameData);
+    let due;
+    try {
+      due = builder.stepsDue(game, ctx.tables.gameData);
+    } catch (e) {
+      // (the game's version file can't be read while a patch rewrites it: the next check looks again)
+      console.log(`Game data: the game's version could not be read (${e.message})`);
+      return;
+    }
     if (!due.length) return;
     // (the same game as the data's: it is the tracker that changed, whether it reads some steps anew or all of them.
     // Where the game is not found, there is no version to read: the build below says what is wrong.)
