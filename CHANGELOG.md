@@ -3,6 +3,20 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.4.7
+
+- Fixed: a data folder that could not be written to, as on a full disk, could stop the tracker from starting. The
+  tracker now starts, says that it could not save the history, and saves it once it can.
+- Restoring a backup that was edited by hand leaves out a part that holds something else than the tracker keeps in
+  it, instead of taking it as it is.
+- The rdmodule's data shows as out of date when the tracker's game data names the minis differently, not only after
+  a game patch or a tracker update.
+- The error log names what went wrong when an account can't be updated or the history can't be saved.
+- An event that starts at midnight UTC would have been shown at 18:00. No event does today.
+- A newer version of one of the Python packages the exe carries (archspec 0.2.8).
+- After this update the tracker reads its game data again once, in the background; it takes a minute or two. The
+  rdmodule's data shows as out of date once.
+
 ## 0.4.6
 
 - Collection: the flag on a card that can be upgraded reads UPG and has the same width on every card.
