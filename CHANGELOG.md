@@ -3,6 +3,17 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.4.5
+
+- Fixed: a game patch that set a PvP match's Victory Points to zero would have frozen the tracker. Such a change now
+  shows as unexplained on the PvP tab.
+- The tracker does a little less work at each start: a helper for its Start menu shortcut is prepared once per
+  version, no longer every time.
+- The rdmodule: a Neutral leader's faction shows its icon on the menu.
+- Building from source installs the same version of Pillow as the released exe carries.
+- After this update the tracker reads the tables of its game data again once, in the background; it takes under a
+  minute, and the pictures stay as they are.
+
 ## 0.4.4
 
 - Fixed: a damaged `config.json` (the file that holds the game's folder when you gave one by hand) stopped the
