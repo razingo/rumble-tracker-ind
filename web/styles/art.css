@@ -112,6 +112,7 @@ body {
 .card .flags:empty { display: none; }
 .card .flag { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   font-size: 10.5px; padding: 1px 6px; }
+.card .flag.upgrade { flex: none; } /* (short, and the same width on every card: the flags beside it give way) */
 .card .flag.wild { padding: 1px 6px 1px 2px; gap: 3px; }
 .card .flag.wild .icon { width: 13px; height: 13px; flex: none; }
 .card .flag.boost { padding: 1px 6px 1px 4px; gap: 2px; }

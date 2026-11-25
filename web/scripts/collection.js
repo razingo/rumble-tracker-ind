@@ -275,7 +275,7 @@ function cardForUnit(u) {
   const up = nextUpgrade(u);
   const slots = talentSlots(u);
   const flags = [];
-  if (up?.ready) flags.push('<span class="flag good">Upgrade ready</span>');
+  if (up?.ready) flags.push('<span class="flag good upgrade" title="Upgrade ready">UPG</span>');
   if (u.talents < slots) flags.push('<span class="flag good">Talent slot open</span>');
   if (effectivePicks(u).length < u.talents) flags.push('<span class="flag warn">Tick talents</span>');
   if (isLeader(u) && armyOf(u).some((s) => s.type === 'Wildcard')) flags.push(`<span
