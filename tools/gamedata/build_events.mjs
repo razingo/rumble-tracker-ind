@@ -9,7 +9,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readBundle, bundleFiles, jsonObjectAt, saveIdOf, englishStrings, CURRENCY_NAMES } from './unityfs.mjs';
+import { bundleFiles, dataObjects, saveIdOf, englishStrings, COINS, CURRENCY_NAMES } from './unityfs.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DATA = process.env.RUMBLE_GAMEDATA || join(HERE, '..', '..', 'gamedata'); // the game data being built
@@ -32,24 +32,9 @@ const BUNDLES = new RegExp('^(' + [
   'support_progression', 'support_commerce', 'store\\.bundle', 'ui_avatars', 'ui_(moltencore|stormwind|ironforge|onyxia)',
   'zonedata_dungeon_', 'cosmetics_skins_', 'gryphongame_embedded',
 ].join('|') + ')');
-for (const p of all) {
-  const base = p.split(/[\\/]/).pop();
-  if (!BUNDLES.test(base)) continue;
-  let b; try { b = readBundle(p); } catch { continue; }
-  for (const f of b.files) {
-    if (f.data.length > 2e8) continue;
-    const t = f.data.toString('utf8');
-    for (const m of t.matchAll(/\{\s*"\$type": "Gryphon\.Data\.([\w.]+)/g)) {
-      if (!WANT.test(m[1])) continue;
-      const json = balanced(t, m.index);
-      if (!json) continue;
-      try { const o = JSON.parse(json); if (o.guid) objs[o.guid] = { type: m[1], bundle: base, ...o }; } catch { /* not plain JSON */ }
-    }
-  }
-}
-
-/** The JSON object starting at text[i] ('{'), up to its matching brace (string-aware), or null. */
-function balanced(text, i) { return jsonObjectAt(text, i, 2e6); } // (no object here is longer)
+// (no object here is longer than 2e6 characters)
+dataObjects(all.filter((p) => BUNDLES.test(p.split(/[\\/]/).pop())),
+  { wanted: (type) => WANT.test(type), limit: 2e6, maxFile: 2e8, into: objs, bundle: true });
 
 const str = englishStrings(objs);
 const clean = (s) => s?.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim() || null;
@@ -165,7 +150,7 @@ function rewardOf(r) {
     out.amount = g.m_currencyAmount;
     // the reward's own text is sometimes a generic string (a Rare Core read "Arc Energy"): name it by its currency
     if (CURRENCY_NAMES[g.m_currencyType]) out.label = CURRENCY_NAMES[g.m_currencyType];
-    if (g.m_currencyType === 'e9c433015c337934c9890eb4e13ff3d3') out.coins = true; // raised by coin income bonuses
+    if (g.m_currencyType === COINS) out.coins = true; // raised by coin income bonuses
   }
   delete out.unit;
   if (g.m_grantType === 'Tome' || tome || out.kind === 'tome') out.kind = 'tome';
@@ -249,8 +234,7 @@ for (const ev of events) {
       const icon = spriteOf(fb.m_sprite);
       if (icon) sprites.add(icon);
       x.r.fallback = { label: CURRENCY_NAMES[fb.m_currencyType] || clean(str[fb.m_rewardName]) || fb.name,
-        amount: fb.m_currencyAmount || null, coins: fb.m_currencyType === 'e9c433015c337934c9890eb4e13ff3d3'
-        || undefined, icon: icon || undefined };
+        amount: fb.m_currencyAmount || null, coins: fb.m_currencyType === COINS || undefined, icon: icon || undefined };
     }
   }
   const tree = all.map((x) => x.r).filter(Boolean).sort((a, b) => a.row - b.row || a.col - b.col);

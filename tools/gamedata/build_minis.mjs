@@ -13,7 +13,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readBundle, bundleFiles, jsonObjectAt, saveIdOf, guidOfSaveId, englishStrings, slugOf } from './unityfs.mjs';
+import { bundleFiles, dataObjects, saveIdOf, guidOfSaveId, englishStrings, slugOf } from './unityfs.mjs';
 import { FACTIONS } from './factions.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -29,20 +29,7 @@ const GROWTH = 1.1001, LEVELS = 31;
 const LEADER_FACE = { Onu: 0.20, Ysera: 0.21, Anubarak: 0.17, OldMurkEye: 0.23, Hogger: 0.14, Charlga: 0.15, Drakkisath: 0.13 };
 
 const files = bundleFiles(DIR, (n) => BUNDLES.test(n));
-function balanced(text, i) { return jsonObjectAt(text, i, 3e6); } // (no object here is longer)
-const objs = {};
-for (const p of files) {
-  let b; try { b = readBundle(p); } catch { continue; }
-  for (const f of b.files) {
-    if (f.data.length > 3e8) continue;
-    const t = f.data.toString('utf8');
-    for (const m of t.matchAll(/\{\s*"\$type": "Gryphon\.Data\.([\w.]+)/g)) {
-      const js = balanced(t, m.index);
-      if (!js) continue;
-      try { const o = JSON.parse(js); if (o.guid) objs[o.guid] = { type: m[1], ...o }; } catch { /* not plain JSON */ }
-    }
-  }
-}
+const objs = dataObjects(files);
 const str = englishStrings(objs);
 log(`${files.length} bundles, ${Object.keys(objs).length} objects, ${Object.keys(str).length} English strings`);
 

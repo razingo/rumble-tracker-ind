@@ -197,4 +197,3 @@ export function diffSnapshots(prev, cur, rules, t) {
   }
   return events;
 }
-

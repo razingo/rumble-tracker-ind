@@ -12,6 +12,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { TAR } from '../server/system.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const VENDOR = path.join(ROOT, 'tools', 'rdmodule', 'vendor');
@@ -55,8 +56,7 @@ if (!existsSync(zip) || sha256(readFileSync(zip)) !== VGM_SHA256) {
 const dir = path.join(VENDOR, 'vgmstream');
 rmSync(dir, { recursive: true, force: true });
 mkdirSync(dir, { recursive: true });
-const tar = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe');
-if (spawnSync(tar, ['-xf', zip, '-C', dir], { stdio: 'inherit' }).status !== 0) fail('could not unpack vgmstream.');
+if (spawnSync(TAR, ['-xf', zip, '-C', dir], { stdio: 'inherit' }).status !== 0) fail('could not unpack vgmstream.');
 if (!existsSync(path.join(dir, 'vgmstream-cli.exe'))) fail('the vgmstream package has no vgmstream-cli.exe.');
 // what was fetched, for the versions of the steps that use it (tools/rdmodule/extract.mjs)
 writeFileSync(path.join(VENDOR, 'versions.json'), JSON.stringify({ three: THREE, vgmstream: VGM }, null, 1) + '\n');

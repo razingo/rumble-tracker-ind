@@ -7,7 +7,7 @@ import net from 'node:net';
 import os from 'node:os';
 import { readFile, writeFile, mkdtemp, mkdir, rm } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { stepsDue, stepVersions, remadeFor, renderServer } from '../tools/rdmodule/extract.mjs';
+import { stepsDue, stepVersions, remadeFor, renderServer, outOfDate } from '../tools/rdmodule/extract.mjs';
 import { runSteps } from '../tools/gamedata/build.mjs';
 import { createRdmodule } from '../server/rdmodule.mjs';
 import { createHttpServer } from '../server/http/server.mjs';
@@ -38,6 +38,11 @@ test('the rdmodule: nothing extracted at first, and its page is served with its 
     await writeFile(path.join(rdmodule.folders.code, 'index.html'), '<!doctype html><title>m</title>');
     await mkdir(path.join(rdmodule.folders.extracted, 'sprites'), { recursive: true });
     await writeFile(path.join(rdmodule.folders.extracted, 'sprites', 'index.json'), '{}');
+    // a stamp that was cut off is no extraction
+    await writeFile(path.join(rdmodule.folders.extracted, 'ready.json'), '{"extracted":"2026-01-02T03');
+    assert.equal((await rdmodule.status()).state, 'none');
+    assert.equal((await rdmodule.status()).extracted, null);
+    assert.equal(outOfDate(rdmodule.folders.extracted), false);
     await writeFile(path.join(rdmodule.folders.extracted, 'ready.json'), '{"extracted":"2026-01-02T03:04:05.000Z"}');
     assert.equal((await rdmodule.status()).state, 'ready');
     assert.equal((await rdmodule.status()).extracted, '2026-01-02T03:04:05.000Z');

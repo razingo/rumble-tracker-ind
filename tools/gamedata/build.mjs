@@ -33,7 +33,7 @@ import { REG } from '../../server/system.mjs';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SEED = join(HERE, 'seed');
 const OWN_PYTHON = join(HERE, 'python', 'python.exe');
-const PACKAGES = ['UnityPy==1.25.4', 'Pillow'];
+const PACKAGES = ['UnityPy==1.25.4', 'Pillow==13.0.0']; // (the versions the exe's own Python has: tools/fetch-python.mjs)
 const { priority } = osConstants;
 const AT_ONCE = Math.max(2, Math.min(4, availableParallelism() - 1)); // steps running side by side
 const PROGRAM_MINUTES = 10; // a program still running by then hangs: it is stopped and its step fails

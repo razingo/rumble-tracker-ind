@@ -7,7 +7,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readBundle, bundleFiles, jsonObjectAt, saveIdOf, englishStrings } from './unityfs.mjs';
+import { bundleFiles, dataObjects, saveIdOf, englishStrings } from './unityfs.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DATA = process.env.RUMBLE_GAMEDATA || join(HERE, '..', '..', 'gamedata'); // the game data being built
@@ -17,26 +17,12 @@ const DIR = process.env.RUMBLE_BUNDLES;
 const all = bundleFiles(DIR);
 const base = (p) => p.split(/[\\/]/).pop();
 
-/** The JSON object starting at text[i] ('{'), up to its matching brace (string-aware), or null. */
-function balanced(text, i) { return jsonObjectAt(text, i, 2e6); } // (no object here is longer)
-
 const objs = {};
 const loaded = new Set();
 function load(test) {
-  for (const p of all) {
-    if (loaded.has(p) || !test(base(p))) continue;
-    loaded.add(p);
-    let b; try { b = readBundle(p); } catch { continue; }
-    for (const f of b.files) {
-      if (f.data.length > 2e8) continue;
-      const t = f.data.toString('utf8');
-      for (const m of t.matchAll(/\{\s*"\$type": "Gryphon\.Data\.([\w.]+)/g)) {
-        const json = balanced(t, m.index);
-        if (!json) continue;
-        try { const o = JSON.parse(json); if (o.guid) objs[o.guid] = { type: m[1], ...o }; } catch { /* not plain JSON */ }
-      }
-    }
-  }
+  const files = all.filter((p) => !loaded.has(p) && test(base(p)));
+  for (const p of files) loaded.add(p);
+  dataObjects(files, { limit: 2e6, maxFile: 2e8, into: objs }); // (no object here is longer)
 }
 // PvP data, its strings (mutator_pvp*, earlyloadgamedata: patch notes and season names), schedules, currencies
 load((b) => /^(feature_pvp|mutator_pvp|strtable_|earlyloadgamedata\.bundle|data_currencytype|gryphongame\.bundle|store\.bundle)/.test(b));

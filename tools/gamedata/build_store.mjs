@@ -4,7 +4,7 @@
 import { writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readBundle, bundleFiles, jsonObjectAt, saveIdOf, englishStrings, CURRENCY_NAMES } from './unityfs.mjs';
+import { bundleFiles, dataObjects, saveIdOf, englishStrings, COINS, CURRENCY_NAMES } from './unityfs.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DATA = process.env.RUMBLE_GAMEDATA || join(HERE, '..', '..', 'gamedata'); // the game data being built
@@ -21,26 +21,12 @@ const WANT = new RegExp('^(' + [
 ].join('|') + ')$');
 
 const files = bundleFiles(DIR, (n) => BUNDLES.test(n));
-function balanced(text, i) { return jsonObjectAt(text, i, 3e6); } // (no object here is longer)
-const objs = {};
-for (const p of files) {
-  let b; try { b = readBundle(p); } catch { continue; }
-  for (const f of b.files) {
-    if (f.data.length > 3e8) continue;
-    const t = f.data.toString('utf8');
-    for (const m of t.matchAll(/\{\s*"\$type": "Gryphon\.Data\.([\w.]+)/g)) {
-      if (!WANT.test(m[1])) continue;
-      const js = balanced(t, m.index);
-      try { const o = JSON.parse(js); if (o.guid) objs[o.guid] = { type: m[1], ...o }; } catch { /* not plain JSON */ }
-    }
-  }
-}
+const objs = dataObjects(files, { wanted: (type) => WANT.test(type) });
 // English strings (same scheme as build_events.mjs)
 const str = englishStrings(objs);
 const clean = (s) => s?.replace(/<[^>]+>/g, '').replace(/\{\d+\}/g, '').replace(/\s+/g, ' ').trim() || null;
 
 const int = (g) => objs[g]?.m_value ?? null;
-const COINS = 'e9c433015c337934c9890eb4e13ff3d3';
 
 // readable fallback for offers without an English title: Daily_TomeMega_Generic_StoreOffer -> "Tome Mega Generic"
 const pretty = (n) => n.replace(/_StoreOffer.*$/, '').replace(/^(Daily|Special|Persistent|FreeGift)_/,

@@ -10,7 +10,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readBundle, bundleFiles, jsonObjectAt, saveIdOf } from './unityfs.mjs';
+import { bundleFiles, dataObjects, saveIdOf } from './unityfs.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DATA = process.env.RUMBLE_GAMEDATA || join(HERE, '..', '..', 'gamedata'); // the game data being built
@@ -19,20 +19,7 @@ const DIR = process.env.RUMBLE_BUNDLES;
 const BUNDLES = /^(gryphongame_embedded|support_progression|support_commerce|store\.bundle|feature_store)/;
 const WANT = /^(LevelProgressionData|Rarity|ProgressionRarityTable|StoreSettings|ArmyManagerSettings|SharedInt)$/;
 
-const objs = {};
-for (const p of bundleFiles(DIR, (n) => BUNDLES.test(n))) {
-  let b; try { b = readBundle(p); } catch { continue; }
-  for (const f of b.files) {
-    if (f.data.length > 3e8) continue;
-    const t = f.data.toString('utf8');
-    for (const m of t.matchAll(/\{\s*"\$type": "Gryphon\.Data\.([\w.]+)/g)) {
-      if (!WANT.test(m[1])) continue;
-      const js = jsonObjectAt(t, m.index, 3e6); // (no object here is longer)
-      if (!js) continue;
-      try { const o = JSON.parse(js); if (o.guid) objs[o.guid] = { type: m[1], ...o }; } catch { /* not plain JSON */ }
-    }
-  }
-}
+const objs = dataObjects(bundleFiles(DIR, (n) => BUNDLES.test(n)), { wanted: (type) => WANT.test(type) });
 const one = (type, test = () => true) => Object.values(objs).find((o) => o.type === type && test(o));
 // a number given as it is, or as the GUID of a SharedInt
 const int = (v) => (objs[v] ? Number(objs[v].m_value) : Number(v));

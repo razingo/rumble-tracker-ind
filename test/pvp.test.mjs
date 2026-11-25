@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { parsePvp, inferMatches, vpValues, pvpReading, manualResult } from '../server/game/pvp.mjs';
 import { int, embedded, fixed64 } from '../web/scripts/lib/protobuf.js';
 
-
 const RULES = { base: 80, win: 2, loss: 1, streak: [{ upTo: 3, x: 1 }, { upTo: 5, x: 1.25 }] };
 const at = (honor, vp, season = 's27') => ({ season, honor, vp });
 const match = (from, to) => inferMatches(from, to, RULES);
@@ -49,6 +48,13 @@ test('no matches across seasons, or for impossible changes', () => {
   assert.equal(match(at(9500, 3000, 's26'), at(9000, 0, 's27')), null);
   assert.equal(match(at(5000, 500), at(5000, 400)), null);
   assert.equal(match(at(5000, 0), at(5000, 120)), null);
+});
+
+test('rules in which a match pays nothing tell no matches, and the search ends', () => {
+  for (const rules of [{ base: 0, win: 2, loss: 1 }, { base: 80, win: 0, loss: 1 }, { base: 80, win: 2, loss: 0 },
+    { base: 80, win: 2, loss: 1, streak: [{ x: 1 }, { x: 0 }] }]) {
+    assert.equal(inferMatches(at(5000, 0), at(5060, 160), rules), null, JSON.stringify(rules));
+  }
 });
 
 test('readings log a season start, matches and changes no combination explains', () => {

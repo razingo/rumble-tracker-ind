@@ -122,4 +122,3 @@ test('logs the G.R.I.D. when its refresh time or items change', () => {
   assert.equal(logGrid(h, 'a', grid('t2', ['x', 'z']), 'now'), true);
   assert.equal(h.a.length, 3);
 });
-

@@ -7,7 +7,6 @@ import { deflateRawSync, crc32 } from 'node:zlib';
 import { latestAppOf, latestRelease, zipUrl, zipEntry, downloadUpdate, sha256 as sha } from '../server/update/appupdate.mjs';
 import { readLimited } from '../server/download.mjs';
 
-
 /** A zip like tools/build-release.mjs writes (deflate; `stored` names are kept uncompressed). */
 function zip(entries, stored = []) {
   const local = [], central = [];

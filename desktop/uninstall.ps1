@@ -28,7 +28,6 @@ $exe = $env:RT_EXE
 $folder = Split-Path -Parent $exe
 $notices = Join-Path $folder 'THIRD-PARTY-NOTICES'
 $own = @($env:RT_HOME, $env:RT_NOTE, $env:RT_LOCAL) | Where-Object { $_ -and (Split-Path -Leaf $_) -eq 'RumbleTracker' }
-# (the launcher's pop-up script and font, written to the temporary folder to be run)
 # What a move of the tracker's folder could not remove yet, as it was in use (the note's list): it goes too, where it
 # is in a folder named RumbleTracker.
 $left = @()
@@ -36,6 +35,7 @@ if ($env:RT_NOTE) {
   try { $left = @((Get-Content -LiteralPath (Join-Path $env:RT_NOTE 'location.json') -Raw | ConvertFrom-Json).clear) } catch {}
 }
 $left = @($left | Where-Object { $_ -is [string] -and ((Split-Path -Parent $_) -split '[\\/]') -contains 'RumbleTracker' })
+# (RumbleTracker-launcher: the launcher's pop-up script and font, written to the temporary folder to be run)
 $targets = @($own) + $left + @($exe, "$exe.old", "$exe.failed", (Join-Path $env:TEMP 'RumbleTracker-launcher')) +
   @('README.md', 'LICENSE.txt', 'NOTICE.md' | ForEach-Object { Join-Path $folder $_ }) +
   @('Node.js-LICENSE.txt', 'WebView2-LICENSE.txt', 'WebView2-NOTICE.txt', 'Font-LilitaOne-OFL.txt', 'Font-Nunito-OFL.txt',

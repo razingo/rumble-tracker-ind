@@ -58,4 +58,3 @@ export function recordPvp(pvpHistory, account, acc, cur, now, vpRules) {
   acc.pvp = cur;
   return true;
 }
-

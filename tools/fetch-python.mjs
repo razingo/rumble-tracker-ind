@@ -12,6 +12,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, wri
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { TAR } from '../server/system.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, 'tools', 'gamedata', 'python');
@@ -42,8 +43,7 @@ if (sha256(zip) !== SHA256) {
 }
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
-const tar = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe');
-if (spawnSync(tar, ['-xf', zip, '-C', OUT], { stdio: 'inherit' }).status !== 0) fail('could not unpack the package.');
+if (spawnSync(TAR, ['-xf', zip, '-C', OUT], { stdio: 'inherit' }).status !== 0) fail('could not unpack the package.');
 // the embeddable Python only looks where its ._pth file says
 const site = path.join(OUT, 'Lib', 'site-packages');
 mkdirSync(site, { recursive: true });

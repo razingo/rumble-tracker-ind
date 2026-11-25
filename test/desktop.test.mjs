@@ -123,15 +123,29 @@ test('the release zip carries a license for everything the exe carries', () => {
   }
 });
 
-test('integration script compiles', { skip: !windows && 'Windows only', timeout: 60000 }, async () => {
-  // Only the type definition, as running it would create a shortcut and register a link type.
+test('integration script compiles, and keeps its compiled helpers', { skip: !windows && 'Windows only', timeout: 60000 }, async () => {
+  // Only the helpers, as running the rest would create a shortcut and register a link type.
   const script = readFileSync(path.join(DESKTOP, 'integration.ps1'), 'utf8');
-  const typeOnly = script.slice(0, script.indexOf("\n'@") + 4) + "\n'compiled'";
-  const out = await new Promise((resolve, reject) => {
-    execFile(POWERSHELL, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand',
-      encoded(typeOnly)], { windowsHide: true }, (e, stdout, stderr) => (e ? reject(new Error(stderr || e.message)) : resolve(stdout)));
+  const cut = script.indexOf('\n$exe = $env:RT_EXE');
+  assert.ok(cut > 0, 'the script has changed: where its helpers end is not found');
+  const helpersOnly = `${script.slice(0, cut)}\n[RtIntegration].Assembly.Location; 'compiled'`;
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'rt-helpers-'));
+  const run = (env) => new Promise((resolve, reject) => {
+    execFile(POWERSHELL, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encoded(helpersOnly)],
+      { windowsHide: true, env: { ...process.env, ...env } }, (e, stdout, stderr) => (e ? reject(new Error(stderr || e.message))
+        : resolve(stdout)));
   });
-  assert.match(out, /compiled/);
+  try {
+    // (a folder with brackets in its name, which Add-Type can't write to by itself)
+    const cache = path.join(dir, 'a [b]', 'integration-helpers.dll');
+    mkdirSync(path.dirname(cache));
+    assert.match(await run({ RT_CACHE: '' }), /compiled/, 'without a place to keep them');
+    assert.match(await run({ RT_CACHE: cache }), /compiled/);
+    assert.ok(existsSync(cache), 'compiled into RT_CACHE');
+    assert.ok((await run({ RT_CACHE: cache })).includes(cache), 'loaded from there the next time');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('the log\'s lines carry no Windows user name', () => {

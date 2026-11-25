@@ -36,4 +36,3 @@ export function showToast(title, body) {
     }, (err) => resolve(!err));
   });
 }
-

@@ -121,4 +121,3 @@ export const ui = {
   tab: ((h) => (h && globalThis.document?.querySelector(`[data-tab="${CSS.escape(h)}"]`)
     ? h : store.get('tab', 'collection')))(globalThis.location?.hash.slice(1)),
 };
-

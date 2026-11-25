@@ -221,6 +221,7 @@ async function cardClick(e) {
   const remove = e.target.closest('[data-armory-tag-remove]');
   if (remove) {
     const { card, army } = armyOfCard(remove);
+    if (!army) return;
     return updateSavedArmy(army.id, { tags: (army.tags || []).filter((t) => t !== remove.dataset.armoryTagRemove) }, card);
   }
   const act = e.target.closest('[data-armory-action]');

@@ -212,8 +212,10 @@ test('a mini the game adds gets its key from its name', () => {
   assert.equal(slugOf(null), '');
 });
 
-test('UnityPy is pinned to one version, from source and in the exe', async () => {
-  const pin = async (file) => /'UnityPy==([\d.]+)'/.exec(await readFile(new URL(file, import.meta.url), 'utf8'))?.[1];
-  assert.ok(await pin('../tools/fetch-python.mjs'));
-  assert.equal(await pin('../tools/gamedata/build.mjs'), await pin('../tools/fetch-python.mjs'));
+test('UnityPy and Pillow are pinned to one version, from source and in the exe', async () => {
+  for (const name of ['UnityPy', 'Pillow']) {
+    const pin = async (file) => new RegExp(`'${name}==([\\d.]+)'`, 'i').exec(await readFile(new URL(file, import.meta.url), 'utf8'))?.[1];
+    assert.ok(await pin('../tools/fetch-python.mjs'), name);
+    assert.equal(await pin('../tools/gamedata/build.mjs'), await pin('../tools/fetch-python.mjs'), name);
+  }
 });

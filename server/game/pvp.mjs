@@ -47,6 +47,8 @@ export function inferMatches(prev, cur, rules, maxMatches = 12) {
     return null;
   }
   const { loss, wins } = vpValues(rules);
+  // (rules with a match that pays nothing can't tell how many were played: any number would fit)
+  if (!(loss > 0) || !wins.every((w) => w > 0)) return null;
   // Every (losses, wins per band) with total VP = dv, fewest matches first.
   const found = [];
   const search = (left, i, counts) => {

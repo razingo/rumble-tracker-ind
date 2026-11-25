@@ -2293,7 +2293,7 @@
     leaderToken(l, 100, 300, 96);
     text(l.name, 166, 266, 22, '#fff', 'left', 800);
     const fx = 166 + ctx.measureText(l.name).width + 14;
-    text(l.family, fx + (icon(l.family, fx, 253, 16) ? 20 : 0), 266, 13, FAMILY[l.family], 'left', 700);
+    text(l.family, fx + (icon(l.family === 'Neutral' ? 'Miner' : l.family, fx, 253, 16) ? 20 : 0), 266, 13, FAMILY[l.family], 'left', 700);
     text(`Passive · ${l.passive}`, 166, 288, 14, '#ffe9b0', 'left', 700);
     // the passive's text beside its name, in the largest size that fits the panel
     const px = 166 + ctx.measureText(`Passive · ${l.passive}`).width + 12;

@@ -41,9 +41,7 @@ body {
   min-width: 1280px;
   margin: 0;
   color: var(--ink);
-  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
-  font-family: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
-  font-weight: 600;
+  font: 600 14px/1.45 "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
   background-attachment: fixed;
 }
 h2 { margin: 0 0 10px; }
@@ -421,7 +419,7 @@ button { cursor: pointer; }
 }
 .army-slot-foot .max.boost { color: #3fd0c0; }
 .army-talent { border: 0; background: transparent; padding: 0; }
-.talent-icon { width: 28px !important; height: 28px !important; border-radius: 6px !important; padding: 0 !important;
+.talent-icon { width: 28px !important; height: 28px !important; border-radius: 4px !important; padding: 0 !important;
   background: none !important; }
 /* only a hint, as matching a slot is optional */
 .army-notes { margin: 12px 0 4px; padding-left: 18px; color: #d9b44a; font-size: 13px; }
@@ -825,7 +823,7 @@ button { cursor: pointer; }
 .report-button { position: relative; }
 .report-button.has-problems::after { content: ''; position: absolute; top: 2px; right: 2px; width: 9px; height: 9px;
   border-radius: 50%; background: var(--error); box-shadow: 0 0 0 2px var(--panel); }
-.report-form { padding: 16px 20px 20px; display: grid; gap: 10px; }
+.report-form { padding: 16px 20px 20px; display: grid; gap: 14px; }
 .report-field { display: grid; gap: 4px; font-weight: 700; }
 .report-field input, .report-field textarea { font: inherit; font-weight: 500; width: 100%; resize: vertical; }
 .report-details summary { cursor: pointer; font-weight: 700; font-size: 13px; }
@@ -837,8 +835,7 @@ button { cursor: pointer; }
 .dialog { width: min(620px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 0;
   border: 1px solid var(--line); border-radius: 14px; background: var(--panel-2); color: var(--ink); box-shadow: var(--shadow); }
 .dialog::backdrop { background: rgb(0 0 0 / 55%); }
-.dialog-form { padding: 16px 20px 20px; display: grid; gap: 10px; }
-.dialog-head { display: flex; align-items: center; justify-content: space-between; }
+.dialog-form { padding: 16px 20px 20px; display: grid; gap: 14px; }
 .dialog-head h2 { margin: 0; }
 .dialog-toggle { font-weight: 800; }
 .notify-account select, .close-window select { margin-left: 6px; }
@@ -864,9 +861,8 @@ button { cursor: pointer; }
 .dialog-actions { display: flex; align-items: center; gap: 10px; }
 /* A pop-up's title and close button stay on top while what is under them scrolls. What it holds is in cards, lighter
    than the pop-up; in Settings each section has a card of its own under a gold title. */
-.dialog-head { position: sticky; top: 0; z-index: 1; margin: -16px -20px 0; padding: 12px 20px;
-  background: var(--panel-2); border-bottom: 1px solid rgb(242 179 61 / 35%); }
-.dialog-form, .report-form { gap: 14px; }
+.dialog-head { display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 1;
+  margin: -16px -20px 0; padding: 12px 20px; background: var(--panel-2); border-bottom: 1px solid rgb(242 179 61 / 35%); }
 .message-body p:last-child { margin-bottom: 0; }
 .dialog-card { display: grid; gap: 10px; padding: 12px 16px 16px; border: 1px solid var(--line); border-radius: 12px;
   background: var(--panel); box-shadow: 0 2px 8px rgb(0 0 0 / 30%); }
@@ -1309,7 +1305,7 @@ select:focus, input:focus, textarea:focus { outline: 2px solid var(--gold-2); ou
 
 /* purple footer bar */
 .army-slot.empty .army-slot-foot { background: #1c2140; }
-.army-talent .talent-icon { border: 2px solid #1d1036 !important; border-radius: 4px !important; }
+.army-talent .talent-icon { border: 2px solid #1d1036 !important; }
 
 /* Misc */
 ::-webkit-scrollbar { width: 10px; height: 10px; }

@@ -3,10 +3,11 @@
 # - the rumble-tracker: link type, which starts the exe: clicking a notification opens the tracker;
 # - after an update (RT_REFRESH=1), asks Explorer to redraw the exe's icon (it caches icons by path).
 # Writes "shortcut", "protocol" and "icon" lines for what succeeded; errors go to standard error.
-# Environment: RT_EXE (the exe), RT_AUMID (app ID), RT_TITLE (shortcut name), RT_REFRESH.
+# Environment: RT_EXE (the exe), RT_AUMID (app ID), RT_TITLE (shortcut name), RT_REFRESH, RT_CACHE (where to keep the
+# compiled helpers below).
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
-Add-Type -TypeDefinition @'
+$helpers = @'
 using System;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
@@ -76,6 +77,24 @@ public static class RtIntegration {
   }
 }
 '@
+# Compiling the helpers takes a moment, so they are compiled once per version into RT_CACHE (in the unpacked app), as
+# desktop/window.ps1 does with its own
+$cache = $env:RT_CACHE
+if ($cache -and -not (Test-Path -LiteralPath $cache)) {
+  # (compiled in the temporary folder, then moved: Add-Type can't write to a path with [ or ] in it)
+  $made = Join-Path ([IO.Path]::GetTempPath()) "RumbleTracker-integration-$PID.dll"
+  try {
+    Add-Type -TypeDefinition $helpers -OutputAssembly $made -OutputType Library
+    [IO.File]::Copy($made, "$cache.tmp", $true)
+    [IO.File]::Move("$cache.tmp", $cache)
+  } catch {
+    # not kept: compiled in memory below
+  } finally {
+    Remove-Item -ErrorAction SilentlyContinue -LiteralPath $made, "$cache.tmp"
+  }
+}
+if ($cache -and (Test-Path -LiteralPath $cache)) { Add-Type -LiteralPath $cache }
+else { Add-Type -TypeDefinition $helpers }
 
 $exe = $env:RT_EXE
 try {

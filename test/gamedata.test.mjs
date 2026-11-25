@@ -201,6 +201,14 @@ test('a check without the game fails as a read does, and a retry asked for durin
     assert.equal(ctx.gameData.error, 'Warcraft Rumble was not found on this PC.');
     assert.deepEqual(ctx.gameData.reading, false);
 
+    // the game's version can't be read just now (a patch is rewriting it): nothing is built, and it is no error
+    const patching = fakeBuilder('C:\\game');
+    patching.stepsDue = () => { throw new Error('EBUSY: .build.info'); };
+    const errors = ctx.errorLog.list().length;
+    await (await createGameData(ctx, { builder: patching })).check();
+    assert.equal(patching.builds, 0);
+    assert.equal(ctx.errorLog.list().length, errors);
+
     // a retry asked for while a check runs: the running one looked before the change, so another follows
     const slow = fakeBuilder('C:\\game');
     let looked = 0;

@@ -1273,7 +1273,8 @@ async function main() {
 const AUMID = 'razingo.RumbleCollectionTracker';
 const INTEGRATE_DELAY = 5000; // ms after the start
 function integrate() {
-  const env = { ...process.env, RT_EXE: process.execPath, RT_AUMID: AUMID, RT_TITLE: TITLE, RT_REFRESH: afterUpdate ? '1' : '' };
+  const env = { ...process.env, RT_EXE: process.execPath, RT_AUMID: AUMID, RT_TITLE: TITLE, RT_REFRESH: afterUpdate ? '1' : '',
+    RT_CACHE: path.join(APP_DIR, 'desktop', 'integration-helpers.dll') };
   execFile(POWERSHELL, psArgs(fs.readFileSync(path.join(APP_DIR, 'desktop', 'integration.ps1'), 'utf8')),
     { windowsHide: true, timeout: 60000, env }, (err, out, stderr) => {
     const done = new Set(String(out || '').split(/\r?\n/).map((l) => l.trim()));

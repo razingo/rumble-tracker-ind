@@ -95,6 +95,40 @@ export function jsonObjectAt(text, i, limit) {
   return null;
 }
 
+/**
+ * The game's data objects in the bundle files given, as { guid: { type, ...the object } } (type: its name without
+ * "Gryphon.Data."). A bundle or an object that can't be read is passed over. `wanted(type)` picks the types,
+ * `limit` is the longest an object's text may be and `maxFile` the largest file looked into; `into` adds to objects
+ * read earlier, and `bundle` puts the name of the bundle each came from on it.
+ */
+export function dataObjects(files, { wanted = () => true, limit = 3e6, maxFile = 3e8, into = {}, bundle = false } = {}) {
+  for (const p of files) {
+    let b;
+    try {
+      b = readBundle(p);
+    } catch {
+      continue;
+    }
+    const from = bundle ? { bundle: p.split(/[\\/]/).pop() } : null;
+    for (const f of b.files) {
+      if (f.data.length > maxFile) continue;
+      const t = f.data.toString('utf8');
+      for (const m of t.matchAll(/\{\s*"\$type": "Gryphon\.Data\.([\w.]+)/g)) {
+        if (!wanted(m[1])) continue;
+        const json = jsonObjectAt(t, m.index, limit);
+        if (!json) continue;
+        try {
+          const o = JSON.parse(json);
+          if (o.guid) into[o.guid] = { type: m[1], ...from, ...o };
+        } catch {
+          // not plain JSON
+        }
+      }
+    }
+  }
+  return into;
+}
+
 // The save stores an ID as the GUID's 32 hex digits in another order: guid[i] = saveId[PERM[i]].
 const PERM = [8, 9, 10, 11, 12, 13, 14, 15, 4, 5, 6, 7, 0, 1, 2, 3, 30, 31, 28, 29, 26, 27, 24, 25, 22, 23, 20, 21, 18, 19, 16, 17];
 /** The ID the save uses for a game object's GUID. */
@@ -125,8 +159,9 @@ export function englishStrings(objs) {
 }
 
 // The currencies' names by their GUID (data_currencytype.bundle), as the game shows them.
+export const COINS = 'e9c433015c337934c9890eb4e13ff3d3';
 export const CURRENCY_NAMES = {
-  e9c433015c337934c9890eb4e13ff3d3: 'Coins', '85f8dc579c792453abcc2f9c900eb9d5': 'Arc Energy',
+  [COINS]: 'Coins', '85f8dc579c792453abcc2f9c900eb9d5': 'Arc Energy',
   '9b00c3378c339bc47bd442ddfd0d1a56': 'Valor', '3949594ec662246408f94474a345a7ab': 'Rare Upgrade Core',
   a93da5dcbe6bd4c2aa18ca4a485c182f: 'Epic Upgrade Core', deb04929d9e074a7a91475b8b6202e7b: 'Legendary Upgrade Core',
   dfaa4aaedad744b7b86869bf8d9bb68e: 'Big Red Button', cf836abedd57e1f4e887bb330b5b87d7: 'Rare-O-Matic',
