@@ -3,6 +3,23 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.4.4
+
+- Fixed: a damaged `config.json` (the file that holds the game's folder when you gave one by hand) stopped the
+  tracker from starting. It now counts as "no folder given", and the tracker looks for the game.
+- The window opens and reloads faster: pictures and scripts it already has are no longer sent again.
+- A tracker's folder with `[` or `]` in its name no longer slows down every start.
+- The side panel no longer says "Not saved" when you close it right after a change that was saved.
+- Deleting an army in the Armory, sending a test notification and clearing the errors in Report a problem now
+  say so when the tracker does not answer.
+- A check for a newer game that can't read the game's version file, as while the game is being patched, no longer
+  shows as an error in Report a problem.
+- A first move of an old install's files that fails also removes the empty folders it made for the place you
+  picked.
+- The rdmodule's data: a picture step that fails says so at once, not after 30 minutes, and a picture that can't
+  be saved is reported. A damaged extraction counts as not extracted.
+- The rdmodule: one error no longer freezes it.
+
 ## 0.4.3
 
 - Moving the tracker's folder is safer. Everything is copied first, and the old files are removed only once the
