@@ -142,7 +142,8 @@ test('integration script compiles, and keeps its compiled helpers', { skip: !win
     assert.match(await run({ RT_CACHE: '' }), /compiled/, 'without a place to keep them');
     assert.match(await run({ RT_CACHE: cache }), /compiled/);
     assert.ok(existsSync(cache), 'compiled into RT_CACHE');
-    assert.ok((await run({ RT_CACHE: cache })).includes(cache), 'loaded from there the next time');
+    // (by the file's name: Windows may spell the temporary folder another way; helpers compiled in memory have no file)
+    assert.ok((await run({ RT_CACHE: cache })).includes(path.basename(cache)), 'loaded from there the next time');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
