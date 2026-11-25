@@ -15,8 +15,10 @@ else: no Node.js, no Python, no installer.
 
 1. Open [Releases](https://github.com/razingo/rumble-tracker-ind/releases/latest) and download
    `RumbleTracker-<version>-win-x64.zip`, or build the exe yourself ([SELF-BUILD.md](SELF-BUILD.md)).
-2. Extract the zip anywhere (for example to `Documents\RumbleTracker`) and double-click **RumbleTracker.exe**.
-3. The tracker opens in its own window. The first time, it reads its game data from your game install, with a
+2. Extract the zip anywhere (for example to your Desktop) and double-click **RumbleTracker.exe**.
+3. The first time, the tracker asks where to keep its files. It makes a folder named `RumbleTracker` in the folder
+   you pick and keeps everything there; you can move it later in **⚙ Settings**.
+4. The tracker opens in its own window. The first time, it reads its game data from your game install, with a
    loading bar (about a minute), then shows the tracker.
 
 **The tracker needs no download for its game data.** Names, stats, events, shop offers and all images are read from
@@ -27,10 +29,12 @@ The tracker reads the game's save every few seconds, so the window updates on it
 
 ### Its own window
 
-The tracker is one program with its own window and tray icon. The window shows the tracker's page with Microsoft Edge
-WebView2, which comes with Windows 10 and 11. It doesn't use your browser, so your bookmarks, extensions and logins
-aren't touched; links to other sites open in your default browser. On the rare PC without WebView2, the tracker
-only explains how to install it from Microsoft; start it again once WebView2 is installed.
+The tracker is one program with its own window and tray icon. The window has a title bar in the tracker's look, with
+its own buttons to minimize, maximize and close; it is resized by its edges and snaps as any window. The window shows
+the tracker's page with Microsoft Edge WebView2, which comes with Windows 10 and 11. It doesn't use your browser, so
+your bookmarks, extensions and logins aren't touched; links to other sites open in your default browser. On the rare
+PC without WebView2, the tracker only explains how to install it from Microsoft; start it again once WebView2 is
+installed.
 
 ### The tray icon
 
@@ -177,7 +181,7 @@ Environment variables for development and testing:
 | `web/` | The page. `scripts/app.js` starts it and switches tabs, `core.js` holds what the modules share, and each tab, dialog and menu has its own module; the Army tab also has `army-code.js` (army codes) and `army-pools.js`. `scripts/lib/` has the code the server and build tools use too: shared names and units, formatting, the protobuf reader and writer, schedules, PvP seasons, input limits and the reward-tree planner. `styles/style.css` is the page's look; `styles/art.css` adds the textures and frames from the game files |
 | `server/rdmodule.mjs`, `rdmodule/` | The rdmodule and its page |
 | `gamedata/` | Game data and art (© Blizzard, see NOTICE), served as `/static/…`. Not in the repository; read from the game install |
-| `desktop/` | The exe's launcher (`launcher.cjs`), the unseen window the rdmodule's pictures are drawn in (`render.ps1`), the window and tray icon (`window.ps1`, with the WebView2 libraries in `webview2/`), Windows integration (`integration.ps1`), Uninstall in Settings (`uninstall.ps1`) and the script that draws the icon (`make-icon.ps1`, into `web/favicon.ico`) |
+| `desktop/` | The exe's launcher (`launcher.cjs`), the unseen window the rdmodule's pictures are drawn in (`render.ps1`), the window and tray icon (`window.ps1`, with the WebView2 libraries in `webview2/`), the pop-ups shown before the window can open (`popup.ps1`, with the title font `LilitaOne-Regular.ttf`), Windows integration (`integration.ps1`), Uninstall in Settings (`uninstall.ps1`) and the script that draws the icon (`make-icon.ps1`, into `web/favicon.ico`) |
 | `tools/gamedata/` | The game-data builder: `build.mjs` runs the steps, with the table builders, the image extractors and `seed/`, the tracker's own few tables |
 | `tools/rdmodule/` | The rdmodule's exports and render pages |
 | `tools/` | What the exe carries (`fetch-python.mjs`, `fetch-rdmodule-tools.mjs`, `fetch-webview2.ps1`), building the release (`build-release.mjs`, Node.js 25.5+) and the checks: style (`check-style.mjs`), that two reads of the game data and two extractions give the same files (`check-gamedata.mjs`, `check-extraction.mjs`) and pinned software with a newer version out (`check-pins.mjs`). `git.mjs` finds Git for the ones that need it |

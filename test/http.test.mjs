@@ -265,3 +265,43 @@ test("the exe's window is shown on request, and the tracker uninstalls", async (
   await new Promise((r) => setTimeout(r, 300));
   assert.equal(uninstalled, 1);
 });
+
+test("the tracker's folder: a move from Settings is noted, then the tracker restarts; a folder is opened only by its kind", async () => {
+  const { host } = await import('../server/host.mjs');
+  const { mkdtemp, mkdir, readFile, writeFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const dir = await mkdtemp(path.join(tmpdir(), 'rt-http-storage-'));
+  const storage = { folder: path.join(dir, 'now', 'RumbleTracker'), note: path.join(dir, 'roaming', 'location.json') };
+  await mkdir(path.join(storage.folder, 'data'), { recursive: true });
+  await mkdir(path.dirname(storage.note), { recursive: true });
+  await writeFile(storage.note, JSON.stringify({ folder: storage.folder }));
+  let restarted = 0;
+  const reading = ctx.gameData;
+  try {
+    // where the folder is set by the one who started the tracker, there is no choice
+    host.attach({ options: {}, restart: () => restarted++ });
+    assert.equal((await api('GET', '/api/settings')).body.storageFolder, null);
+    assert.match((await api('POST', '/api/storage', { folder: path.join(dir, 'games') })).body.error, /set where it was started/);
+    host.attach({ options: { storage }, restart: () => restarted++ });
+    assert.equal((await api('GET', '/api/settings')).body.storageFolder, storage.folder);
+    // not while the game data is read, nor to a folder that will not do
+    ctx.gameData = { ...reading, reading: true };
+    assert.match((await api('POST', '/api/storage', { folder: path.join(dir, 'games') })).body.error, /game data is being read/);
+    ctx.gameData = { ...reading, reading: false };
+    assert.match((await api('POST', '/api/storage', { folder: 'games' })).body.error, /whole path/);
+    assert.equal(restarted, 0);
+    const moved = await api('POST', '/api/storage', { folder: path.join(dir, 'games') });
+    assert.deepEqual([moved.status, moved.body.folder], [200, path.join(dir, 'games', 'RumbleTracker')]);
+    assert.deepEqual(JSON.parse(await readFile(storage.note, 'utf8')), { folder: storage.folder, moveTo: moved.body.folder,
+      made: [moved.body.folder, path.join(dir, 'games')] });
+    await new Promise((r) => setTimeout(r, 300));
+    assert.equal(restarted, 1);
+    // (a folder of a kind that is known would open in Explorer, so only the refusal is tried)
+    assert.equal((await api('POST', '/api/open-folder', { which: path.join(dir, 'games') })).status, 400);
+    assert.equal((await api('POST', '/api/open-folder', {})).status, 400);
+  } finally {
+    ctx.gameData = reading;
+    host.attach({ options: {} });
+    await rm(dir, { recursive: true, force: true });
+  }
+});

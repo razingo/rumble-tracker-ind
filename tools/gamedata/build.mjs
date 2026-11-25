@@ -56,6 +56,8 @@ export const TABLE_FILES = {
 };
 // A step that writes into a file another step made runs whenever that one did, whatever came out of it.
 const FOLLOWS = { Minis: ['Army boards'] };
+// And it starts from what that one made: when it runs, that one runs first, so it never builds on its own last result.
+const STARTS_FROM = { 'Army boards': ['Minis'] };
 const SOURCES = {
   'Index of the game files': ['build_guid_index.mjs', ...TABLES],
   Rules: ['build_rules.mjs', ...TABLES, 'seed/rules.json'],
@@ -500,7 +502,8 @@ export async function buildGameData({ game = findGame(), out, work, due = 'all',
       ?? (made[step] || []).map((f) => join(out, f)));
     return hashes[step] !== last;
   };
-  const missing = (await runSteps(steps, { onStep, log, only, ran: hashed, follows: FOLLOWS }))
+  const missing = (await runSteps(steps, { onStep, log, only, ran: hashed, follows: FOLLOWS,
+    remade: (step) => STARTS_FROM[step] || [] }))
     .filter((l) => /NOT FOUND/.test(l)).map((l) => l.trim());
 
   checkTables(out);

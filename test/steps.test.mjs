@@ -49,7 +49,7 @@ test('the real builder: everything is due without a stamp; data is kept when the
 });
 
 test('a step that waits for one that ran runs only when that one made something else', async () => {
-  const run = async (only, changed, follows = {}) => {
+  const run = async (only, changed, follows = {}, starts = {}) => {
     const order = [];
     const step = (name) => async () => { order.push(name); };
     await runSteps([
@@ -59,7 +59,8 @@ test('a step that waits for one that ran runs only when that one made something 
       ['events', ['minis'], step('events')],
       ['rewards', ['events'], step('rewards')],
       ['store', [], step('store')],
-    ], { atOnce: 1, only: only && new Set(only), ran: (name) => changed.includes(name), follows });
+    ], { atOnce: 1, only: only && new Set(only), ran: (name) => changed.includes(name), follows,
+      remade: (name) => starts[name] || [] });
     return order;
   };
   assert.deepEqual(await run(['minis'], []), ['minis'], 'the same came out: nothing after it runs');
@@ -67,6 +68,9 @@ test('a step that waits for one that ran runs only when that one made something 
   assert.deepEqual(await run(['minis'], ['minis', 'events']), ['minis', 'boards', 'events', 'rewards']);
   assert.deepEqual(await run(['minis'], [], { minis: ['boards'] }), ['minis', 'boards'], 'a step that follows runs anyway');
   assert.deepEqual(await run(['store', 'index'], ['store']), ['index', 'store']);
+  // a step that writes into what another made has that one run first, so it never builds on its own last result
+  assert.deepEqual(await run(['boards'], [], { minis: ['boards'] }, { boards: ['minis'] }), ['minis', 'boards']);
+  assert.deepEqual(await run(['index'], ['index'], { minis: ['boards'] }, { boards: ['minis'] }), ['index', 'minis', 'boards']);
   assert.deepEqual(await run(null, []), ['index', 'minis', 'boards', 'events', 'rewards', 'store'], 'everything, when asked');
   assert.deepEqual(await run([], ['minis']), []);
 });

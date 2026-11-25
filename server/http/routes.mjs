@@ -223,6 +223,7 @@ export function createRoutes(ctx, deps) {
       if ((await deps.rdmodule?.status())?.state === 'running') {
         return [400, { error: 'The additional data is being extracted. Move the files once that is done.' }];
       }
+      if (ctx.gameData?.reading) return [400, { error: 'The game data is being read. Move the files once that is done.' }];
       let home;
       try {
         home = await noteMove(host.options.storage, folder);

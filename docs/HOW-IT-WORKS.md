@@ -75,8 +75,8 @@ newer version, a pop-up offers:
 
 - **Download now**: the tracker downloads the release from GitHub, checks the zip and the exe against the checksums
   published with that release, and has the exe replaced and restarted. If the new version fails to start, the previous
-  one is put back. The checksums show the download arrived whole; who published it is taken on trust from GitHub, as
-  when you download the zip there yourself.
+  one is put back and started, and says why. The checksums show the download arrived whole; who published it is
+  taken on trust from GitHub, as when you download the zip there yourself.
 - **Later**: hides the pop-up until the tracker restarts.
 
 An exe you built yourself gets the pop-up without *Download now*: it opens GitHub Releases instead, and the exe is
@@ -104,19 +104,37 @@ A few seconds after each start, the exe makes sure of these, for your Windows ac
 Everything the tracker keeps is in one folder named `RumbleTracker`. The first start asks where to put it, with
 `%LOCALAPPDATA%` filled in, and the tracker makes the `RumbleTracker` folder in the folder you pick. **⚙ Settings →
 The tracker's folder** shows where it is and opens it. To move it, type another folder there: the tracker closes,
-moves its files into a `RumbleTracker` folder in it, and starts again. If the move can't be finished, the files are
-put back and the tracker says why.
+moves its files into a `RumbleTracker` folder in it, and starts again.
+
+A move copies everything first, then notes the new folder, and only then removes the files from where they were. So
+a move that fails, or is cut off by the PC going off, leaves the files whole in one place: where they were while
+they are copied, and in the new folder from then on. A move that can't be done says why, and needs the room for a
+second copy until the old files go. Old files that are still in use are removed at a later start.
 
 A tracker from before there was a choice kept your data in `%APPDATA%\RumbleTracker` and the rest in
 `%LOCALAPPDATA%\RumbleTracker`. Its first start after the update asks the same question and moves both into the one
 folder.
+
+If the folder you pick on the first start already holds a `RumbleTracker` folder, the tracker uses it. Its program
+files, game data and window data are made fresh, and the backups in it stay. A new tracker takes over the data it
+finds there. A tracker that brings data of its own keeps its own. The backups it found go into
+`data\backups\pre_existing`, so none of them has the name of one of its own, and the data it found is saved there
+too as one more file (`found-<date>.json`). *Backup → Import backup…* reads all of them.
+
+If the folder is not there when the tracker starts (its disk is not connected, or the folder was moved, renamed or
+deleted), the tracker does not make a new one by itself. It asks: try again, pick a folder, or quit. In a folder you pick it
+starts empty, also when you pick the same one again, or with a tracker's files if it finds them there; files in
+another place are left as they are.
+
+The question, and a message that the tracker can't start, are shown before the tracker's own window can open. They
+have the tracker's look; if that can't be shown, Windows' own message box and folder picker are.
 
 | Where | What |
 |---|---|
 | `%APPDATA%\RumbleTracker\location.json` | The note of where the tracker's folder is. It stays here wherever the folder is |
 | `data` | Your data: what you entered, the history, settings, the game data read from your game install (`gamedata`, with the reading's working files in `gamedata-build`), the game's folder if you gave one (`config.json`), automatic backups (`backups`), a downloaded update (`update`, removed once installed) and the log (`tracker.log`, `tracker.previous.log`) |
 | `data\state` | The last read of each account's save (rebuilt by the next read; not in backups) |
-| `%TEMP%\RumbleTracker-launcher` | The script and the title font of the pop-ups the tracker shows before its window can open (the folder question, a message that it can't start). Written again at each use, removed by Uninstall |
+| `%TEMP%\RumbleTracker-launcher` | The script and the title font of the pop-ups the tracker shows before its window can open (the folder question, a message that it can't start), written again at each use. While the tracker starts, also `starting.lock`, so that a second start does not ask or move files too; it brings the first one's question to the front and leaves an empty file, `show`, so the first one opens its window once it runs. Removed by Uninstall |
 | `app` | The program's files, unpacked from the exe once per version |
 | `webview2` | The window's WebView2 data (Microsoft Edge WebView2 shows the page). The files there are WebView2's own (cache, settings); the tracker stores nothing of yours in it, and deleting the folder only resets the window |
 

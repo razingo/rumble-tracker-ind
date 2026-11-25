@@ -72,7 +72,12 @@ test("uninstalling removes the data, the program files and the zip's files, and 
       'picked/RumbleTracker/data/names.json',
       'picked/RumbleTracker/data/backups/b.json', 'picked/RumbleTracker/app/v/x.mjs', 'picked/mine.txt',
       'zip/RumbleTracker.exe', 'zip/README.md', 'zip/THIRD-PARTY-NOTICES/Node.js-LICENSE.txt', 'other/RumbleTracker.exe',
-      'other/mine.txt', 'custom/names.json']) file(f);
+      'other/mine.txt', 'custom/names.json', 'old/RumbleTracker/data/state/s.json', 'old/RumbleTracker/webview2/c',
+      'old/keep.txt']) file(f);
+    // (what a move left in the old folder is in the note; only what is in a RumbleTracker folder goes)
+    writeFileSync(path.join(dir, 'appdata', 'RumbleTracker', 'location.json'), JSON.stringify({ folder: 'x', clear: [
+      path.join(dir, 'old', 'RumbleTracker', 'data', 'state'), path.join(dir, 'old', 'RumbleTracker', 'webview2'),
+      path.join(dir, 'old', 'keep.txt')] }));
     // the tracker's folder in the one the player picked, and the note of where it is
     const env = { RT_FILES_ONLY: '1', RT_PARENT: '0', RT_HOME: path.join(dir, 'picked', 'RumbleTracker') };
     // (the usual place in %LOCALAPPDATA% goes too, with what an earlier version left there)
@@ -80,6 +85,8 @@ test("uninstalling removes the data, the program files and the zip's files, and 
       RT_EXE: path.join(dir, 'zip', 'RumbleTracker.exe') }, 'uninstall.ps1');
     assert.deepEqual(['appdata/RumbleTracker', 'local/RumbleTracker', 'picked/RumbleTracker', 'zip']
       .filter((f) => existsSync(path.join(dir, f))), [], 'all removed');
+    assert.deepEqual([existsSync(path.join(dir, 'old', 'RumbleTracker')), existsSync(path.join(dir, 'old', 'keep.txt'))],
+      [false, true], 'what a move left behind goes with its folder, and nothing outside a RumbleTracker folder');
     // (run again with nothing there: none of the folders has to exist)
     await run({ ...env, RT_NOTE: path.join(dir, 'appdata', 'RumbleTracker'), RT_LOCAL: path.join(dir, 'local', 'RumbleTracker'),
       RT_EXE: path.join(dir, 'zip', 'RumbleTracker.exe') }, 'uninstall.ps1');

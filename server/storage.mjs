@@ -3,12 +3,11 @@
 // move asked for in Settings is checked and noted here; the launcher moves the files at the next start, before
 // anything uses them, so the tracker restarts for it.
 import path from 'node:path';
-import { mkdir, readdir, stat, statfs, writeFile, rename, rm } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rmdir, stat, statfs, writeFile, rename, rm } from 'node:fs/promises';
 
 const FOLDER_NAME = 'RumbleTracker';
 const same = (a, b) => path.resolve(a).toLowerCase() === path.resolve(b).toLowerCase();
 const inside = (inner, outer) => (path.resolve(inner).toLowerCase() + path.sep).startsWith(path.resolve(outer).toLowerCase() + path.sep);
-const disk = (p) => path.parse(path.resolve(p)).root.toLowerCase();
 
 /** The folder the tracker makes for itself in the one picked; a folder already named so is used as it is. */
 export function homeIn(picked) {
@@ -46,21 +45,36 @@ export async function noteMove(storage, picked) {
   if ((await readdir(home).catch(() => [])).length) {
     throw new Error(`${home} already has files in it. Pick another folder, or empty that one.`);
   }
-  try {
-    await mkdir(home, { recursive: true });
-    const probe = path.join(home, '.write');
-    await writeFile(probe, '');
-    await rm(probe);
-  } catch (e) {
-    throw new Error(`The tracker can't write to that folder (${e.code || e.message}).`);
+  // the folders that are made for the try: the tracker's own, and those above it that are not there
+  const made = [];
+  for (let d = home; !await stat(d).then(() => true, () => false); d = path.dirname(d)) {
+    made.push(d);
+    if (path.dirname(d) === d) break;
   }
-  if (disk(home) !== disk(storage.folder)) {
+  try {
+    try {
+      await mkdir(home, { recursive: true });
+      const probe = path.join(home, '.write');
+      await writeFile(probe, '');
+      await rm(probe);
+    } catch (e) {
+      throw new Error(`The tracker can't write to that folder (${e.code || e.message}).`);
+    }
+    // the files are copied before the old ones go, so they need their room there, on the same disk too
     const gb = (bytes) => (bytes / 2 ** 30).toFixed(1);
     const needed = await bytesIn(storage.folder);
     const free = await statfs(home).then((s) => s.bavail * s.bsize, () => null);
     if (free != null && needed > free) throw new Error(`The files take ${gb(needed)} GB, and ${gb(free)} GB is free there.`);
+    // (what an earlier move left to remove stays in the note)
+    const clear = await readFile(storage.note, 'utf8').then((text) => JSON.parse(text).clear, () => null);
+    // (`made`: the folders made here, which go again if the move can't be done)
+    const note = { folder: storage.folder, moveTo: home, ...(made.length && { made }),
+      ...(Array.isArray(clear) && clear.length && { clear }) };
+    await writeFile(`${storage.note}.tmp`, JSON.stringify(note, null, 2));
+    await rename(`${storage.note}.tmp`, storage.note);
+  } catch (e) {
+    for (const d of made) await rmdir(d).catch(() => {}); // they do not stay
+    throw e;
   }
-  await writeFile(`${storage.note}.tmp`, JSON.stringify({ folder: storage.folder, moveTo: home }, null, 2));
-  await rename(`${storage.note}.tmp`, storage.note);
   return home;
 }

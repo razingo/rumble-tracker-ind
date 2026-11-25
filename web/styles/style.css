@@ -862,7 +862,6 @@ button { cursor: pointer; }
 .notify-hours input { width: 52px; }
 .notify-quiet { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .dialog-actions { display: flex; align-items: center; gap: 10px; }
-.dialog-form h3 { margin: 6px 0 0; font-size: 14px; }
 /* A pop-up's title and close button stay on top while what is under them scrolls. What it holds is in cards, lighter
    than the pop-up; in Settings each section has a card of its own under a gold title. */
 .dialog-head { position: sticky; top: 0; z-index: 1; margin: -16px -20px 0; padding: 12px 20px;

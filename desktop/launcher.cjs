@@ -17,7 +17,7 @@ const http = require('node:http');
 const net = require('node:net');
 const crypto = require('node:crypto');
 const zlib = require('node:zlib');
-const { execFile, spawn } = require('node:child_process');
+const { execFile, execFileSync, spawn } = require('node:child_process');
 const { createRequire } = require('node:module');
 const { setTimeout: sleep } = require('node:timers/promises');
 const { pathToFileURL } = require('node:url');
@@ -61,14 +61,35 @@ let host = null; // server/host.mjs, loaded by main before the server starts
 process.title = TITLE;
 
 // Logging
-// Lines written before the folder is known wait in `early`.
+// A start's lines wait in `early` until this start has its own log (rotateLog), so they are in the log of the start
+// they belong to, and nothing is written into the data folder while it may be moved. A start that ends before that
+// (it hands over to a running tracker, or can't go on) adds them to the log that is there: the one of the folder it
+// knows, or the one of the data folder from before there was a choice (`oldLog`, set when files are found there).
 let early = [];
+let logOpen = false;
+let oldLog = null;
 function useHome(home, data = path.join(home, 'data')) {
   HOME = home;
   DATA = data;
   fs.mkdirSync(DATA, { recursive: true });
   LOG = path.join(DATA, 'tracker.log');
 }
+// A tracker that has its folder knows its log from the start; one that still asks for it, once it has it.
+if (!FIXED_DATA) {
+  try {
+    const known = JSON.parse(fs.readFileSync(NOTE, 'utf8')).folder;
+    if (known && fs.existsSync(path.join(known, 'data'))) useHome(known);
+  } catch {
+    // no note yet, or its folder is not there
+  }
+}
+process.on('exit', () => {
+  try {
+    if ((LOG || oldLog) && early.length) fs.appendFileSync(LOG || oldLog, early.join(''));
+  } catch {
+    // nowhere to write
+  }
+});
 // Called only by the instance that runs (not when handing over to a running one).
 const rotateLog = () => {
   try {
@@ -77,6 +98,7 @@ const rotateLog = () => {
     // first start
   }
   logBytes = 0;
+  logOpen = true;
 };
 // The tracker can run for weeks in the tray, so the log is rotated once it passes MAX_LOG. At most two files of about
 // MAX_LOG each are kept.
@@ -101,7 +123,7 @@ for (const level of ['log', 'info', 'warn', 'error']) {
     let line = withoutUserName(a.map((x) => (typeof x === 'string' ? x : x instanceof Error ? x.stack : JSON.stringify(x))).join(' '));
     if (line.length > MAX_LINE) line = `${line.slice(0, MAX_LINE)}… (${line.length - MAX_LINE} more characters)`;
     let text = `${new Date().toISOString()} ${line}\n`;
-    if (!LOG) return void early.push(text);
+    if (!LOG || !logOpen) return void early.push(text);
     text = early.join('') + text;
     early = [];
     try {
@@ -132,25 +154,45 @@ const PS_RUN_FILE = '. ([ScriptBlock]::Create([IO.File]::ReadAllText($env:RT_SCR
 
 /**
  * Shows a start-up error in a pop-up, then exits. With `rollback`, the new version failed to start right after an
- * app update, so the previous exe is put back and started instead.
+ * app update, so the previous exe is put back and started instead. This one then ends at once, without a pop-up: the
+ * previous version says what happened once it runs (--restored, see showRestored), with the reason left in RESTORED.
  */
 function fatal(message, { rollback = false } = {}) {
   console.log(`Stopped: ${message}`);
   if (rollback && afterUpdate && fs.existsSync(OLD_EXE)) {
     try {
+      fs.mkdirSync(LAUNCHER_TEMP, { recursive: true });
+      fs.writeFileSync(RESTORED, message);
+    } catch {
+      // the previous version then says it without the reason
+    }
+    try {
       fs.rmSync(FAILED_EXE, { force: true });
       fs.renameSync(process.execPath, FAILED_EXE); // a running exe can be renamed
       fs.renameSync(OLD_EXE, process.execPath);
-      spawn(process.execPath, [`--after-update=${process.pid}:${afterUpdate.port}`], { detached: true, stdio: 'ignore' }).unref();
+      spawn(process.execPath, [`--after-update=${process.pid}:${afterUpdate.port}`, '--restored'],
+        { detached: true, stdio: 'ignore' }).unref();
       console.log('App update: the new version failed to start; the previous version was restored');
-      message = `The new version could not start, so the previous version was restored and started again.
-
-${message}`;
+      return process.exit(1);
     } catch (e) {
       console.log(`App update: could not restore the previous version: ${e.message}`);
+      fs.rmSync(RESTORED, { force: true });
     }
   }
   popup('message', 'The tracker stopped', message).then(() => process.exit(1));
+}
+
+/** In the previous version, started again after a new one could not start: says so, with the new one's reason. */
+function showRestored() {
+  let why = '';
+  try {
+    why = fs.readFileSync(RESTORED, 'utf8').trim();
+    fs.rmSync(RESTORED, { force: true });
+  } catch {
+    // no reason was left
+  }
+  popup('message', 'The tracker was not updated',
+    `The new version could not start, so the previous version was restored and started again.${why ? `\n\n${why}` : ''}`);
 }
 
 /** Opens an address with the program Windows has for it (here, Windows' snipping overlay). */
@@ -259,27 +301,98 @@ function measure(p, sum = { files: 0, bytes: 0 }) {
   return sum;
 }
 
-/**
- * Moves a file or folder. On the same disk it is renamed; to another disk it is copied, the copy is counted, and
- * only then is the original removed. Anything already at `to` is a leftover of a move that was cut off, and goes.
- */
-function moveEntry(from, to) {
-  fs.rmSync(to, { recursive: true, force: true });
-  fs.mkdirSync(path.dirname(to), { recursive: true });
+const remove = (p) => fs.rmSync(p, { recursive: true, force: true });
+/** Whether a folder is there with something in it. */
+function inUse(folder) {
   try {
-    fs.renameSync(from, to);
-    return;
-  } catch (e) {
-    if (!['EXDEV', 'EPERM', 'EACCES', 'EBUSY'].includes(e.code)) throw e;
+    return fs.readdirSync(folder).length > 0;
+  } catch {
+    return false;
   }
-  fs.cpSync(from, to, { recursive: true, preserveTimestamps: true });
-  const a = measure(from);
-  const b = measure(to);
-  if (a.files !== b.files || a.bytes !== b.bytes) throw new Error(`The copy of ${path.basename(from)} is not complete.`);
-  fs.rmSync(from, { recursive: true, force: true });
+}
+/**
+ * Whether the tracker's folder is where the note says: its data folder is there. It is not made here, so a folder
+ * that is gone (its disk is not connected, or it was moved, renamed or deleted) is asked about, not started empty.
+ */
+const reachable = (home) => fs.existsSync(path.join(home, 'data'));
+
+/** The folders that making `folder` would make: it and those above it that are not there, the deepest first. */
+function notThere(folder) {
+  const list = [];
+  for (let d = path.resolve(folder); !fs.existsSync(d); d = path.dirname(d)) {
+    list.push(d);
+    if (path.dirname(d) === d) break;
+  }
+  return list;
+}
+/** Removes the folders of the list that are empty (the ones made for a try that did not work out). */
+function dropEmpty(folders) {
+  for (const d of folders) {
+    try {
+      fs.rmdirSync(d);
+    } catch {
+      // not there, or not empty
+    }
+  }
 }
 
-/** What a move of the tracker's files moves: [from, to, which names] for each folder. */
+// What a backup holds (BACKUP_KEYS in server/userdata.mjs), each in a file of that name in the data folder.
+const PROFILE = ['names', 'talents', 'army', 'armies', 'drafts', 'grid_history', 'pvp_history', 'notifications', 'plans',
+  'progress', 'settings'];
+// What the tracker makes again by itself: in its folder, and in the data folder.
+const REMADE_HOME = ['app', 'webview2', 'webview2-rdmodule'];
+const REMADE_DATA = ['gamedata', 'gamedata-build', 'state', 'update'];
+
+/** The profile data in a data folder as a backup (server/backup.mjs), or null when there is none. */
+function profileBackup(data, now = new Date()) {
+  const files = {};
+  for (const key of PROFILE) {
+    try {
+      const value = JSON.parse(fs.readFileSync(path.join(data, `${key}.json`), 'utf8'));
+      if (value && typeof value === 'object') files[key] = value;
+    } catch {
+      // not there, or not readable
+    }
+  }
+  return Object.keys(files).length ? { format: 'rumble-tracker-backup', version: 1, created: now.toISOString(), data: files } : null;
+}
+
+const PRE_EXISTING = 'pre_existing';
+/**
+ * Makes a tracker's folder that was found in the picked place ready for this tracker. What a tracker makes again by
+ * itself goes (the program's files, the game data, the window's data), so that all of it is fresh; the backups stay.
+ * A tracker without data of its own uses the data it finds. One that brings its own (`own`) keeps only the backups
+ * found there, in a folder of their own in the backups folder (PRE_EXISTING), so that none has the name of one of
+ * its own. The profile data found is saved there too, as one more file that Import backup reads, and that file's
+ * path is returned; the rest of the data found goes. `keepHome`: the folder is this tracker's own already (its
+ * program's files and window's data are in it).
+ */
+function takeOver(home, own, { keepHome = false, now = new Date() } = {}) {
+  const data = path.join(home, 'data');
+  if (!keepHome) for (const name of REMADE_HOME) remove(path.join(home, name));
+  for (const name of REMADE_DATA) remove(path.join(data, name));
+  if (!own) return null;
+  const stamp = now.toISOString().replace(/[:.]/g, '-');
+  const backups = path.join(data, 'backups');
+  const aside = path.join(backups, PRE_EXISTING);
+  const found = fs.existsSync(backups) ? fs.readdirSync(backups).filter((n) => n !== PRE_EXISTING) : [];
+  const backup = profileBackup(data, now);
+  if (found.length || backup) fs.mkdirSync(aside, { recursive: true });
+  for (const name of found) {
+    // (one set aside by an earlier take-over under the same name stays too)
+    const to = path.join(aside, fs.existsSync(path.join(aside, name)) ? `${stamp}-${name}` : name);
+    fs.renameSync(path.join(backups, name), to);
+  }
+  let kept = null;
+  if (backup) {
+    kept = path.join(aside, `found-${stamp}.json`);
+    fs.writeFileSync(kept, JSON.stringify(backup));
+  }
+  for (const name of fs.existsSync(data) ? fs.readdirSync(data) : []) if (name !== 'backups') remove(path.join(data, name));
+  return kept;
+}
+
+/** What a move of the tracker's files takes: [from, to, which names] for each folder. */
 function movePairs(move, noteDir) {
   const window = (name) => name.startsWith('webview2');
   // from before there was a choice: the data in %APPDATA%, the window's data in %LOCALAPPDATA%
@@ -290,25 +403,113 @@ function movePairs(move, noteDir) {
   return [[path.join(move.from, 'data'), path.join(move.to, 'data'), () => true], [move.from, move.to, window]];
 }
 
-/** Moves the files of each pair, entry by entry; `back` moves them the other way (after a move that failed). */
-function moveFiles(pairs, back = false) {
-  for (const [a, b, wanted] of pairs) {
-    const [from, to] = back ? [b, a] : [a, b];
-    if (samePath(from, to) || !fs.existsSync(from)) continue;
-    for (const name of fs.readdirSync(from)) if (wanted(name)) moveEntry(path.join(from, name), path.join(to, name));
+/**
+ * The files and folders the pairs name, one by one: { from, to, spare, merge }. A spare one (the window's data) may
+ * be left behind when it can't be copied, as the window makes it again. The backups are added to the ones already in
+ * the folder they go to (`merge`).
+ */
+function moveList(pairs) {
+  const list = [];
+  pairs.forEach(([from, to, wanted], i) => {
+    if (samePath(from, to) || !fs.existsSync(from)) return;
+    for (const name of fs.readdirSync(from)) {
+      if (wanted(name)) {
+        list.push({ from: path.join(from, name), to: path.join(to, name), spare: name.startsWith('webview2'),
+          merge: i === 0 && name === 'backups' });
+      }
+    }
+  });
+  return list;
+}
+
+/**
+ * Copies one of the list and counts the copy. Anything already at `to` goes first, but backups (see moveList): the
+ * ones found there were set aside in a folder of their own (takeOver), so ours are added beside that folder.
+ */
+function copyEntry(e) {
+  if (e.merge && fs.existsSync(e.to)) {
+    e.added = [];
+    for (const name of fs.readdirSync(e.from)) {
+      const [from, to] = [path.join(e.from, name), path.join(e.to, name)];
+      e.added.push(to);
+      fs.cpSync(from, to, { recursive: true, force: true, preserveTimestamps: true });
+      const a = measure(from);
+      const b = measure(to);
+      if (a.files !== b.files || a.bytes !== b.bytes) throw new Error(`The copy of ${name} is not complete.`);
+    }
+    return;
+  }
+  remove(e.to);
+  fs.mkdirSync(path.dirname(e.to), { recursive: true });
+  fs.cpSync(e.from, e.to, { recursive: true, preserveTimestamps: true });
+  const a = measure(e.from);
+  const b = measure(e.to);
+  if (a.files !== b.files || a.bytes !== b.bytes) throw new Error(`The copy of ${path.basename(e.from)} is not complete.`);
+}
+
+/**
+ * Copies everything in the list; what it was copied from stays as it is. When one can't be copied, the copies made so
+ * far are removed again and the error is thrown, so nothing is half there. Returns what a later clean-up removes: the
+ * originals of what was copied.
+ */
+function copyAll(list) {
+  const made = [];
+  try {
+    for (const e of list) {
+      made.push(e);
+      try {
+        copyEntry(e);
+      } catch (err) {
+        if (!e.spare) throw err;
+        made.pop();
+        try {
+          remove(e.to);
+        } catch {
+          // in use: the window makes what is missing in it again
+        }
+      }
+    }
+  } catch (err) {
+    for (const e of made) {
+      try {
+        // (of backups added to a folder that was there, only the ones added go)
+        for (const p of e.added || [e.to]) remove(p);
+        if (e.added) dropEmpty([e.to]);
+      } catch {
+        // in use: it is written over by the next try
+      }
+    }
+    throw err;
+  }
+  return list.map((e) => e.from);
+}
+
+/**
+ * Removes what is where the list's files go: the copies of a try that was cut off or could not be finished. Of
+ * backups, only the ones that are also where they come from go, so the ones found there stay.
+ */
+function dropCopies(list) {
+  for (const e of list) {
+    try {
+      if (!e.merge) remove(e.to);
+      else if (fs.existsSync(e.to) && fs.existsSync(e.from)) {
+        for (const name of fs.readdirSync(e.from)) remove(path.join(e.to, name));
+        dropEmpty([e.to]);
+      }
+    } catch {
+      // in use: it is written over by the next try
+    }
   }
 }
 
-/** Bytes the pairs hold that would go to another disk, and the bytes free there (null when that can't be told). */
-function roomFor(pairs) {
+/** The bytes the list holds, and the bytes free on the disk it goes to (null when that can't be told). */
+function roomFor(list) {
   let needed = 0;
   let free = null;
-  for (const [from, to, wanted] of pairs) {
-    const disk = (p) => path.parse(path.resolve(p)).root.toLowerCase();
-    if (!fs.existsSync(from) || disk(from) === disk(to)) continue;
-    for (const name of fs.readdirSync(from)) if (wanted(name)) needed += measure(path.join(from, name)).bytes;
+  for (const e of list) needed += measure(e.from).bytes;
+  if (list.length) {
     try {
-      const s = fs.statfsSync(path.parse(path.resolve(to)).root);
+      const s = fs.statfsSync(path.parse(path.resolve(list[0].to)).root);
       free = s.bavail * s.bsize;
     } catch {
       // not told
@@ -317,12 +518,29 @@ function roomFor(pairs) {
   return { needed, free };
 }
 
-/** After a move: the old folder's unpacked program goes, and the folder itself once nothing is left in it. */
+/** Removes what a move left where the files were. Returns what could not be removed yet (in use). */
+function clearOld(paths) {
+  const left = [];
+  for (const p of paths) {
+    try {
+      remove(p);
+    } catch {
+      // in use
+    }
+    if (fs.existsSync(p)) left.push(p);
+  }
+  return left;
+}
+
+/**
+ * After a move: what the tracker makes again by itself goes from the old folder (with `window`, which an earlier
+ * version kept there), and the folder itself once nothing is left in it.
+ */
 function tidyOld(old, kept) {
   if (samePath(old, kept)) return;
-  for (const name of ['app', 'data']) {
+  for (const name of ['app', 'window', 'data']) {
     try {
-      if (name === 'app' || !fs.readdirSync(path.join(old, name)).length) fs.rmSync(path.join(old, name), { recursive: true, force: true });
+      if (name !== 'data' || !fs.readdirSync(path.join(old, name)).length) remove(path.join(old, name));
     } catch {
       // not there, or in use
     }
@@ -334,18 +552,50 @@ function tidyOld(old, kept) {
   }
 }
 
+/**
+ * What an earlier move left to remove (a note's `clear`), without anything in the folder the files go to now: that
+ * would be the new copy.
+ */
+const stillToClear = (clear, to) => (clear || []).filter((p) => !samePath(p, to) && !inside(p, to));
+
+/**
+ * The folders made for a move: the tracker's folder there with its data folder, and those Settings made above it
+ * (the note's `made`; only folders the tracker's folder is in count).
+ */
+function madeFor(moving) {
+  const above = (moving.made || []).filter((d) => typeof d === 'string' && inside(moving.to, d) && !samePath(moving.to, d));
+  return [path.join(moving.to, 'data'), moving.to, ...above];
+}
+
+/**
+ * Removes the folders that held what a move left behind, once they are empty: a tracker's old data folder, and its
+ * old folder. `kept` (the tracker's folder now) stays.
+ */
+function dropShells(gone, kept) {
+  for (const p of gone) {
+    let d = path.dirname(p);
+    for (let i = 0; i < 2 && !samePath(d, kept); i++) {
+      dropEmpty([d]);
+      if (path.basename(d).toLowerCase() === FOLDER_NAME.toLowerCase()) break;
+      d = path.dirname(d);
+    }
+  }
+}
+
 /** Why the tracker's folder can't be `home`, or null: it must be a folder the tracker can write to. */
 function homeProblem(home, noteDir) {
   if (!path.isAbsolute(home)) return 'Give the whole path of a folder, such as D:\\Games.';
   if (samePath(home, noteDir) || inside(home, noteDir)) {
     return 'That folder holds the note of where the tracker\'s files are. Pick another.';
   }
+  const made = notThere(home);
   try {
     fs.mkdirSync(home, { recursive: true });
     const probe = path.join(home, `.write-${process.pid}`);
     fs.writeFileSync(probe, '');
     fs.rmSync(probe);
   } catch (e) {
+    dropEmpty(made); // the folders made for the try do not stay
     return `The tracker can't write to that folder (${e.code || e.message}).`;
   }
   return null;
@@ -399,14 +649,16 @@ async function findPort() {
 // The launcher's own pop-ups (desktop/popup.ps1): the question of where the files go, the wait while they are moved,
 // and messages. They are needed before the program's files are unpacked, so the script and the title's font are in
 // the exe beside those files, and are written to the temporary folder to be run.
+const LAUNCHER_TEMP = path.join(os.tmpdir(), 'RumbleTracker-launcher');
+// Why a new version could not start, left for the previous version that is started again (see fatal).
+const RESTORED = path.join(LAUNCHER_TEMP, 'restored.txt');
 let popupFiles = null;
 function popupSources() {
   if (popupFiles) return popupFiles;
-  const dir = path.join(os.tmpdir(), 'RumbleTracker-launcher');
-  popupFiles = { script: path.join(dir, 'popup.ps1'), font: path.join(dir, 'LilitaOne-Regular.ttf') };
+  popupFiles = { script: path.join(LAUNCHER_TEMP, 'popup.ps1'), font: path.join(LAUNCHER_TEMP, 'LilitaOne-Regular.ttf') };
   for (const f of Object.values(popupFiles)) {
     try {
-      fs.mkdirSync(dir, { recursive: true });
+      fs.mkdirSync(LAUNCHER_TEMP, { recursive: true });
       fs.writeFileSync(f, Buffer.from(sea.getAsset(path.basename(f))));
     } catch {
       // in use by a pop-up that is open, so it is there already
@@ -422,12 +674,134 @@ function popupStart(kind, head, text, more = {}) {
     RT_TITLE: TITLE, RT_HEAD: head, RT_TEXT: text, RT_EXE: process.execPath, ...more } }];
 }
 
-/** Shows a pop-up and resolves to what it printed once it is closed ("ok", with the folder for ask, or nothing). */
-function popup(kind, head, text, more) {
+// When the tracker's own pop-up can't be shown (its script can't be written or run), Windows' own are: a message box,
+// and for the question of where the files go, the same words in a message box and then Windows' folder picker. A
+// message with three buttons has them as Yes, No and Cancel, each named in the text.
+const PLAIN_POPUP = `Add-Type -AssemblyName System.Windows.Forms
+$text = $env:RT_HEAD + [Environment]::NewLine + [Environment]::NewLine + $env:RT_TEXT
+$box = [System.Windows.Forms.MessageBox]
+if ($env:RT_KIND -eq 'ask') {
+  if ($env:RT_PROBLEM) { $text = $env:RT_PROBLEM + [Environment]::NewLine + [Environment]::NewLine + $text }
+  if ($box::Show($text, $env:RT_TITLE, 'OKCancel', 'Question') -ne 'OK') { [Console]::Out.Write('cancel'); exit }
+  $d = New-Object System.Windows.Forms.FolderBrowserDialog
+  $d.Description = 'The tracker makes a folder named RumbleTracker in the folder you pick.'
+  $d.SelectedPath = $env:RT_FOLDER
+  [Console]::Out.Write($(if ($d.ShowDialog() -eq 'OK') { 'ok ' + $d.SelectedPath } else { 'cancel' }))
+} elseif ($env:RT_BUTTONS) {
+  $names = $env:RT_BUTTONS.Split('|')
+  $text += [Environment]::NewLine
+  $text += [Environment]::NewLine + 'Yes: ' + $names[0] + [Environment]::NewLine + 'No: ' + $names[1]
+  $text += [Environment]::NewLine + 'Cancel: ' + $names[2]
+  $answer = $box::Show($text, $env:RT_TITLE, 'YesNoCancel', 'Warning')
+  [Console]::Out.Write($(if ($answer -eq 'Yes') { 'ok 0' } elseif ($answer -eq 'No') { 'ok 1' } else { 'ok 2' }))
+} else {
+  [void]$box::Show($text, $env:RT_TITLE, 'OK', 'Warning')
+  [Console]::Out.Write('ok')
+}`;
+
+/**
+ * Shows a pop-up and resolves to what was pressed once it is closed: "ok" (with the folder for ask, with the
+ * button's number for a message with RT_BUTTONS) or "cancel". If the tracker's own pop-up says neither, it was not
+ * shown, and Windows' own is.
+ */
+function popup(kind, head, text, more = {}) {
   const [args, options] = popupStart(kind, head, text, more);
-  return new Promise((resolve) => {
-    execFile(POWERSHELL, args, options, (err, out) => resolve(String(out || '').trim()));
+  const said = (run) => new Promise((resolve) => {
+    execFile(POWERSHELL, run, options, (err, out) => resolve(String(out || '').trim()));
   });
+  return said(args).then((out) => {
+    if (/^(ok|cancel)\b/.test(out)) return out;
+    console.log('The tracker\'s own pop-up could not be shown; Windows\' own is');
+    return said(psArgs(PLAIN_POPUP));
+  });
+}
+
+// One start at a time: a second one, begun while the first still asks where the files go or moves them, would ask and
+// move too. The first leaves its process id in a file until its server answers; a file left by a start that ended
+// otherwise names a process that is gone, or one that is not the tracker.
+const START_LOCK = path.join(LAUNCHER_TEMP, 'starting.lock');
+let startingPid = 0; // the start that is under way, when it is not this one
+// An empty file a second one leaves for the start that is under way, which has no server to ask yet: once it runs, it
+// shows its window, also when it was started in the background.
+const SHOW_REQUEST = path.join(LAUNCHER_TEMP, 'show');
+const SHOW_REQUEST_LATE = 3000; // ms after the start, when it is looked for once more
+function askStartToShow() {
+  try {
+    fs.writeFileSync(SHOW_REQUEST, '');
+  } catch {
+    // nowhere to leave it
+  }
+}
+/** Whether the window was asked for that way; the request is taken. */
+function showAsked() {
+  try {
+    fs.rmSync(SHOW_REQUEST);
+    return true;
+  } catch {
+    return false;
+  }
+}
+function trackerRuns(pid) {
+  try {
+    process.kill(pid, 0);
+  } catch {
+    return false;
+  }
+  try {
+    const out = execFileSync(path.join(SYSTEM32, 'tasklist.exe'),
+      ['/FI', `PID eq ${pid}`, '/FO', 'CSV', '/NH'], { windowsHide: true, encoding: 'utf8', timeout: 10000 });
+    return out.toLowerCase().includes(path.basename(process.execPath).toLowerCase());
+  } catch {
+    return true; // not told: taken as the tracker
+  }
+}
+function dropStartLock() {
+  try {
+    if (Number(fs.readFileSync(START_LOCK, 'utf8')) === process.pid) fs.rmSync(START_LOCK);
+  } catch {
+    // not there
+  }
+}
+/** Whether this start may go on: false when another one is under way. */
+function takeStartLock() {
+  for (let i = 0; i < 2; i++) {
+    try {
+      fs.mkdirSync(LAUNCHER_TEMP, { recursive: true });
+      fs.writeFileSync(START_LOCK, String(process.pid), { flag: 'wx' });
+      process.on('exit', dropStartLock);
+      showAsked(); // (one left for a start that ended is not for this one)
+      return true;
+    } catch (e) {
+      if (e.code !== 'EEXIST') return true; // nowhere to leave it: this start goes on without
+      let pid = 0;
+      try {
+        pid = Number(fs.readFileSync(START_LOCK, 'utf8'));
+      } catch {
+        // gone again
+      }
+      if (pid && pid !== process.pid && trackerRuns(pid)) {
+        startingPid = pid;
+        return false;
+      }
+      fs.rmSync(START_LOCK, { force: true });
+    }
+  }
+  return true;
+}
+/**
+ * Brings the pop-up of the start that is under way to the front: the window of a PowerShell that start runs, so no
+ * other window with the tracker's name is taken for it.
+ */
+const SHOW_START_QUESTION = `$shell = New-Object -ComObject WScript.Shell
+$own = Get-CimInstance Win32_Process -Filter "ParentProcessId = $([int]$env:RT_STARTING) AND Name = 'powershell.exe'"
+foreach ($p in $own) { if ($shell.AppActivate([int]$p.ProcessId)) { break } }`;
+function showStartQuestion() {
+  try {
+    execFileSync(POWERSHELL, psArgs(SHOW_START_QUESTION),
+      { windowsHide: true, timeout: 15000, stdio: 'ignore', env: { ...process.env, RT_STARTING: String(startingPid) } });
+  } catch {
+    // it stays where it is
+  }
 }
 
 /**
@@ -451,28 +825,102 @@ async function askFolder(existing) {
   }
 }
 
-/** Moves the tracker's files as the note says, behind a window that asks to wait. Returns why it failed, or null. */
-function moveNow(note) {
-  const pairs = movePairs(note.moving, NOTE_DIR);
-  const { needed, free } = roomFor(pairs);
+/**
+ * Moves the tracker's files as the note says, behind a window that asks to wait: everything is copied first, then the
+ * note names the new folder, and only then do the files go from where they were. So a move that fails or is cut off
+ * leaves them whole in one place: where they were while copying, and in the new folder from then on (what is left of
+ * the old ones is in the note's `clear`, and goes at a later start). Returns the note that holds now, and why the
+ * move failed, if it did.
+ */
+function relocate(note) {
+  const { moving } = note;
   const gb = (bytes) => (bytes / 2 ** 30).toFixed(1);
-  if (free != null && needed > free) return `It needs ${gb(needed)} GB there, and ${gb(free)} GB is free.`;
+  const before = stillToClear(note.clear, moving.to);
+  const back = moving.legacy ? {} : { folder: note.folder, ...(before.length && { clear: before }) };
+  let list = [];
+  // What a move that is not done leaves no trace of: the copies (also those of an earlier try that was cut off) and
+  // the folders made for it. A folder in use there that is not made ready yet holds another tracker's files, not
+  // copies, so nothing in it goes.
+  const undo = () => {
+    if (!moving.legacy || moving.prepared) dropCopies(list);
+    dropEmpty(madeFor(moving));
+  };
+  try {
+    list = moveList(movePairs(moving, NOTE_DIR));
+    const { needed, free } = roomFor(list);
+    // (the room is looked at before a folder in use there is touched)
+    if (free != null && needed > free) {
+      undo();
+      return { note: back, failed: `It needs ${gb(needed)} GB there, and ${gb(free)} GB is free.` };
+    }
+    // a folder that is in use where the files go is made ready once, before anything of ours is in it
+    if (moving.legacy && !moving.prepared) {
+      if (inUse(moving.to)) {
+        const kept = takeOver(moving.to, true, { keepHome: samePath(moving.to, moving.from) });
+        if (kept) console.log(`The data found in ${moving.to} was set aside as ${kept}`);
+      }
+      moving.prepared = true;
+    }
+    writeNote(NOTE, note); // (a move cut off while copying is done again at the next start)
+  } catch (e) {
+    // (a file that can't be read, or a folder there that can't be made ready: the move is not begun)
+    console.log(`The move to ${moving.to} could not begin: ${e.message}`);
+    undo();
+    return { note: back, failed: e.message };
+  }
   const [args, options] = popupStart('wait', 'Moving the tracker\'s files', 'This can take a few minutes.');
   const wait = spawn(POWERSHELL, args, { ...options, stdio: 'ignore' });
   try {
-    moveFiles(pairs);
-    return null;
-  } catch (e) {
-    console.log(`Moving the files to ${note.moving.to} failed: ${e.message}`);
+    let old;
     try {
-      moveFiles(pairs, true);
-    } catch (e2) {
-      console.log(`Moving them back failed: ${e2.message}`);
-      return `${e.message} Some files are now in ${note.moving.to} and some in ${note.moving.legacy ? NOTE_DIR : note.moving.from}.`;
+      old = copyAll(list);
+    } catch (e) {
+      console.log(`Copying the files to ${moving.to} failed: ${e.message}`);
+      undo();
+      return { note: back, failed: e.message };
     }
-    return e.message;
+    // (an earlier version kept its window's helpers in the usual place: they go, wherever the files went)
+    const moved = { folder: moving.to, clear: [...before, ...old, ...(moving.legacy ? [path.join(DEFAULT_HOME, 'window')] : [])] };
+    writeNote(NOTE, moved);
+    return { note: cleared(moved, moving.from) };
   } finally {
     wait.kill();
+  }
+}
+
+/**
+ * Removes what a move left behind (the note's `clear`), and the folders it was in once they are empty. Returns the
+ * note without what is gone.
+ */
+function cleared(note, from) {
+  const all = note.clear || [];
+  const left = clearOld(all);
+  if (from) tidyOld(from, note.folder);
+  dropShells(all.filter((p) => !left.includes(p)), note.folder);
+  const { clear, ...rest } = note;
+  const next = left.length ? { ...rest, clear: left } : rest;
+  if (left.length) console.log(`Still to remove, as they are in use: ${left.join(', ')}`);
+  return next;
+}
+
+/**
+ * The tracker's folder is not there (its disk is not connected, or it was moved, renamed or deleted): tries again, has
+ * a folder picked (the same one again starts empty in it), or gives up (null).
+ */
+async function unreachable(folder) {
+  for (;;) {
+    const said = await popup('message', 'The tracker\'s folder can\'t be reached',
+      `The tracker keeps its files in ${folder}, and that folder is not there now. If its disk is not connected, `
+      + 'connect it and try again. If the folder was moved or renamed, put it back and try again.\n\n'
+      + 'In a folder you pick, the tracker starts empty, or with the tracker\'s files it finds there. Files in another '
+      + 'place stay as they are.',
+      { RT_BUTTONS: 'Try again|Pick a folder|Quit' });
+    if (said === 'ok 0') {
+      if (reachable(folder)) return folder;
+    } else if (said === 'ok 1') {
+      const to = await askFolder(false);
+      if (to) return to;
+    } else return null;
   }
 }
 
@@ -486,36 +934,50 @@ async function locate() {
     useHome(DEFAULT_HOME, FIXED_DATA);
     return true;
   }
-  let note = readNote(NOTE);
-  if (!note?.folder && !note?.moving) {
+  let note = readNote(NOTE) || {};
+  // (a first move that was cut off goes on without the question, and has the same log)
+  if (note.moving?.legacy) oldLog = path.join(NOTE_DIR, 'tracker.log');
+  if (!note.folder && !note.moving) {
     // files from before there was a choice: the data folder was the note's own folder
     const legacy = fs.existsSync(NOTE_DIR) && fs.readdirSync(NOTE_DIR).some((n) => !n.startsWith('location.json'));
+    if (legacy) oldLog = path.join(NOTE_DIR, 'tracker.log');
     const to = await askFolder(legacy);
     if (!to) return false;
-    note = legacy ? { moving: { legacy: true, from: DEFAULT_HOME, to } } : { folder: to };
-  } else if (note.moveTo && note.folder && !samePath(note.moveTo, note.folder)) {
-    note = { folder: note.folder, moving: { from: note.folder, to: note.moveTo } };
-  } else if (note.moveTo) note = { folder: note.folder };
+    if (legacy) note = { moving: { legacy: true, from: DEFAULT_HOME, to } };
+    else {
+      // a tracker's folder found there is used, with what the tracker makes again by itself made fresh
+      if (inUse(to)) takeOver(to, false);
+      note = { folder: to };
+    }
+  } else if (note.folder && !reachable(note.folder)) {
+    const to = await unreachable(note.folder);
+    if (!to) return false;
+    if (!samePath(to, note.folder)) {
+      if (inUse(to)) takeOver(to, false);
+      note = { folder: to };
+    }
+  }
+  if (note.moveTo) {
+    const { moveTo, made, ...rest } = note;
+    note = samePath(moveTo, note.folder) ? rest : { ...rest, moving: { from: note.folder, to: moveTo, ...(made && { made }) } };
+  }
   let failed = null;
   if (note.moving) {
     const { moving } = note;
-    writeNote(NOTE, note); // (a move cut off goes on at the next start)
-    failed = moveNow(note);
-    if (!failed) {
-      tidyOld(moving.from, moving.to);
-      note = { folder: moving.to };
-    } else if (moving.legacy) {
+    ({ note, failed } = relocate(note));
+    if (failed && moving.legacy) {
       // as before the question: it is asked again at the next start
       fs.rmSync(NOTE, { force: true });
-      fatal(`The tracker's files could not be moved to ${moving.to}: ${failed}\n\nStart the tracker again to pick a folder.`);
+      fatal(`The tracker's files could not be moved to ${moving.to}: ${failed}\n\nThey are where they were. Start the `
+        + 'tracker again to pick a folder.');
       return false;
-    } else note = { folder: note.folder };
-  }
+    }
+  } else if (note.clear) note = cleared(note);
   writeNote(NOTE, note);
   useHome(note.folder);
   if (failed) {
     console.log(`The files stay in ${note.folder}`);
-    await popup('message', 'The files were not moved', `${failed}\n\nThey stay in ${note.folder}.`);
+    await popup('message', 'The files were not moved', `${failed}\n\nThey are where they were, in ${note.folder}.`);
   }
   return true;
 }
@@ -669,7 +1131,7 @@ function uninstall() {
   spawn(path.join(SYSTEM32, 'cmd.exe'), ['/d', '/c', 'start', '""', '/b', POWERSHELL, ...psArgs(PS_RUN_FILE)], {
     stdio: 'ignore', windowsHide: true,
     env: { ...process.env, RT_SCRIPT: path.join(APP_DIR, 'desktop', 'uninstall.ps1'), RT_PARENT: String(process.pid),
-      RT_EXE: process.execPath, RT_DATA: DATA, RT_HOME: HOME, RT_NOTE: FIXED_DATA ? '' : NOTE_DIR,
+      RT_EXE: process.execPath, RT_HOME: HOME, RT_NOTE: FIXED_DATA ? '' : NOTE_DIR,
       RT_LOCAL: FIXED_DATA ? '' : DEFAULT_HOME, RT_TITLE: TITLE },
   }).unref();
   quitFromTray('Uninstall from Settings');
@@ -766,6 +1228,15 @@ async function main() {
   if (process.platform !== 'win32') return fatal(`${TITLE} runs on Windows only.`);
   if (afterUpdate || restartOf) await waitForExit(afterUpdate?.pid || restartOf);
   if (!await claimPort()) return;
+  if (!takeStartLock()) {
+    // (nothing is written to the log: the other start may be moving the folder it is in)
+    early = [];
+    oldLog = null;
+    LOG = null;
+    if (!NO_WINDOW) askStartToShow();
+    showStartQuestion();
+    return;
+  }
   if (!await locate()) return;
   rotateLog();
   let app;
@@ -778,8 +1249,12 @@ async function main() {
   console.log(`${TITLE} ${app.index.version}, unpacked in ${app.dir}`);
   handOverOnPortRace();
   if (!await startServer(app)) return;
+  dropStartLock();
   // after the server, not alongside it: starting both at once slows each of them down
-  startWindowHost(quitFromTray);
+  startWindowHost(quitFromTray, !NO_WINDOW || showAsked());
+  // (a second start that saw the lock just before it went may leave its request a moment later)
+  setTimeout(() => { if (showAsked()) showWindow(); }, SHOW_REQUEST_LATE);
+  if (args.has('--restored')) showRestored();
   removeLeftovers();
   // not needed right away, so it doesn't slow down the window opening
   setTimeout(integrate, INTEGRATE_DELAY);

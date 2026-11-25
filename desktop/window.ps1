@@ -226,6 +226,11 @@ try {
 } catch {
   # Segoe UI
 }
+$titleIcon = New-Object System.Drawing.Icon($icon, 16, 16)
+$titleBrush = New-Object System.Drawing.SolidBrush $titleColor
+$titlePen = New-Object System.Drawing.Pen $titleLine
+$titleFormat = New-Object System.Drawing.StringFormat
+$titleFormat.LineAlignment = 'Center'; $titleFormat.Trimming = 'EllipsisCharacter'; $titleFormat.FormatFlags = 'NoWrap'
 $EDGE = 5 # px of the window's own edge at the sides and the bottom
 
 function New-Frame($title) {
@@ -243,16 +248,16 @@ function Add-Caption($f) {
   $bar.Dock = 'Top'
   $bar.Height = $f.CaptionHeight
   $bar.BackColor = $frameColor
+  # (the buttons end above the line under the bar, which so runs the bar's whole width)
+  $bar.Padding = New-Object System.Windows.Forms.Padding(0, 0, 0, 1)
+  # (what it is drawn with is made once, not at every repaint: the tracker may run for weeks)
   $bar.add_Paint({
     param($s, $e)
-    $form = $s.FindForm()
     $e.Graphics.TextRenderingHint = 'AntiAliasGridFit'
-    $e.Graphics.DrawIcon((New-Object System.Drawing.Icon($form.Icon, 16, 16)), (New-Object System.Drawing.Rectangle(8, 10, 16, 16)))
-    $format = New-Object System.Drawing.StringFormat
-    $format.LineAlignment = 'Center'; $format.Trimming = 'EllipsisCharacter'; $format.FormatFlags = 'NoWrap'
+    $e.Graphics.DrawIcon($titleIcon, (New-Object System.Drawing.Rectangle(8, 10, 16, 16)))
     $room = New-Object System.Drawing.RectangleF(32, 0, ($s.Width - 32 - 3 * 46), $s.Height)
-    $e.Graphics.DrawString($form.Text, $titleFont, (New-Object System.Drawing.SolidBrush $titleColor), $room, $format)
-    $e.Graphics.DrawLine((New-Object System.Drawing.Pen $titleLine), 0, ($s.Height - 1), $s.Width, ($s.Height - 1))
+    $e.Graphics.DrawString($s.FindForm().Text, $titleFont, $titleBrush, $room, $titleFormat)
+    $e.Graphics.DrawLine($titlePen, 0, ($s.Height - 1), $s.Width, ($s.Height - 1))
   })
   # (Segoe MDL2 Assets has Windows' own signs for these)
   $button = {
