@@ -18,14 +18,15 @@ export function replaceContents(target, source) {
 
 /**
  * Restores a backup into `files` in place. Keys missing from the backup (older or partial backups) are left as they
- * are. Returns the restored keys, or null if this isn't a backup.
+ * are, and so is one whose part holds something else than `shape(key, value)` passes (a backup edited by hand).
+ * Returns the restored keys, or null if this isn't a backup.
  */
-export function restoreBackup(files, backup) {
+export function restoreBackup(files, backup, shape = () => true) {
   if (!backup || backup.format !== BACKUP_FORMAT || !backup.data || typeof backup.data !== 'object') return null;
   const restored = [];
   for (const [key, obj] of Object.entries(files)) {
     const incoming = backup.data[key];
-    if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) continue;
+    if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming) || !shape(key, incoming)) continue;
     replaceContents(obj, incoming);
     restored.push(key);
   }

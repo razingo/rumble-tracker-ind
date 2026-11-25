@@ -28,6 +28,16 @@ export const BACKUP_KEYS = {
   settings: 'appSettings',
 };
 
+// (a part that is not there is filled in when read; one that is something else makes the file a damaged one)
+const parts = (kinds) => (v) => isRecord(v) && Object.entries(kinds).every(([k, ok]) => v[k] === undefined || ok(v[k]));
+// What a file holds when it is more than an object with named parts, by property.
+const SHAPES = {
+  names: parts({ accounts: isRecord, units: isRecord }),
+  sentLog: parts({ sent: isRecord, log: Array.isArray, pending: Array.isArray }),
+};
+/** Whether `value` is what a backup may hold under `key`: a restore leaves out a part that is something else. */
+export const backupShape = (key, value) => (SHAPES[BACKUP_KEYS[key]] || isRecord)(value);
+
 /** App settings with unknown or missing values replaced by the defaults. */
 export const cleanAppSettings = (s) => ({
   closeWindow: Object.hasOwn(CLOSE_CHOICES, s?.closeWindow ?? '') ? s.closeWindow : 'ask',
@@ -43,12 +53,10 @@ export const unitSlug = (ctx, id) => ctx.user.names.units[id] || ctx.tables.buil
 /** Loads every file (missing ones start empty). */
 export async function loadUserData(ctx) {
   const dir = ctx.paths.DATA;
-  const read = (key, fallback, shape) => ctx.readUserJson(path.join(dir, FILES[key]), fallback, shape);
-  // (a part that is not there is filled in below; one that is something else makes the file a damaged one)
-  const parts = (kinds) => (v) => isRecord(v) && Object.entries(kinds).every(([k, ok]) => v[k] === undefined || ok(v[k]));
-  const notified = await read('sentLog', null, parts({ sent: isRecord, log: Array.isArray, pending: Array.isArray }));
+  const read = (key, fallback) => ctx.readUserJson(path.join(dir, FILES[key]), fallback, SHAPES[key]);
+  const notified = await read('sentLog', null); // (its missing parts are filled in below)
   const u = {
-    names: await read('names', { accounts: {}, units: {} }, parts({ accounts: isRecord, units: isRecord })),
+    names: await read('names', { accounts: {}, units: {} }),
     talents: await read('talents', {}),
     army: await read('army', {}),
     armies: await read('armies', {}),

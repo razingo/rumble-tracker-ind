@@ -16,8 +16,11 @@ const stateShape = (v) => isRecord(v) && Array.isArray(v.events)
 
 /** readPrefs(): { [account]: { units, currencies, store, profile, commerce, pvp: Buffer } } (game/prefs.mjs). */
 export function createScanner(ctx, { readPrefs }) {
-  const failures = new Map(); // 'read' or account id -> consecutive failures
+  const failures = new Map(); // 'read', 'save', an account id or 'update <id>' -> consecutive failures
+  const unsaved = new Set(); // user-data files changed in memory that are still to be written
   const status = ctx.scan;
+  const sourceOf = (key) => (key === 'read' ? 'reading the save' : key === 'save' ? 'saving the history'
+    : key.startsWith('update ') ? 'updating an account' : 'decoding the save');
 
   // logMessage omits user-given names, for problem reports and tracker.log
   function noteFailure(key, message, logMessage = message) {
@@ -26,7 +29,7 @@ export function createScanner(ctx, { readPrefs }) {
     if (n >= FAILS_BEFORE_ERROR) {
       status.lastError = message;
       status.lastErrorLog = logMessage;
-      ctx.errorLog.add(key === 'read' ? 'reading the save' : 'decoding the save', logMessage);
+      ctx.errorLog.add(sourceOf(key), logMessage);
     }
   }
   function noteSuccess(key) {
@@ -162,7 +165,17 @@ export function createScanner(ctx, { readPrefs }) {
             `Could not update an account: ${e.message}`);
         }
       }
-      for (const key of dirty) await ctx.user.save(key);
+      // (a data folder that can't be written just now does not stop the tracker: the next scan writes them again)
+      for (const key of dirty) unsaved.add(key);
+      try {
+        for (const key of [...unsaved]) {
+          await ctx.user.save(key);
+          unsaved.delete(key);
+        }
+        noteSuccess('save');
+      } catch (e) {
+        noteFailure('save', `Could not save the history: ${e.message}`);
+      }
       // A new G.R.I.D. comes with a changed shop, so its history needs no check of its own.
       if (changed || dirty.has('progress') || dirty.has('pvpHistory')) ctx.bump();
     } finally {

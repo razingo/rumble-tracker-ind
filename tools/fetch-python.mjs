@@ -22,7 +22,7 @@ const URL_ZIP = `https://www.python.org/ftp/python/${VERSION}/python-${VERSION}-
 const TAG = `cp${VERSION.split('.').slice(0, 2).join('')}`; // cp314
 // ready-made builds exist for all of these
 const PACKAGES = ['UnityPy==1.25.4', 'pillow==13.0.0', 'lz4==4.4.5', 'brotli==1.2.1', 'texture2ddecoder==1.0.6', 'etcpak==0.9.15',
-  'astc-encoder-py==0.1.12', 'archspec==0.2.7', 'fsspec==2026.9.0', 'attrs==26.1.0'];
+  'astc-encoder-py==0.1.12', 'archspec==0.2.8', 'fsspec==2026.9.0', 'attrs==26.1.0'];
 // published as source only (plain Python, so any Python can build it)
 const FROM_SOURCE = ['tpk_ar==0.2.4'];
 

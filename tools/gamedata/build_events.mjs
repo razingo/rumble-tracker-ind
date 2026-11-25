@@ -47,7 +47,9 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
 
 function schedule(sc) {
   if (!sc) return null;
-  const hour = Number((sc.m_referenceDateTime || '').slice(11, 13)) || 18;
+  // (18:00 where the schedule names no time; midnight is a time like any other)
+  const time = (sc.m_referenceDateTime || '').slice(11, 13);
+  const hour = /^\d\d$/.test(time) ? Number(time) : 18;
   if (sc.type === 'RotatingSchedule') {
     const iso = (s) => s.replace(' ', 'T');
     return { kind: 'once', start: iso(sc.m_referenceDateTime), end: iso(sc.m_expirationDateTime) };

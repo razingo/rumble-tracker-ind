@@ -69,6 +69,22 @@ test('a step is due when its script or inputs changed, everything without a stam
   assert.deepEqual(stepsDue(null, { hashes, steps: { ...steps, Sprites: 'older', Sounds: undefined } }), ['Sounds', 'Sprites']);
 });
 
+test('the steps that read the tracker\'s game data are due when its tables change, and only those', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'rumble-tables-'));
+  try {
+    await writeFile(path.join(dir, 'minis.json'), '{"minis":[]}');
+    await writeFile(path.join(dir, 'unit_ids.json'), '{"units":{}}');
+    const stamp = { steps: stepVersions(dir), hashes: {} };
+    assert.deepEqual(stepsDue(null, stamp, dir), []);
+    await writeFile(path.join(dir, 'unit_ids.json'), '{"units":{"a":"new-mini"}}');
+    const due = stepsDue(null, stamp, dir);
+    assert.ok(due.includes('List of minis') && due.includes('Animations'), due.join(', '));
+    assert.deepEqual(due.filter((s) => /^(Sprites|Backdrops|Effect sprites|Map|Index of the game files)$/.test(s)), []);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('a step runs after one that made something else, and the bulky exports it reads are made again first', async () => {
   const run = async (due, changed) => {
     const order = [];

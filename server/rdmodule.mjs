@@ -27,6 +27,8 @@ export function createRdmodule(ctx) {
     return tool;
   };
   const exists = (file) => stat(file).then(() => true, () => false);
+  // the game data the tracker uses: its own read of the game, else the one that came with the source
+  const gamedata = async () => (await exists(path.join(GAMEDATA, 'minis.json')) ? GAMEDATA : STATIC);
   const freeSpace = () => statfs(DATA).then((s) => s.bavail * s.bsize, () => null);
   const due = { at: 0, is: false }; // whether the extraction is out of date, and when that was last looked at
 
@@ -48,7 +50,7 @@ export function createRdmodule(ctx) {
         .catch(() => null);
       // (finding the game asks Windows where it is: the answer is kept for half a minute, as the page asks often)
       if (extracted && Date.now() - due.at > DUE_MS) {
-        Object.assign(due, { at: Date.now(), is: !!t?.outOfDate(out, await givenGameFolder(ctx)) });
+        Object.assign(due, { at: Date.now(), is: !!t?.outOfDate(out, await givenGameFolder(ctx), await gamedata()) });
       }
       return { available: !!t?.canExtract(), state: run.state !== 'idle' ? run.state : extracted ? 'ready' : 'none',
         waiting: run.waiting, extracted, outOfDate: !!extracted && due.is, smallPc: totalmem() < SMALL_PC,
@@ -77,7 +79,7 @@ export function createRdmodule(ctx) {
         console.log('Rdmodule: extracting from the game install');
         return t.extractRdmodule({
           gameFolder,
-          gamedata: await exists(path.join(GAMEDATA, 'minis.json')) ? GAMEDATA : STATIC, out, work, log: console.log,
+          gamedata: await gamedata(), out, work, log: console.log,
           onStep: (done, total, label) => Object.assign(run, { done, total, label }),
         });
       }).then((ran) => {

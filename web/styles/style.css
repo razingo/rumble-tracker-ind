@@ -154,7 +154,6 @@ button { cursor: pointer; }
 .needs .row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
 .needs .row:first-of-type { border-top: 0; }
 .needs .what { flex: 1 1 260px; }
-.needs .ok { color: var(--good); }
 
 /* Support link */
 .coffee-button {
@@ -876,7 +875,6 @@ button { cursor: pointer; }
 .site-foot { max-width: 1280px; margin: 8px auto 24px; padding: 0 20px; font-size: 11.5px; color: var(--muted); text-align: center; }
 .data-banner { max-width: 1280px; margin: 14px auto 0; padding: 10px 16px; border-radius: 10px;
   background: rgb(255 154 98 / 14%); border: 1px solid rgb(255 154 98 / 50%); color: var(--ink); font-size: 13.5px; }
-.data-banner .chip { margin-left: 8px; }
 
 /* Shop offers, on the Calendar tab */
 .shop-card { display: grid; grid-template-columns: 56px 1fr; gap: 12px; align-items: center;
@@ -1011,7 +1009,6 @@ button { cursor: pointer; }
 .filter-row { display: flex; gap: 10px; align-items: center; padding: 4px 0; }
 .filter-label { width: 64px; flex: none; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
 .segmented { display: inline-flex; gap: 2px; }
-.link { background: none; border: 0; padding: 0; font-weight: 600; color: var(--gold-1); }
 .trait-option { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 8px; cursor: pointer; }
 .trait-option:hover { background: var(--chip); }
 .trait-option small { margin-left: auto; color: var(--muted); }

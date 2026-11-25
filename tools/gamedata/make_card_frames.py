@@ -1,7 +1,7 @@
 """Hornless card frames: cut a rounded-rectangle window into each faction frame (same thickness on all
 sides), add a soft dark bevel along the cut, and write one matching fill mask. The game has no Cenarion frame and no
 Cenarion army board: both are its Alliance ones, shifted from blue to green.
-usage: python make_card_frames.py <slots_dir> <out_dir>   (out_dir holds board-alliance.webp, from the interface art)"""
+usage: python -I make_card_frames.py <slots_dir> <out_dir>   (out_dir holds board-alliance.webp, from the interface art)"""
 import os, sys
 from PIL import Image, ImageDraw, ImageFilter, ImageChops
 

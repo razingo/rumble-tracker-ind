@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { mkdtemp, readdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { buildBackup, restoreBackup, writeDailyBackup, BACKUP_FORMAT } from '../server/backup.mjs';
+import { backupShape } from '../server/userdata.mjs';
 import { testContext } from './helpers.mjs';
 
 test('backup round trip replaces contents in place and skips missing or bad keys', () => {
@@ -35,6 +36,16 @@ test('not a backup', () => {
   const files = { names: { accounts: {} } };
   assert.deepEqual(restoreBackup(files, { format: BACKUP_FORMAT, data: { names: [1, 2] } }), []);
   assert.deepEqual(files.names, { accounts: {} });
+});
+
+test('a part of a backup that holds something else than the tracker keeps in it is not restored', () => {
+  const files = { names: { accounts: { a: 'Main' }, units: {} }, plans: { old: 1 }, notifications: {} };
+  const data = { names: { accounts: 7, units: {} }, plans: { fresh: 1 }, notifications: { enabled: false } };
+  assert.deepEqual(restoreBackup(files, { format: BACKUP_FORMAT, data }, backupShape), ['plans', 'notifications']);
+  assert.deepEqual(files.names, { accounts: { a: 'Main' }, units: {} }, 'the names stay as they were');
+  assert.deepEqual(files.plans, { fresh: 1 });
+  // a part that is only missing is fine: repair() fills it in
+  assert.deepEqual(restoreBackup(files, { format: BACKUP_FORMAT, data: { names: { accounts: { b: 'Alt' } } } }, backupShape), ['names']);
 });
 
 test('keeps one backup a day for 7 days', async () => {

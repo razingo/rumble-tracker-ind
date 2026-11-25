@@ -1,7 +1,7 @@
 // API handlers that change the user's data. Each takes the parsed JSON body and returns [status, body]; error
 // messages are shown to the player as they are.
 import { restoreBackup } from '../backup.mjs';
-import { BACKUP_KEYS, unitSlug } from '../userdata.mjs';
+import { BACKUP_KEYS, backupShape, unitSlug } from '../userdata.mjs';
 import { manualResult } from '../game/pvp.mjs';
 import { LIMITS, cleanTags } from '../../web/scripts/lib/limits.js';
 import { APP_NAME } from '../../web/scripts/lib/constants.js';
@@ -159,7 +159,7 @@ export function createHandlers(ctx) {
 
     /** Restores a backup file: { backup }. */
     async restore({ backup }) {
-      const restored = restoreBackup(u().backupFiles(), backup);
+      const restored = restoreBackup(u().backupFiles(), backup, backupShape);
       if (!restored) return [400, { error: `This file is not a ${APP_NAME} backup.` }];
       u().repair();
       for (const key of restored) await u().save(BACKUP_KEYS[key]);

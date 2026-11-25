@@ -100,10 +100,13 @@ const MAKES = {
 };
 const base = (step) => step.replace(/ \d+\/\d+$/, ''); // "Animations 2/4" is a part of "Animations"
 
-/** Whether the extraction in `out` has steps due: the game or the tracker changed since. False when there is none. */
-export function outOfDate(out, gameFolder = '') {
+/**
+ * Whether the extraction in `out` has steps due: the game, the tracker or the game data in `gamedata` changed since.
+ * False when there is none.
+ */
+export function outOfDate(out, gameFolder = '', gamedata = null) {
   try {
-    return !!stampOf(out) && stepsDue(findGame(gameFolder), stampOf(out)).length > 0;
+    return !!stampOf(out) && stepsDue(findGame(gameFolder), stampOf(out), gamedata).length > 0;
   } catch {
     return false; // (the game's version can't be read just now, as while a patch rewrites it: looked at again later)
   }
@@ -119,20 +122,30 @@ function stampOf(out) {
 /**
  * The steps that are due for an extraction with this stamp: 'all' without one, with one from before the steps'
  * output was hashed, or for another version of the game than the one in `game`, else the names of the steps whose
- * version is another now ([] when nothing is due).
+ * version is another now ([] when nothing is due). `gamedata`: the tracker's game data folder, as in stepVersions.
  */
-export function stepsDue(game, stamp) {
+export function stepsDue(game, stamp, gamedata = null) {
   if (!stamp?.steps || !stamp.hashes) return 'all';
   if (game && existsSync(join(game, '.build.info')) && stamp.gameBuild !== gameVersion(game)) return 'all';
-  const now = stepVersions();
+  const now = stepVersions(gamedata);
   return Object.keys(now).filter((name) => stamp.steps[name] !== now[name]);
 }
-/** { step: version } for every step here, as they are in this version of the tracker. */
-export function stepVersions() {
+// The tables of the tracker's game data that steps read (the minis' names and keys), and those steps.
+const GAME_TABLES = ['minis.json', 'unit_ids.json'];
+const TABLE_STEPS = ['List of minis', 'Index of the sounds', 'Index of the effects', 'Tower models', 'Animations', 'Catalog of attacks',
+  'Effects', 'Sounds'];
+/**
+ * { step: version } for every step here, as they are in this version of the tracker. With the tracker's game data
+ * folder, the tables read from it count in the versions of the steps that read them.
+ */
+export function stepVersions(gamedata = null) {
   // the tools a step uses count too: Python and its packages, vgmstream for the sounds, three.js for the pictures
   const fetched = existsSync(join(VENDOR, 'versions.json')) ? JSON.parse(readFileSync(join(VENDOR, 'versions.json'), 'utf8')) : {};
   const py = pythonVersions();
-  let settings = withTools(SETTINGS, PYTHON_STEPS.filter((s) => s !== 'Sounds'), py);
+  const tables = gamedata && GAME_TABLES.every((f) => existsSync(join(gamedata, f)))
+    && Object.values(versionsOf({ tables: GAME_TABLES }, gamedata)).join();
+  let settings = withTools(SETTINGS, TABLE_STEPS, tables && { tables });
+  settings = withTools(settings, PYTHON_STEPS.filter((s) => s !== 'Sounds'), py);
   settings = withTools(settings, ['Sounds'], (py || fetched.vgmstream) && { python: py, vgmstream: fetched.vgmstream });
   settings = withTools(settings, ['Sprites', 'Backdrops', 'Effect sprites'], fetched.three && { three: fetched.three });
   return versionsOf(SOURCES, HERE, settings);
@@ -268,7 +281,7 @@ export async function extractRdmodule({ gameFolder = '', gamedata, out, work, al
   if (!game) throw new BuildError('Warcraft Rumble was not found on this PC.');
   if (!canExtract()) throw new BuildError('This tracker was built without the tools the extraction needs.');
   // what is due: everything, unless the small files the last extraction kept are still there, whole, to go by
-  let due = all ? 'all' : stepsDue(game, stampOf(out));
+  let due = all ? 'all' : stepsDue(game, stampOf(out), gamedata);
   if (due !== 'all' && !(existsSync(join(work, 'asset_index.json')) && workWhole(work))) due = 'all';
   if (!due.length) return [];
   // built beside the last extraction, which it replaces only when it is whole
@@ -376,7 +389,7 @@ export async function extractRdmodule({ gameFolder = '', gamedata, out, work, al
     await new Promise((resolve) => { server.close(resolve); server.closeAllConnections(); });
   }
   await writeFile(join(stage, READY), JSON.stringify({ extracted: new Date().toISOString(), gameBuild: gameVersion(game),
-    steps: stepVersions(), hashes }, null, 1) + '\n');
+    steps: stepVersions(gamedata), hashes }, null, 1) + '\n');
   await replaceFolder(stage, out);
   await prune(work).catch((e) => log(`  the working folder was not cleared: ${e.message}`));
   closeWork(work);

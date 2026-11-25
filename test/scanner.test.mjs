@@ -107,6 +107,22 @@ test('an account file that holds something else is moved aside, and one account 
   assert.match(ctx.scan.lastError, /Could not update/);
 });
 
+test('a history file that can\'t be written does not stop the scan, and is written by a later one', async (t) => {
+  const { ctx, cleanup } = await testContext();
+  t.after(cleanup); // (also when the test fails)
+  const { scan } = createScanner(ctx, { readPrefs: async () => save({ pvp: { honor: 1000, vp: 0 } }) });
+  const real = ctx.user.save, saved = [];
+  ctx.user.save = async () => { throw new Error('ENOSPC: no space left'); };
+  for (let i = 0; i < FAILS_BEFORE_ERROR; i++) await scan(); // (does not throw: the tracker starts with a full disk)
+  assert.match(ctx.scan.lastError, /Could not save the history: ENOSPC/);
+  assert.equal(ctx.errorLog.list().at(-1).source, 'saving the history');
+  // nothing changes in the save any more: what was not written is all the same
+  ctx.user.save = async (key) => { saved.push(key); return real(key); };
+  await scan();
+  assert.deepEqual(saved.sort(), ['progress', 'pvpHistory']);
+  assert.equal(ctx.scan.lastError, null);
+});
+
 test('one scan at a time', async (t) => {
   const { ctx, cleanup } = await testContext();
   t.after(cleanup); // (also when the test fails)
