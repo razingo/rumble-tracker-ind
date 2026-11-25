@@ -3,6 +3,17 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.4.8
+
+- Restoring a backup says which parts it left out, and says so plainly when nothing in the backup could be restored
+  (it used to read "Restored .").
+- The tracker checks the note of where its folder is before it uses it. A note that was changed by hand can no
+  longer have files removed outside the tracker's own folders, and one that names no usable folder has the tracker
+  ask where its files go, as at a first start.
+- An account's data that could not be saved, as on a full disk, is saved at the next read of the save.
+- Moving the tracker's folder in Settings no longer fails with an odd message when that note is damaged.
+- Calendar: a rotation that does not last whole weeks is given in days. None is like that today.
+
 ## 0.4.7
 
 - Fixed: a data folder that could not be written to, as on a full disk, could stop the tracker from starting. The
