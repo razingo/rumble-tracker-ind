@@ -3,6 +3,26 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.4.3
+
+- Moving the tracker's folder is safer. Everything is copied first, and the old files are removed only once the
+  copy is whole, so a move that fails or is cut off leaves your files complete in one place. A move that can't be
+  done says why. Old files that are still in use are removed at a later start.
+- If the folder you pick on the first start already holds a RumbleTracker folder, the tracker uses it. A tracker
+  that brings data of its own keeps its own; the backups and data it found there are kept in
+  `data\backups\pre_existing`, where Backup → Import backup reads them.
+- If the tracker's folder is not there at the start (its disk is not connected, or it was moved or renamed), the
+  tracker asks what to do and no longer starts empty: try again, pick a folder, or quit.
+- Starting the tracker a second time while it is still starting no longer asks or moves anything twice. The first
+  one's question comes to the front, and its window opens once it runs.
+- If a new version can't start, the previous one is started again and says why.
+- Messages shown before the window opens: a long one scrolls, Copy copies its text, and a message with several
+  choices has a button for each.
+- Settings: the tracker's folder can't be moved while the game data is being read.
+- Uninstall also removes old files that a move had left to remove later.
+- Reading the game data again: the army boards are always made from the minis just read.
+- The window's title bar no longer takes a little more memory each time it is redrawn.
+
 ## 0.4.2
 
 - Uninstall asks whether to keep a backup. "Uninstall, keep a backup" saves your names, armies, goals, history
@@ -43,8 +63,6 @@ GitHub release notes.
 
 - Settings: each section is in a box of its own under a gold title, so they are easier to tell apart. Uninstall
   stands out in orange.
-- Settings: the additional data has a section of its own, above Uninstall. It says how much free disk space
-  extracting needs and how much is free.
 
 ## 0.3.7
 
