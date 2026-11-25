@@ -146,7 +146,7 @@ public class RtEndSession : NativeWindow {
     if (m.Msg == 0x16 && m.WParam != IntPtr.Zero) {
       Console.Out.WriteLine("shutdown"); Console.Out.Flush();
       var sw = Stopwatch.StartNew();
-      while (sw.ElapsedMilliseconds < 4000) { try { Process.GetProcessById(parent); } catch { break; } Thread.Sleep(100); }
+      while (sw.ElapsedMilliseconds < 4000) { try { Process.GetProcessById(parent).Dispose(); } catch { break; } Thread.Sleep(100); }
     }
     base.WndProc(ref m);
   }

@@ -4,7 +4,8 @@
 import { writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { bundleFiles, dataObjects, saveIdOf, englishStrings, COINS, CURRENCY_NAMES } from './unityfs.mjs';
+import { bundleFiles, saveIdOf } from './unityfs.mjs';
+import { dataObjects, englishStrings, COINS, CURRENCY_NAMES } from './game_objects.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DATA = process.env.RUMBLE_GAMEDATA || join(HERE, '..', '..', 'gamedata'); // the game data being built
@@ -38,8 +39,9 @@ function titleOf(o, product) {
   const title = clean(str[o.m_offerTitle]), named = clean(str[product?.m_name]);
   if (!title || !/{(?!mini}|tome})/.test(title)) return title || named || pretty(o.name);
   const grant = (o.m_grantedItems || []).map((g) => objs[g]).find((g) => CURRENCY_NAMES[g?.m_currencyType]);
-  return named || (grant ? `${grant.m_currencyAmount.toLocaleString('en-US')} ${CURRENCY_NAMES[grant.m_currencyType]}`
-    : pretty(o.name));
+  // (a grant without an amount is named by its currency alone)
+  const amount = Number(grant?.m_currencyAmount) ? `${Number(grant.m_currencyAmount).toLocaleString('en-US')} ` : '';
+  return named || (grant ? `${amount}${CURRENCY_NAMES[grant.m_currencyType]}` : pretty(o.name));
 }
 
 const offers = {};

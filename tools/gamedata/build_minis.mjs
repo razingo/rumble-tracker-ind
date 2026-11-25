@@ -13,7 +13,8 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { bundleFiles, dataObjects, saveIdOf, guidOfSaveId, englishStrings, slugOf } from './unityfs.mjs';
+import { bundleFiles, saveIdOf, guidOfSaveId } from './unityfs.mjs';
+import { dataObjects, englishStrings, slugOf } from './game_objects.mjs';
 import { FACTIONS } from './factions.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));

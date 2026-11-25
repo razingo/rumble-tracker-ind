@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import os from 'node:os';
 import path from 'node:path';
 import { mkdtemp, mkdir, readFile, readdir, writeFile, rm } from 'node:fs/promises';
-import { readJson, writeJson, flushWrites, replaceFolder } from '../server/store.mjs';
+import { readJson, writeJson, flushWrites, replaceFolder, isRecord } from '../server/store.mjs';
 
 test('overlapping writes to one file all succeed, in order, without temp files left', async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'rumble-store-'));
@@ -37,6 +37,15 @@ test('missing files give the fallback; damaged files are moved aside when allowe
   assert.equal(seen.length, 1);
   assert.match(seen[0], /^names\.json\.corrupt-/);
   assert.deepEqual(await readdir(dir), seen);
+  // a file that is JSON, but not what is kept in it, is damaged too
+  for (const text of ['null', '[]', '"text"', '7']) {
+    await writeFile(p, text);
+    await assert.rejects(readJson(p, {}, { shape: isRecord }), { code: 'BAD_JSON' });
+    assert.deepEqual(await readJson(p, { fresh: true }, { shape: isRecord, onCorrupt: () => seen.push('shape') }), { fresh: true });
+  }
+  assert.equal(seen.filter((s) => s === 'shape').length, 4);
+  await writeFile(p, '{"kept":1}');
+  assert.deepEqual(await readJson(p, {}, { shape: isRecord, onCorrupt: () => assert.fail('it is whole') }), { kept: 1 });
   await rm(dir, { recursive: true });
 });
 

@@ -98,6 +98,20 @@ test('a damaged user file is moved aside and reported; the rest loads', async (t
   assert.ok((await readdir(ctx.paths.DATA)).some((n) => n.startsWith('plans.json.corrupt-')));
 });
 
+test('a user file that holds something else than the tracker keeps in it is moved aside too', async (t) => {
+  const { ctx, cleanup } = await testContext({ files: { 'names.json': 'null', 'plans.json': '[1]', 'armies.json': '7',
+    'talents.json': { a: { u: [1] } }, 'notified.json': { sent: { k: '2026-01-01T00:00:00.000Z' } } } });
+  t.after(cleanup); // (also when the test fails)
+  assert.deepEqual([ctx.user.names, ctx.user.plans, ctx.user.armies], [{ accounts: {}, units: {} }, {}, {}]);
+  assert.deepEqual(ctx.user.talents, { a: { u: [1] } }, 'a whole file is read as it is');
+  // a part that is only missing is filled in, and the file kept
+  assert.deepEqual(ctx.user.sentLog, { sent: { k: '2026-01-01T00:00:00.000Z' }, log: [], pending: [] });
+  assert.equal(ctx.user.notifyBaseline, false);
+  const moved = (await readdir(ctx.paths.DATA)).filter((n) => n.includes('.corrupt-')).map((n) => n.split('.corrupt-')[0]).sort();
+  assert.deepEqual(moved, ['armies.json', 'names.json', 'plans.json']);
+  assert.equal(ctx.errorLog.list().length, 3);
+});
+
 test('damaged game tables throw, so the caller can have them read again', async (t) => {
   const { ctx, cleanup } = await testContext();
   t.after(cleanup); // (also when the test fails)

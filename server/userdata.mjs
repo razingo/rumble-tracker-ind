@@ -1,6 +1,6 @@
 // The user's own files in the data folder: what they entered, and history the save can't give back.
 import path from 'node:path';
-import { writeJson } from './store.mjs';
+import { writeJson, isRecord } from './store.mjs';
 import { cleanSettings } from './notifications/notify.mjs';
 import { CLOSE_CHOICES } from '../web/scripts/lib/constants.js';
 
@@ -43,10 +43,12 @@ export const unitSlug = (ctx, id) => ctx.user.names.units[id] || ctx.tables.buil
 /** Loads every file (missing ones start empty). */
 export async function loadUserData(ctx) {
   const dir = ctx.paths.DATA;
-  const read = (key, fallback) => ctx.readUserJson(path.join(dir, FILES[key]), fallback);
-  const notified = await read('sentLog', null);
+  const read = (key, fallback, shape) => ctx.readUserJson(path.join(dir, FILES[key]), fallback, shape);
+  // (a part that is not there is filled in below; one that is something else makes the file a damaged one)
+  const parts = (kinds) => (v) => isRecord(v) && Object.entries(kinds).every(([k, ok]) => v[k] === undefined || ok(v[k]));
+  const notified = await read('sentLog', null, parts({ sent: isRecord, log: Array.isArray, pending: Array.isArray }));
   const u = {
-    names: await read('names', { accounts: {}, units: {} }),
+    names: await read('names', { accounts: {}, units: {} }, parts({ accounts: isRecord, units: isRecord })),
     talents: await read('talents', {}),
     army: await read('army', {}),
     armies: await read('armies', {}),
@@ -57,7 +59,7 @@ export async function loadUserData(ctx) {
     notifySettings: cleanSettings(await read('notifySettings', {})),
     appSettings: cleanAppSettings(await read('appSettings', {})),
     plans: await read('plans', {}),
-    sentLog: notified || { sent: {}, log: [], pending: [] },
+    sentLog: { sent: {}, log: [], pending: [], ...notified },
     notifyBaseline: !notified, // first run: record what is already due without notifying
     /** Saves one file. Writes to the same file are queued. */
     save: (key) => writeJson(path.join(dir, FILES[key]), u[key]),

@@ -1,7 +1,7 @@
 // The server's shared state. Every module gets this one object, so the tests can build one from temporary folders.
 import path from 'node:path';
 import { createErrorLog } from './report.mjs';
-import { readJson } from './store.mjs';
+import { readJson, isRecord } from './store.mjs';
 import { DEFAULT_PORT } from '../web/scripts/lib/constants.js';
 
 /**
@@ -51,8 +51,12 @@ export function createContext({ root, data, port = DEFAULT_PORT, standalone = fa
     official: false, // a released exe, which may replace itself with a newer release
     // Whether Warcraft Rumble runs, or null while that isn't known.
     game: { running: () => null },
-    /** Reads one of the player's files. A damaged file is moved aside and reported instead of stopping the tracker. */
-    readUserJson: (p, fallback) => readJson(p, fallback, {
+    /**
+     * Reads one of the player's files. A damaged file is moved aside and reported instead of stopping the tracker, and
+     * so is one that holds something else than `shape(value)` passes (an object with named parts, unless given).
+     */
+    readUserJson: (p, fallback, shape = isRecord) => readJson(p, fallback, {
+      shape,
       onCorrupt: (file, moved) => {
         const msg = `${path.basename(file)} was damaged and could not be read. It was moved to ${path.basename(moved)} `
           + 'and the tracker started without it. Restore a backup to get the data back.';

@@ -10,7 +10,8 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { bundleFiles, dataObjects, saveIdOf } from './unityfs.mjs';
+import { bundleFiles, saveIdOf } from './unityfs.mjs';
+import { dataObjects } from './game_objects.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DATA = process.env.RUMBLE_GAMEDATA || join(HERE, '..', '..', 'gamedata'); // the game data being built

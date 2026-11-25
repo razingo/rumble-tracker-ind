@@ -6,7 +6,7 @@ import path from 'node:path';
 import { writeFile, readFile, mkdir, rm } from 'node:fs/promises';
 import { runSteps, runProgram, versionsOf, withTools, stepsDue, stepVersions, checkTables, workWhole, openWork,
   closeWork } from '../tools/gamedata/build.mjs';
-import { slugOf } from '../tools/gamedata/unityfs.mjs';
+import { slugOf } from '../tools/gamedata/game_objects.mjs';
 import { testContext, fakeGame } from './helpers.mjs';
 
 test('runs steps side by side, each after the ones it waits for', async () => {

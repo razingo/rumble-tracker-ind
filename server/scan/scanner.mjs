@@ -1,6 +1,6 @@
 // Scans: reads the save, updates each account's snapshot (state/<id>.json) and the history kept from it.
 import path from 'node:path';
-import { writeJson } from '../store.mjs';
+import { writeJson, isRecord } from '../store.mjs';
 import { parsePvp } from '../game/pvp.mjs';
 import { parseUnits, parseCurrencies, parseActiveEvents, parseIncomeBonuses, parseOwnedAvatars, parseStore,
   parseGameBuild, diffSnapshots } from '../game/model.mjs';
@@ -10,6 +10,9 @@ import { accountLabel } from '../userdata.mjs';
 const MAX_EVENTS = 500;
 // Reads can collide with the game saving; only failures that persist are reported.
 export const FAILS_BEFORE_ERROR = 3;
+// What state/<id>.json holds: the changes seen, and the last snapshot once there is one.
+const stateShape = (v) => isRecord(v) && Array.isArray(v.events)
+  && (v.snapshot == null || (isRecord(v.snapshot) && Array.isArray(v.snapshot.units) && Array.isArray(v.snapshot.currencies)));
 
 /** readPrefs(): { [account]: { units, currencies, store, profile, commerce, pvp: Buffer } } (game/prefs.mjs). */
 export function createScanner(ctx, { readPrefs }) {
@@ -38,7 +41,7 @@ export function createScanner(ctx, { readPrefs }) {
   async function account(id, dirty) {
     let acc = ctx.accounts.get(id);
     if (acc) return acc;
-    acc = await ctx.readUserJson(path.join(ctx.paths.STATE, `${id}.json`), { snapshot: null, events: [] });
+    acc = await ctx.readUserJson(path.join(ctx.paths.STATE, `${id}.json`), { snapshot: null, events: [] }, stateShape);
     ctx.accounts.set(id, acc);
     if (acc.pvpLog) { // the earlier tracker, whose data this one uses, kept the PvP log here
       if (!ctx.user.pvpHistory[id]) {
@@ -149,7 +152,15 @@ export function createScanner(ctx, { readPrefs }) {
       const dirty = new Set(); // user-data files to save
       let changed = false;
       for (const [id, entries] of Object.entries(prefs)) {
-        if (entries.units && await scanAccount(id, entries, now, dirty)) changed = true;
+        if (!entries.units) continue;
+        try {
+          if (await scanAccount(id, entries, now, dirty)) changed = true;
+          noteSuccess(`update ${id}`);
+        } catch (e) {
+          // (one account's trouble does not stop the others, nor the tracker's start)
+          noteFailure(`update ${id}`, `Could not update ${accountLabel(ctx, id)}: ${e.message}`,
+            `Could not update an account: ${e.message}`);
+        }
       }
       for (const key of dirty) await ctx.user.save(key);
       // A new G.R.I.D. comes with a changed shop, so its history needs no check of its own.

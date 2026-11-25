@@ -134,9 +134,10 @@ for (const level of ['log', 'info', 'warn', 'error']) {
           logBytes = 0;
         }
       }
-      if (logBytes + text.length > MAX_LOG) rotateLog();
+      const size = Buffer.byteLength(text);
+      if (logBytes + size > MAX_LOG) rotateLog();
       fs.appendFileSync(LOG, text);
-      logBytes += Buffer.byteLength(text);
+      logBytes += size;
     } catch {
       // nowhere to write
     }

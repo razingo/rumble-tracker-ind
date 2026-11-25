@@ -14,6 +14,7 @@ import { pathToFileURL } from 'node:url';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { ISSUES_REPO, briefError } from './report.mjs';
 import { replaceFolder } from './store.mjs';
+import { createGuard } from './guard.mjs';
 import { givenGameFolder, setGameFolder } from './game/folder.mjs';
 import { esc } from '../web/scripts/lib/format.js';
 import { APP_NAME, SECOND, HOUR } from '../web/scripts/lib/constants.js';
@@ -84,21 +85,17 @@ ${page.error ? `<p>${esc(page.error)}</p>${ask || '<p style="opacity:.7">Trying 
 <p style="opacity:.8">${steps()}</p>
 <p style="opacity:.6;font-size:13px">This is only needed the first time and takes about a minute.</p>`}</main></body></html>`;
     };
-    const hosts = new Set([`localhost:${ctx.port}`, `127.0.0.1:${ctx.port}`]);
+    const refusal = createGuard(ctx.port);
     const boot = http.createServer((req, res) => {
-      if (!hosts.has(req.headers.host)) {
+      const p = new URL(req.url, 'http://localhost').pathname;
+      // (only this page's own address, and a form of this page only: another site's form carries another Origin)
+      if (refusal(req, p)) {
         res.writeHead(403);
         res.end();
         return;
       }
-      const p = new URL(req.url, 'http://localhost').pathname;
-      // the folder given on this page (a form of this page only: another site's form carries another Origin)
+      // the folder given on this page
       if (req.method === 'POST' && p === '/game-folder') {
-        if (req.headers.origin && !hosts.has(req.headers.origin.replace(/^http:\/\//, ''))) {
-          res.writeHead(403);
-          res.end();
-          return;
-        }
         let body = '';
         req.on('data', (d) => { if (body.length < 4096) body += d; });
         req.on('end', async () => {

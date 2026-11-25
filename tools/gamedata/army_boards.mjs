@@ -4,7 +4,8 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readBundle, bundleFiles, jsonObjectAt } from './unityfs.mjs';
+import { readBundle, bundleFiles } from './unityfs.mjs';
+import { jsonObjectAt } from './game_objects.mjs';
 import { FACTIONS } from './factions.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));

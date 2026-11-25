@@ -39,7 +39,8 @@ const AT_ONCE = Math.max(2, Math.min(4, availableParallelism() - 1)); // steps r
 const PROGRAM_MINUTES = 10; // a program still running by then hangs: it is stopped and its step fails
 // What each step is made of: its script and the files it reads besides the game's (in this folder), and its settings
 // below. A step's version is the contents of these, so a step changes exactly when one of them does.
-const TABLES = ['unityfs.mjs'], IMAGES = ['extract_reward_icons.py'];
+// (READER: the bundle reader every table step uses; TABLES: with what the steps that read data objects share)
+const READER = ['unityfs.mjs'], TABLES = [...READER, 'game_objects.mjs'], IMAGES = ['extract_reward_icons.py'];
 // The tracker's own tables (seed/) a step starts from: they are put in place each time it runs.
 const SEEDS = { Rules: ['rules.json'], Minis: ['minis.json', 'unit_ids.json', 'army_code_minis.json'] };
 // What the table steps make, in the game data or (work:) the working folder: what a later step may read. The image
@@ -59,7 +60,7 @@ const FOLLOWS = { Minis: ['Army boards'] };
 // And it starts from what that one made: when it runs, that one runs first, so it never builds on its own last result.
 const STARTS_FROM = { 'Army boards': ['Minis'] };
 const SOURCES = {
-  'Index of the game files': ['build_guid_index.mjs', ...TABLES],
+  'Index of the game files': ['build_guid_index.mjs', ...READER],
   Rules: ['build_rules.mjs', ...TABLES, 'seed/rules.json'],
   Minis: ['build_minis.mjs', 'factions.mjs', 'family_pair_sprites.json', ...TABLES,
     ...SEEDS.Minis.map((f) => `seed/${f}`)],

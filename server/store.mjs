@@ -1,5 +1,6 @@
 // The player's JSON files. Writes to one file are queued and go through a unique temporary file, so saves can't
-// collide. A damaged file is moved aside instead of stopping the tracker.
+// collide. A damaged file, or one that holds something else than the tracker keeps in it, is moved aside instead of
+// stopping the tracker.
 import { readFile, writeFile, rename, rm } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -9,12 +10,15 @@ const queues = new Map(); // path -> promise of the last queued write
 const fileTimestamp = () => new Date().toISOString().replace(/[:.]/g, '-');
 let tmpCounter = 0;
 
+/** Whether a value read from a file is an object with named parts: not null, a list, a number or text. */
+export const isRecord = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+
 /**
- * Reads a JSON file. A missing file gives `fallback`, or throws without one. A file that isn't valid JSON throws,
- * unless `onCorrupt` is given. Then the file is renamed to <name>.corrupt-<time>, onCorrupt(file, movedTo) is called
- * and `fallback` is returned.
+ * Reads a JSON file. A missing file gives `fallback`, or throws without one. A file that isn't valid JSON, or that
+ * holds something `shape(value)` does not pass, throws, unless `onCorrupt` is given. Then the file is renamed to
+ * <name>.corrupt-<time>, onCorrupt(file, movedTo) is called and `fallback` is returned.
  */
-export async function readJson(p, fallback, { onCorrupt } = {}) {
+export async function readJson(p, fallback, { onCorrupt, shape } = {}) {
   let text;
   try {
     text = await readFile(p, 'utf8');
@@ -22,17 +26,20 @@ export async function readJson(p, fallback, { onCorrupt } = {}) {
     if (e.code === 'ENOENT' && fallback !== undefined) return fallback;
     throw e;
   }
+  let why;
   try {
     // JSON.parse rejects a byte-order mark
-    return JSON.parse(text.replace(/^\uFEFF/, ''));
+    const value = JSON.parse(text.replace(/^\uFEFF/, ''));
+    if (!shape || shape(value)) return value;
+    why = 'does not hold what the tracker keeps in it';
   } catch (e) {
-    if (!onCorrupt || fallback === undefined) throw Object.assign(new Error(`${path.basename(p)} is not valid JSON: ${e.message}`),
-      { code: 'BAD_JSON' });
-    const moved = `${p}.corrupt-${fileTimestamp()}`;
-    await rename(p, moved);
-    onCorrupt(p, moved);
-    return fallback;
+    why = `is not valid JSON: ${e.message}`;
   }
+  if (!onCorrupt || fallback === undefined) throw Object.assign(new Error(`${path.basename(p)} ${why}`), { code: 'BAD_JSON' });
+  const moved = `${p}.corrupt-${fileTimestamp()}`;
+  await rename(p, moved);
+  onCorrupt(p, moved);
+  return fallback;
 }
 
 /** Writes a JSON file atomically. Writes to the same file run one at a time, in call order. */

@@ -149,6 +149,12 @@ test('integration script compiles, and keeps its compiled helpers', { skip: !win
   }
 });
 
+test('the integration script fits on a command line', () => {
+  // (the launcher passes it whole, as -EncodedCommand: Windows takes 32,767 characters, and the rest is short)
+  const script = readFileSync(path.join(DESKTOP, 'integration.ps1'), 'utf8');
+  assert.ok(encoded(script).length < 30000, `${encoded(script).length} characters`);
+});
+
 test('the log\'s lines carry no Windows user name', () => {
   // (the launcher is one program with no parts to import: its cleaning is read out of it)
   const launcher = readFileSync(path.join(DESKTOP, 'launcher.cjs'), 'utf8');

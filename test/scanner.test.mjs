@@ -88,6 +88,25 @@ test('a damaged account value keeps the last snapshot', async (t) => {
   assert.equal(ctx.accounts.get(ACC).snapshot.units.length, 1);
 });
 
+test('an account file that holds something else is moved aside, and one account never stops another', async (t) => {
+  const { ctx, cleanup } = await testContext();
+  t.after(cleanup); // (also when the test fails)
+  const OTHER = hexId(0x0200000000, 0xff00);
+  for (const [id, text] of [[ACC, 'null'], [OTHER, '{"snapshot":7,"events":"x"}']]) {
+    await writeFile(path.join(ctx.paths.STATE, `${id}.json`), text);
+  }
+  const both = { ...save(), [OTHER]: save()[ACC] };
+  const { scan } = createScanner(ctx, { readPrefs: async () => both });
+  await scan();
+  assert.deepEqual([ctx.accounts.get(ACC).snapshot.units.length, ctx.accounts.get(OTHER).events], [1, []]);
+  assert.equal(ctx.errorLog.list().filter((e) => e.source === 'data file').length, 2);
+  // an account that can't be updated is reported once it keeps failing; the other is read all the same
+  ctx.user.progress = null; // (what stops the first account's update)
+  const failing = createScanner(ctx, { readPrefs: async () => ({ [ACC]: save({ xp: 5 })[ACC], [OTHER]: both[OTHER] }) });
+  for (let i = 0; i < FAILS_BEFORE_ERROR; i++) await failing.scan(); // (does not throw)
+  assert.match(ctx.scan.lastError, /Could not update/);
+});
+
 test('one scan at a time', async (t) => {
   const { ctx, cleanup } = await testContext();
   t.after(cleanup); // (also when the test fails)

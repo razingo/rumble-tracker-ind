@@ -339,7 +339,7 @@ function treeGrid(ev, rewards, planner, plan, look) {
       ${r0.cost != null ? `<div class="tree-cost">${fmt(r0.cost)}<img src="${eventIcon(ev)}" alt=""></div>` : ''}
     </div>`;
   };
-  return `<div class="tree-wrap${plan ? ' picking' : ''}" style="--cols:${cols};--rows:${rows}">
+  return `<div class="tree-wrap${plan ? ' picking' : ''}" style="--rows:${rows}">
     <svg class="tree-lines" viewBox="0 0 ${cols} ${rows}" preserveAspectRatio="none" aria-hidden="true">${lines}</svg>
     <div class="tree-grid">${rewards.map(node).join('')}</div>
   </div>`;
