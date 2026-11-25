@@ -66,7 +66,8 @@ export async function noteMove(storage, picked) {
     const free = await statfs(home).then((s) => s.bavail * s.bsize, () => null);
     if (free != null && needed > free) throw new Error(`The files take ${gb(needed)} GB, and ${gb(free)} GB is free there.`);
     // (what an earlier move left to remove stays in the note)
-    const clear = await readFile(storage.note, 'utf8').then((text) => JSON.parse(text).clear, () => null);
+    // (a note that can't be read lists nothing; the launcher looks at what a note lists before it removes anything)
+    const clear = await readFile(storage.note, 'utf8').then((text) => JSON.parse(text).clear).catch(() => null);
     // (`made`: the folders made here, which go again if the move can't be done)
     const note = { folder: storage.folder, moveTo: home, ...(made.length && { made }),
       ...(Array.isArray(clear) && clear.length && { clear }) };

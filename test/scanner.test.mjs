@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rm } from 'node:fs/promises';
 import { createScanner, FAILS_BEFORE_ERROR } from '../server/scan/scanner.mjs';
 import { recordProgress, logGrid } from '../server/scan/history.mjs';
 import { flushWrites } from '../server/store.mjs';
@@ -121,6 +121,26 @@ test('a history file that can\'t be written does not stop the scan, and is writt
   await scan();
   assert.deepEqual(saved.sort(), ['progress', 'pvpHistory']);
   assert.equal(ctx.scan.lastError, null);
+});
+
+test('an account file that can\'t be written is written by a later scan, though nothing changed', async (t) => {
+  const { ctx, cleanup } = await testContext();
+  t.after(cleanup); // (also when the test fails)
+  let next = save();
+  const { scan } = createScanner(ctx, { readPrefs: async () => next });
+  const file = path.join(ctx.paths.STATE, `${ACC}.json`);
+  await scan();
+  await flushWrites();
+  // (a folder where the file goes: it can't be written)
+  await rm(file);
+  await mkdir(file);
+  next = save({ xp: 5 });
+  await scan();
+  assert.equal(ctx.accounts.get(ACC).snapshot.units[0].xp, 5, 'the account is read all the same');
+  await rm(file, { recursive: true });
+  await scan(); // the same save as before
+  await flushWrites();
+  assert.equal((await readJsonFile(file)).snapshot.units[0].xp, 5);
 });
 
 test('one scan at a time', async (t) => {

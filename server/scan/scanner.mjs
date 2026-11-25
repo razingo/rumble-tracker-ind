@@ -18,6 +18,7 @@ const stateShape = (v) => isRecord(v) && Array.isArray(v.events)
 export function createScanner(ctx, { readPrefs }) {
   const failures = new Map(); // 'read', 'save', an account id or 'update <id>' -> consecutive failures
   const unsaved = new Set(); // user-data files changed in memory that are still to be written
+  const unsavedStates = new Set(); // accounts whose state/<id>.json is still to be written
   const status = ctx.scan;
   const sourceOf = (key) => (key === 'read' ? 'reading the save' : key === 'save' ? 'saving the history'
     : key.startsWith('update ') ? 'updating an account' : 'decoding the save');
@@ -125,7 +126,12 @@ export function createScanner(ctx, { readPrefs }) {
     let changed = updateCollection(acc, cur, id, now, dirty);
     if (unlessMidSave(() => updateStore(acc, id, entries, now, dirty))) changed = true;
     if (unlessMidSave(() => updatePvp(acc, id, entries, now, dirty))) changed = true;
-    if (changed) await writeJson(path.join(ctx.paths.STATE, `${id}.json`), acc);
+    // (a file that could not be written, as on a full disk, is written at the next scan, changed or not)
+    if (changed || unsavedStates.has(id)) {
+      unsavedStates.add(id);
+      await writeJson(path.join(ctx.paths.STATE, `${id}.json`), acc);
+      unsavedStates.delete(id);
+    }
     return changed;
   }
 

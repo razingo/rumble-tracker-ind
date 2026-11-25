@@ -17,7 +17,8 @@ const LAUNCHER = path.join(DESKTOP, 'launcher.cjs');
 const source = /\/\/ The tracker's folder\n[\s\S]*?\n\/\/ Starting up\n/.exec(fs.readFileSync(LAUNCHER, 'utf8'))[0];
 const launcher = new Function('fs', 'path', 'FOLDER_NAME', `${source}
   return { homeIn, readNote, writeNote, movePairs, moveList, copyAll, roomFor, clearOld, tidyOld, homeProblem, takeOver,
-    profileBackup, inUse, reachable, dropEmpty, stillToClear, madeFor, dropShells, dropCopies, PROFILE };`)(fs, path, 'RumbleTracker');
+    profileBackup, inUse, reachable, dropEmpty, stillToClear, madeFor, dropShells, dropCopies, soundNote,
+    PROFILE };`)(fs, path, 'RumbleTracker');
 
 function scratch() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rt-storage-'));
@@ -265,6 +266,23 @@ test('what a move left behind: nothing of the new copy is removed, and the folde
   } finally {
     s.cleanup();
   }
+});
+
+test('a note changed by hand names no folder that is not a whole path, and lists nothing outside the tracker\'s folders', () => {
+  const home = path.join('D:', path.sep, 'Games', 'RumbleTracker');
+  const own = [path.join(home, 'data', 'tracker.log'), path.join(home, 'webview2')];
+  const whole = { folder: home, clear: own, moveTo: path.join('E:', path.sep, 'RumbleTracker'), made: ['E:\\'] };
+  assert.deepEqual(launcher.soundNote(whole), whole, 'a note the tracker wrote stays as it is');
+  const moving = { moving: { legacy: true, from: home, to: home, prepared: true } };
+  assert.deepEqual(launcher.soundNote(moving), moving);
+  // what is listed to remove: a list, and of it only whole paths inside a RumbleTracker folder
+  assert.deepEqual(launcher.soundNote({ folder: home, clear: `${home}\\data\\x.json` }), { folder: home });
+  assert.deepEqual(launcher.soundNote({ folder: home, clear: [...own, 'C:\\', 'C:\\Users\\me\\Documents', home, 'data', 7, null] }),
+    { folder: home, clear: own });
+  // a folder that is no whole path is no folder: the tracker asks, as at a first start
+  for (const folder of [7, true, ['D:\\x'], { a: 1 }, 'Games', '']) assert.deepEqual(launcher.soundNote({ folder, moveTo: folder }), {});
+  assert.deepEqual(launcher.soundNote({ folder: home, moving: { from: 7, to: home } }), { folder: home });
+  for (const note of [null, 7, 'text', [1]]) assert.deepEqual(launcher.soundNote(note), {});
 });
 
 test('a move that is not done leaves no copies: those of a cut-off try go, the backups found there stay', () => {

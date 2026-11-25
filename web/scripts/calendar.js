@@ -74,7 +74,7 @@ function renderRotations(now) {
     const next = [1, 2, 3].map((k) => rotationAt(rot, cur.end + (k - 1) * rot.periodDays * DAY));
     return `<article class="rotation-card" style="--event-color:${rotationColor(rot, cur.item)}">
       <div class="card-label">${esc(rot.label)} <span class="muted">· every
-        ${rot.periodDays === 7 ? 'week' : `${rot.periodDays / 7} weeks`}</span></div>
+        ${rot.periodDays === 7 ? 'week' : rot.periodDays % 7 ? `${rot.periodDays} days` : `${rot.periodDays / 7} weeks`}</span></div>
       <div class="rotation-now">${rotationIcon(rot, cur.item)}<b>${esc(rotationName(cur.item))}</b></div>
       <div class="time-highlight">Changes in ${span(cur.end - now)}</div>
       ${rot.id === 'dungeon' ? ankhLine() : ''}

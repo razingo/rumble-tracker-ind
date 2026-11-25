@@ -23,7 +23,12 @@ async function restoreBackup(what, restore) {
     forgetDraft(); // the draft comes from the restored data
     setState(null);
     await poll();
-    alertDialog(`Restored ${r.restored.map((k) => LABELS[k] || k).join(', ')}.`, { title: 'Backup restored' });
+    const named = (keys) => keys.map((k) => LABELS[k] || k).join(', ');
+    const leftOut = r.leftOut?.length
+      ? `Left out, as they did not hold what the tracker keeps: ${named(r.leftOut)}.` : '';
+    if (!r.restored.length) {
+      alertDialog(`Nothing in this backup could be restored.${leftOut ? `\n\n${leftOut}` : ''}`, { title: 'Not restored' });
+    } else alertDialog(`Restored ${named(r.restored)}.${leftOut ? `\n\n${leftOut}` : ''}`, { title: 'Backup restored' });
   } catch (err) {
     alertDialog(err.message, { title: 'Not restored' });
   }

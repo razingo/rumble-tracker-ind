@@ -560,6 +560,26 @@ function tidyOld(old, kept) {
 const stillToClear = (clear, to) => (clear || []).filter((p) => !samePath(p, to) && !inside(p, to));
 
 /**
+ * A note as the tracker writes it, whatever the file holds (it may have been changed by hand): the folders it names
+ * are whole paths, and of what it lists to remove only whole paths inside a folder named as the tracker's own count,
+ * as when uninstalling (desktop/uninstall.ps1). Anything else is left out, so a note that names no folder is asked
+ * about like a first start, and nothing outside the tracker's folders is ever removed.
+ */
+function soundNote(note) {
+  if (!note || typeof note !== 'object' || Array.isArray(note)) return {};
+  const whole = (p) => typeof p === 'string' && path.isAbsolute(p);
+  const own = (p) => whole(p) && path.dirname(path.resolve(p)).toLowerCase().split(path.sep).includes(FOLDER_NAME.toLowerCase());
+  const out = { ...note };
+  for (const key of ['folder', 'moveTo']) if (!whole(out[key])) delete out[key];
+  const m = out.moving;
+  if (!m || typeof m !== 'object' || !whole(m.from) || !whole(m.to)) delete out.moving;
+  const clear = Array.isArray(out.clear) ? out.clear.filter(own) : [];
+  if (clear.length) out.clear = clear;
+  else delete out.clear;
+  return out;
+}
+
+/**
  * The folders made for a move: the tracker's folder there with its data folder, and those Settings made above it
  * (the note's `made`; only folders the tracker's folder is in count).
  */
@@ -940,7 +960,7 @@ async function locate() {
     useHome(DEFAULT_HOME, FIXED_DATA);
     return true;
   }
-  let note = readNote(NOTE) || {};
+  let note = soundNote(readNote(NOTE));
   // (a first move that was cut off goes on without the question, and has the same log)
   if (note.moving?.legacy) oldLog = path.join(NOTE_DIR, 'tracker.log');
   if (!note.folder && !note.moving) {

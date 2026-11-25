@@ -157,14 +157,15 @@ export function createHandlers(ctx) {
       return ok('pvpHistory');
     },
 
-    /** Restores a backup file: { backup }. */
+    /** Restores a backup file: { backup }. Answers what was restored, and what was left out for what it holds. */
     async restore({ backup }) {
-      const restored = restoreBackup(u().backupFiles(), backup, backupShape);
+      const leftOut = [];
+      const restored = restoreBackup(u().backupFiles(), backup, backupShape, leftOut);
       if (!restored) return [400, { error: `This file is not a ${APP_NAME} backup.` }];
       u().repair();
       for (const key of restored) await u().save(BACKUP_KEYS[key]);
       ctx.bump();
-      return [200, { ok: true, restored, created: backup.created }];
+      return [200, { ok: true, restored, leftOut, created: backup.created }];
     },
   };
 }

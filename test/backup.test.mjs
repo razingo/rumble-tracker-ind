@@ -46,6 +46,10 @@ test('a part of a backup that holds something else than the tracker keeps in it 
   assert.deepEqual(files.plans, { fresh: 1 });
   // a part that is only missing is fine: repair() fills it in
   assert.deepEqual(restoreBackup(files, { format: BACKUP_FORMAT, data: { names: { accounts: { b: 'Alt' } } } }, backupShape), ['names']);
+  // what was left out is told, so the page can say so; a part the backup does not have is not one of them
+  const leftOut = [];
+  assert.deepEqual(restoreBackup(files, { format: BACKUP_FORMAT, data: { names: { units: [] }, plans: 7 } }, backupShape, leftOut), []);
+  assert.deepEqual(leftOut, ['names', 'plans']);
 });
 
 test('keeps one backup a day for 7 days', async () => {
