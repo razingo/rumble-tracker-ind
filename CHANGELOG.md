@@ -3,6 +3,10 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.6.2
+
+- Backup → Import backup…: a file that holds no backup at all now says so, instead of doing nothing.
+
 ## 0.6.1
 
 - Calendar: live changes keep showing after the timeline slider was used; they used to wait for a click somewhere
