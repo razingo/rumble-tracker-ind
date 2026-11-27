@@ -77,8 +77,9 @@ function useHome(home, data = path.join(home, 'data')) {
 // A tracker that has its folder knows its log from the start; one that still asks for it, once it has it.
 if (!FIXED_DATA) {
   try {
+    // (a whole path only, as soundNote asks of the note further down)
     const known = JSON.parse(fs.readFileSync(NOTE, 'utf8')).folder;
-    if (known && fs.existsSync(path.join(known, 'data'))) useHome(known);
+    if (typeof known === 'string' && path.isAbsolute(known) && fs.existsSync(path.join(known, 'data'))) useHome(known);
   } catch {
     // no note yet, or its folder is not there
   }
@@ -571,8 +572,18 @@ function soundNote(note) {
   const own = (p) => whole(p) && path.dirname(path.resolve(p)).toLowerCase().split(path.sep).includes(FOLDER_NAME.toLowerCase());
   const out = { ...note };
   for (const key of ['folder', 'moveTo']) if (!whole(out[key])) delete out[key];
+  // (a move starts from the folder the note names: only the first one, from before there was a choice, has none)
+  if (!out.folder) delete out.moveTo;
   const m = out.moving;
-  if (!m || typeof m !== 'object' || !whole(m.from) || !whole(m.to)) delete out.moving;
+  if (!m || typeof m !== 'object' || !whole(m.from) || !whole(m.to) || !(m.legacy || out.folder)) delete out.moving;
+  // the folders made for a move: a list of whole paths
+  const made = (list) => (Array.isArray(list) ? list.filter(whole) : []);
+  if (made(out.made).length) out.made = made(out.made);
+  else delete out.made;
+  if (out.moving) {
+    const { made: list, ...rest } = out.moving;
+    out.moving = { ...rest, ...(made(list).length && { made: made(list) }) };
+  }
   const clear = Array.isArray(out.clear) ? out.clear.filter(own) : [];
   if (clear.length) out.clear = clear;
   else delete out.clear;

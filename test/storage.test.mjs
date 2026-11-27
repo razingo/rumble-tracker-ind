@@ -283,6 +283,16 @@ test('a note changed by hand names no folder that is not a whole path, and lists
   for (const folder of [7, true, ['D:\\x'], { a: 1 }, 'Games', '']) assert.deepEqual(launcher.soundNote({ folder, moveTo: folder }), {});
   assert.deepEqual(launcher.soundNote({ folder: home, moving: { from: 7, to: home } }), { folder: home });
   for (const note of [null, 7, 'text', [1]]) assert.deepEqual(launcher.soundNote(note), {});
+  // a move starts from the folder the note names: without one there is no move (but the first, from before the choice)
+  const to = path.join('E:', path.sep, 'RumbleTracker');
+  assert.deepEqual(launcher.soundNote({ moveTo: to }), {});
+  assert.deepEqual(launcher.soundNote({ moving: { from: home, to } }), {});
+  // the folders made for a move: a list of whole paths, or none
+  assert.deepEqual(launcher.soundNote({ folder: home, moveTo: to, made: 'E:\\' }), { folder: home, moveTo: to });
+  assert.deepEqual(launcher.soundNote({ folder: home, moving: { from: home, to, made: ['E:\\', 'x', 7] } }),
+    { folder: home, moving: { from: home, to, made: ['E:\\'] } });
+  assert.deepEqual(launcher.madeFor(launcher.soundNote({ folder: home, moving: { from: home, to, made: 'text' } }).moving),
+    [path.join(to, 'data'), to]);
 });
 
 test('a move that is not done leaves no copies: those of a cut-off try go, the backups found there stay', () => {

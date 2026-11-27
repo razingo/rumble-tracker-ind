@@ -383,7 +383,7 @@ function eventCard(r, now) {
     <img src="${eventIcon(ev)}" alt="">
     <div class="cal-name">${esc(ev.name || ev.id)}</div>
     <div class="time-highlight">${status}</div>
-    <div class="cal-dates">${r.unknown ? 'Dates not in the game files' : `${when(r.start)} – ${when(r.end)}`}</div>
+    <div class="cal-dates">${r.unknown ? 'Outside its usual dates' :`${when(r.start)} – ${when(r.end)}`}</div>
     ${live || tickets != null || ev.rewards ? `<div class="cal-badges">
       ${live ? '<span class="cal-badge" title="Your game lists this event as running">Running in your game</span>' : ''}
       ${tickets != null ? `<span class="cal-badge tickets" title="As last saved by the game">${fmt(tickets)} tickets</span>` : ''}
@@ -555,7 +555,7 @@ export async function renderCalendar() {
   const now = Date.now();
   const soon = runsBetween(now - 60 * DAY, now + 60 * DAY);
   const running = soon.filter((r) => r.start <= now && now < r.end).sort((a, b) => a.end - b.end);
-  // Running events not covered by the schedule rules.
+  // Events the game runs now though their schedule has no run now.
   for (const id of state?.activeEvents || []) {
     if (running.some((r) => r.ev.saveId === id)) continue;
     const ev = EVENTS.events.find((e) => e.saveId === id);
@@ -594,7 +594,7 @@ function pickReward(el, multi) {
   if (!k) view.picks = [];
   else if (multi) view.picks = picks.includes(k) ? picks.filter((x) => x !== k) : [...picks, k];
   else view.picks = picks.length === 1 && picks[0] === k ? [] : [k];
-  renderCalendar();
+  return renderCalendar();
 }
 
 /** Sets or clears the reward goal of the open tree. */
@@ -653,7 +653,9 @@ export function bindCalendar() {
     const el = e.target.closest?.('.tree-node[data-tree-pick]');
     if (!el || (e.key !== 'Enter' && e.key !== ' ')) return;
     e.preventDefault();
-    pickReward(el, e.ctrlKey || e.metaKey);
+    const key = el.dataset.treePick;
+    // (the tab is drawn anew: the focus goes back to the reward, so the keyboard can go on)
+    pickReward(el, e.ctrlKey || e.metaKey).then(() => page.querySelector(`.tree-node[data-tree-pick="${CSS.escape(key)}"]`)?.focus());
   });
   page.addEventListener('input', slideTimeline);
   // remember whether the challenge list is open across redraws

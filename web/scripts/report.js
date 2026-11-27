@@ -97,13 +97,17 @@ function renderReportDialog(msg = '') {
   </form>`;
 }
 
+/** The details a report can carry, with the tab that is open. */
+const reportDetails = () => getJson(`/api/report?page=${encodeURIComponent(ui.tab || '')}`, 'the report details');
+
 async function openReportDialog() {
   const dlg = $('#reportDialog');
   REPORT.data = null;
+  REPORT.screenshot = false; // (one taken for an earlier report is not part of this one)
   renderReportDialog();
   dlg.showModal();
   try {
-    REPORT.data = await getJson(`/api/report?page=${encodeURIComponent(ui.tab || '')}`, 'the report details');
+    REPORT.data = await reportDetails();
     renderReportDialog();
   } catch (err) {
     renderReportDialog(err.message);
@@ -154,7 +158,7 @@ export function bindReport() {
     } else if (e.target.closest('[data-report-clear]')) {
       try {
         await post('/api/report/clear', {});
-        REPORT.data = await getJson('/api/report', 'the report details');
+        REPORT.data = await reportDetails();
       } catch (err) {
         msg(err.message, false);
         return;

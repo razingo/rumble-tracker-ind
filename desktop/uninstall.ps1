@@ -34,7 +34,9 @@ $left = @()
 if ($env:RT_NOTE) {
   try { $left = @((Get-Content -LiteralPath (Join-Path $env:RT_NOTE 'location.json') -Raw | ConvertFrom-Json).clear) } catch {}
 }
-$left = @($left | Where-Object { $_ -is [string] -and ((Split-Path -Parent $_) -split '[\\/]') -contains 'RumbleTracker' })
+# (whole paths only, as the launcher takes them: desktop/launcher.cjs, soundNote)
+$left = @($left | Where-Object { $_ -is [string] -and [IO.Path]::IsPathRooted($_) -and $_ -match '^([A-Za-z]:)?[\\/]' -and
+  ((Split-Path -Parent $_) -split '[\\/]') -contains 'RumbleTracker' })
 # (RumbleTracker-launcher: the launcher's pop-up script and font, written to the temporary folder to be run)
 $targets = @($own) + $left + @($exe, "$exe.old", "$exe.failed", (Join-Path $env:TEMP 'RumbleTracker-launcher')) +
   @('README.md', 'LICENSE.txt', 'NOTICE.md' | ForEach-Object { Join-Path $folder $_ }) +

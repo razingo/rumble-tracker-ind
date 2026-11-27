@@ -129,7 +129,11 @@ export function createScanner(ctx, { readPrefs }) {
     // (a file that could not be written, as on a full disk, is written at the next scan, changed or not)
     if (changed || unsavedStates.has(id)) {
       unsavedStates.add(id);
-      await writeJson(path.join(ctx.paths.STATE, `${id}.json`), acc);
+      try {
+        await writeJson(path.join(ctx.paths.STATE, `${id}.json`), acc);
+      } catch (e) {
+        throw Object.assign(e, { changed }); // (the page is told of the change all the same)
+      }
       unsavedStates.delete(id);
     }
     return changed;
@@ -167,6 +171,7 @@ export function createScanner(ctx, { readPrefs }) {
           noteSuccess(`update ${id}`);
         } catch (e) {
           // (one account's trouble does not stop the others, nor the tracker's start)
+          if (e.changed) changed = true;
           noteFailure(`update ${id}`, `Could not update ${accountLabel(ctx, id)}: ${e.message}`,
             `Could not update an account: ${e.message}`);
         }

@@ -81,6 +81,11 @@ test('the page, game data and refused requests', async () => {
   assert.equal((await api('POST', '/api/name', { kind: 'account', id: ACC, value: 'x' }, { origin: 'https://evil.example' })).status, 403);
   const form = await fetch(`${base}/api/quit`, { method: 'POST', headers: { 'content-type': 'text/plain' }, body: '{}' });
   assert.equal(form.status, 403);
+  // a body that is JSON, but no request (the handlers read named parts)
+  for (const body of ['null', '[1]', '7', '{"cut":']) {
+    const r = await fetch(`${base}/api/name`, { method: 'POST', headers: { 'content-type': 'application/json' }, body });
+    assert.equal(r.status, 400, body);
+  }
   assert.equal(ctx.errorLog.list().length, 0); // none of these is a server error
 });
 

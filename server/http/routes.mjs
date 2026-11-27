@@ -9,6 +9,7 @@ import { createHandlers, armoryFile } from './handlers.mjs';
 import { host } from '../host.mjs';
 import { givenGameFolder, setGameFolder } from '../game/folder.mjs';
 import { noteMove } from '../storage.mjs';
+import { isRecord } from '../store.mjs';
 import { EXPLORER } from '../system.mjs';
 import { execFile } from 'node:child_process';
 import { MINUTE, MB, CLOSE_CHOICES } from '../../web/scripts/lib/constants.js';
@@ -24,11 +25,16 @@ async function readBody(req, limit = 64 * 1024) {
     if (size > limit) throw Object.assign(new Error('The request is too large for the tracker to accept.'), { status: 413 });
     chunks.push(c);
   }
+  const invalid = () => Object.assign(new Error('The request is not valid JSON.'), { status: 400 });
+  let body;
   try {
-    return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
+    body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
   } catch {
-    throw Object.assign(new Error('The request is not valid JSON.'), { status: 400 });
+    throw invalid();
   }
+  // (every handler reads named parts: a list, a number or null is not a request)
+  if (!isRecord(body)) throw invalid();
+  return body;
 }
 
 /** Allows `n` calls per `ms` milliseconds; allow() is false for the rest of that time. */

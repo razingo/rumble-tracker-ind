@@ -11,11 +11,11 @@ export function currencyInfo(id, { events, rules, activeEvents = [], now = Date.
     return { name: events?.currencyNames?.[id] || rules?.currencyDefaultNames?.[role] || null };
   }
   // The schedule decides first, the latest start winning, because the save's list of running events is only as recent
-  // as the last game session and can still name an event that has ended. The save's list covers events the game files
-  // give no dates for.
+  // as the last game session and can still name an event that has ended. The save's list covers events the game runs
+  // outside their schedule (every event in the game data has one).
   const users = (events.events || []).filter((ev) => ev.currency === slot);
   const scheduled = users
-    .map((ev) => ({ ev, start: ev.schedule ? occurrences(ev, now, now + 1)[0]?.start : undefined }))
+    .map((ev) => ({ ev, start: occurrences(ev, now, now + 1)[0]?.start }))
     .filter((x) => x.start !== undefined)
     .sort((a, b) => b.start - a.start);
   const live = scheduled[0]?.ev || users.find((ev) => activeEvents.includes(ev.saveId));

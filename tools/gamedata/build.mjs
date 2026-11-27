@@ -525,6 +525,12 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const stamp = existsSync(stampFile) ? JSON.parse(readFileSync(stampFile, 'utf8')) : null;
   const due = args.includes('--force') ? 'all' : stepsDue(o.game, stamp);
   if (!due.length) {
+    // (without the game, stepsDue keeps the data there is: that is not the same as having nothing to do)
+    if (!o.game || !existsSync(join(o.game, '.build.info'))) {
+      const where = o.game ? `in ${o.game}` : 'on this PC';
+      console.error(`build-gamedata: Warcraft Rumble was not found ${where}. The game data there is (${stamp.gameBuild}) was kept.`);
+      process.exit(1);
+    }
     console.log(`The game data is already read from this version of the game (${stamp.gameBuild}): nothing to do (--force reads anyway).`);
     process.exit(0);
   }

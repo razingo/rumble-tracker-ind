@@ -135,8 +135,10 @@ test('an account file that can\'t be written is written by a later scan, though 
   await rm(file);
   await mkdir(file);
   next = save({ xp: 5 });
+  const rev = ctx.rev;
   await scan();
   assert.equal(ctx.accounts.get(ACC).snapshot.units[0].xp, 5, 'the account is read all the same');
+  assert.ok(ctx.rev > rev, 'and the page is told of the change');
   await rm(file, { recursive: true });
   await scan(); // the same save as before
   await flushWrites();
