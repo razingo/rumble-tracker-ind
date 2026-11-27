@@ -3,6 +3,13 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.4.10
+
+- Army: the lists of leaders and minis stay where you scrolled them when you add or remove a mini, and the keyboard
+  keeps its place on the card or slot.
+- A file of yours that holds something unusable for one account, as after a backup changed by hand, no longer stops
+  that account's page from showing. That part is left out and noted under Report a problem; the other accounts stay.
+
 ## 0.4.9
 
 - G.R.I.D.: the "Can be offered" list no longer closes by itself after a few seconds.
