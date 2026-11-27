@@ -95,9 +95,12 @@ function queryOnce() {
   });
 }
 
-/** Parses the REG_BINARY values of a .reg export. */
-function parse(text) {
-  const result = {};
+/**
+ * Parses the REG_BINARY values of a .reg export. Where a game patch left an entry there in two versions (…_v6_… and
+ * …_v7_…), the higher one is read.
+ */
+export function parse(text) {
+  const result = {}, versions = {};
   for (const line of text.replace(/\\\r?\n\s*/g, '').split(/\r?\n/)) {
     const m = REG_LINE.exec(line);
     if (!m) continue;
@@ -105,6 +108,9 @@ function parse(text) {
     const hex = hexList.replace(/,/g, '');
     const kind = Object.keys(WANTED).find((k) => WANTED[k].test(entry));
     if (!kind) continue;
+    const version = Number(/_v(\d+)_h\d+$/.exec(entry)[1]), seen = (versions[account] ??= {});
+    if (version < (seen[kind] ?? 0)) continue;
+    seen[kind] = version;
     // The value is null-terminated base64 of a protobuf message.
     const b64 = Buffer.from(hex, 'hex').toString('latin1').replace(/\0+$/, '');
     (result[account] ??= {})[kind] = Buffer.from(b64, 'base64');

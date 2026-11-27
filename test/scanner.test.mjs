@@ -6,6 +6,7 @@ import { readFile, writeFile, mkdir, rm } from 'node:fs/promises';
 import { createScanner, FAILS_BEFORE_ERROR } from '../server/scan/scanner.mjs';
 import { recordProgress, logGrid } from '../server/scan/history.mjs';
 import { flushWrites } from '../server/store.mjs';
+import { embedded, string } from '../web/scripts/lib/protobuf.js';
 import { testContext, unitsValue, currenciesValue, pvpValue, hexId, RULES } from './helpers.mjs';
 
 const ACC = hexId(0x0100000000, 0xff00);
@@ -143,6 +144,18 @@ test('an account file that can\'t be written is written by a later scan, though 
   await scan(); // the same save as before
   await flushWrites();
   assert.equal((await readJsonFile(file)).snapshot.units[0].xp, 5);
+});
+
+test('the game build is the newest any account names, whichever is listed last', async (t) => {
+  const { ctx, cleanup } = await testContext();
+  t.after(cleanup); // (also when the test fails)
+  const commerce = (build) => embedded(1, string(3, `${build}.dp-live`));
+  const OTHER = hexId(0x0200000000, 0xff00);
+  // (the second account was not played since the patch)
+  const prefs = { [ACC]: { ...save()[ACC], commerce: commerce('16.2.0.120000') }, [OTHER]: { commerce: commerce('16.1.9.119999') } };
+  const { scan } = createScanner(ctx, { readPrefs: async () => prefs });
+  await scan();
+  assert.equal(ctx.scan.gameBuild, '16.2.0.120000');
 });
 
 test('one scan at a time', async (t) => {

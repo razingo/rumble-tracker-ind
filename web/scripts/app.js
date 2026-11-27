@@ -82,6 +82,11 @@ async function boot() {
     next.focus();
   });
   setTab(ui.tab);
+  // a #tab typed into the address is followed
+  addEventListener('hashchange', () => {
+    const tab = location.hash.slice(1);
+    if (tab !== ui.tab && document.querySelector(`[data-tab="${CSS.escape(tab)}"]`)) setTab(tab);
+  });
   await poll();
   schedulePoll();
   // In view: the tracker looks for a newer version now (it may have sat in the tray since its last daily look).

@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readVarint, parseMessage, varint, int, embedded, string, fixed64, double } from '../web/scripts/lib/protobuf.js';
 import { parseUnits, parseCurrencies, parseGameBuild, parseOwnedAvatars, compareVersions, diffSnapshots } from '../server/game/model.mjs';
+import { parse as parsePrefs } from '../server/game/prefs.mjs';
 import { id, hexId } from './helpers.mjs';
 
 test('varints', () => {
@@ -62,6 +63,19 @@ test('game build, and comparing builds and versions', () => {
   assert.ok(compareVersions('0.1.10', '0.1.9') > 0);
   assert.ok(compareVersions('1.0.0', '0.99.99') > 0);
   assert.equal(compareVersions('0.3.6', '0.3.6'), 0);
+});
+
+test('the registry export: only the wanted entries, and of two versions of one the higher', () => {
+  const acc = 'ab'.repeat(16);
+  const line = (entry, text) => `"${acc}_prod-actual_${entry}"=hex:${[...Buffer.from(`${Buffer.from(text).toString('base64')}\0`)]
+    .map((b) => b.toString(16).padStart(2, '0')).join(',')}`;
+  const text = ['Windows Registry Editor Version 5.00', '', '[HKEY_CURRENT_USER\\Software\\x]',
+    line('CommerceState_v7_h1', 'new'), line('CommerceState_v6_h2', 'old'), line('VirtualCurrencyState_v9_h3', 'one'),
+    line('VirtualCurrencyState_v10_h3', 'two'), line('LoginToken_v1_h1', 'secret'), '"other"=dword:00000001'].join('\r\n');
+  const read = parsePrefs(text);
+  assert.deepEqual(Object.keys(read), [acc]);
+  assert.deepEqual(Object.fromEntries(Object.entries(read[acc]).map(([k, v]) => [k, v.toString()])),
+    { commerce: 'new', currencies: 'two' });
 });
 
 test('changes between two scans', () => {

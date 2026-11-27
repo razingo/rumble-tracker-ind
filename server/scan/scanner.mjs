@@ -3,7 +3,7 @@ import path from 'node:path';
 import { writeJson, isRecord } from '../store.mjs';
 import { parsePvp } from '../game/pvp.mjs';
 import { parseUnits, parseCurrencies, parseActiveEvents, parseIncomeBonuses, parseOwnedAvatars, parseStore,
-  parseGameBuild, diffSnapshots } from '../game/model.mjs';
+  parseGameBuild, compareVersions, diffSnapshots } from '../game/model.mjs';
 import { recordProgress, logGrid, recordPvp } from './history.mjs';
 import { accountLabel } from '../userdata.mjs';
 
@@ -154,14 +154,17 @@ export function createScanner(ctx, { readPrefs }) {
       }
       const now = new Date().toISOString();
       status.lastScan = now;
+      // (the newest build any account names: one not played since a patch still names the build before it)
+      let build = null;
       for (const entries of Object.values(prefs)) {
         try {
           const b = parseGameBuild(entries.commerce);
-          if (b) status.gameBuild = b;
+          if (b && (!build || compareVersions(b, build) > 0)) build = b;
         } catch {
           // caught mid-save
         }
       }
+      if (build) status.gameBuild = build;
       const dirty = new Set(); // user-data files to save
       let changed = false;
       for (const [id, entries] of Object.entries(prefs)) {

@@ -14,7 +14,9 @@ export async function loadStore() {
   return STORE;
 }
 
-const isLeaderSlug = (slug) => BY_SLUG.get(slug)?.category === 'Leader';
+let eligibleOpen = false; // whether the "Can be offered" list is open, kept across redraws
+
+const isLeaderSlug =(slug) => BY_SLUG.get(slug)?.category === 'Leader';
 
 /** How many other minis must be offered before one comes back, by kind. */
 function cooldownLimits() {
@@ -116,7 +118,7 @@ function cooldownPanel(cooldowns, history) {
       so the list may be incomplete at first.</p>
     <div class="cooldown-list">${cooling.length ? cooling.map(coolingChip).join('')
       : '<span class="muted">Nothing logged yet.</span>'}</div>
-    <details class="cooldown-eligible"><summary>Can be offered: ${plural(eligible.length, 'mini')}</summary>
+    <details class="cooldown-eligible" ${eligibleOpen ? 'open' : ''}><summary>Can be offered: ${plural(eligible.length, 'mini')}</summary>
       <div class="cooldown-list">${eligible.map((m) => miniChip(m, m.slug, { cls: ' small' })).join('')}</div>
     </details>
   </section>`;
@@ -168,5 +170,8 @@ export async function renderGridTab() {
 }
 
 export function bindGridTab() {
+  $('#tab-grid').addEventListener('toggle', (e) => {
+    if (e.target.classList?.contains('cooldown-eligible')) eligibleOpen = e.target.open;
+  }, true);
   setInterval(() => { if (ui.tab === 'grid' && !document.hidden) renderGridTab(); }, 30 * SECOND);
 }

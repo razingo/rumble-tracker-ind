@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { writeFile, readFile, mkdir, rm } from 'node:fs/promises';
 import { runSteps, runProgram, versionsOf, withTools, stepsDue, stepVersions, checkTables, workWhole, openWork,
-  closeWork } from '../tools/gamedata/build.mjs';
+  closeWork, leftBy } from '../tools/gamedata/build.mjs';
 import { slugOf } from '../tools/gamedata/game_objects.mjs';
 import { testContext, fakeGame } from './helpers.mjs';
 
@@ -121,6 +121,14 @@ test('a working folder is gone by only when the last build left it whole', async
   } finally {
     await cleanup();
   }
+});
+
+test('an image step clears what it made last time, but not a picture it dropped that another step still shows', () => {
+  const made = { 'Event rewards': ['rewards/gold.webp', 'rewards/tome.webp', 'rewards/skin.webp'],
+    'PvP rewards': ['rewards/gold.webp', 'rewards/tome.webp', 'rewards/frame.webp'] };
+  // the PvP rewards no longer name the tome (the event rewards do) nor the frame (nobody does)
+  assert.deepEqual(leftBy(made, 'PvP rewards', ['rewards/gold.webp']), ['rewards/gold.webp', 'rewards/frame.webp']);
+  assert.deepEqual(leftBy(made, 'Portraits', ['art/a.webp']), [], 'a step that runs for the first time');
 });
 
 test('a program that is not done in time is stopped, and its step fails', async () => {

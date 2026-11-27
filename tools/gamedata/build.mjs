@@ -350,6 +350,15 @@ export async function outputHash(paths) {
   return h.digest('hex').slice(0, 12);
 }
 
+/**
+ * The files an image step clears before it runs again: what it made last time (`made`: { step: [files] }), but a file
+ * it no longer lists (`now`) that another step made too. Two steps may share a picture, and that one is still shown.
+ */
+export function leftBy(made, step, now) {
+  const others = new Set(Object.entries(made).filter(([name]) => name !== step).flatMap(([, files]) => files));
+  return (made[step] || []).filter((f) => now.includes(f) || !others.has(f));
+}
+
 /** A build begins in `work`: the sizes no longer hold, and a build of everything (`all`) leaves its marker. */
 export function openWork(work, all) {
   mkdirSync(work, { recursive: true });
@@ -437,10 +446,11 @@ export async function buildGameData({ game = findGame(), out, work, due = 'all',
   const images = (step) => async () => {
     const [dir, list, size, prefer] = IMAGE_STEPS[step];
     const listFile = join(existsSync(join(HERE, list)) ? HERE : work, list);
-    for (const f of made[step] || []) rmSync(join(out, f), { force: true });
     const names = JSON.parse(readFileSync(listFile, 'utf8'));
-    made[step] = (Array.isArray(names) ? names : Object.keys(names))
+    const now = (Array.isArray(names) ? names : Object.keys(names))
       .map((n) => `${dir}/${n.endsWith('.png') ? n : `${n}.webp`}`);
+    for (const f of leftBy(made, step, now)) rmSync(join(out, f), { force: true });
+    made[step] = now;
     return runProgram(await py(), ['-I', join(HERE, 'extract_reward_icons.py'), join(out, dir), listFile, size,
       ...(prefer ? [prefer] : [])], env, QUIET);
   };

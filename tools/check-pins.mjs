@@ -69,6 +69,7 @@ for (const [what, file, pinned, latestOf] of pins) {
     console.log(`unknown  ${what} ${pinned}: ${e.message}`);
   }
 }
-console.log(behind ? `\n${behind} of ${pins.length} are behind.` : `\nAll ${pins.length - unknown} that could be checked are current.`);
+const checked = pins.length - unknown;
+console.log(behind ? `\n${behind} of ${pins.length} are behind.` : checked ? `\nAll ${checked} that could be checked are current.` : '');
 if (unknown) console.log(`${unknown} could not be checked.`);
 process.exit(behind || unknown ? 1 : 0); // (a check that could not look is not a pass)
