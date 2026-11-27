@@ -3,6 +3,13 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.6.1
+
+- Calendar: live changes keep showing after the timeline slider was used; they used to wait for a click somewhere
+  else.
+- After this update the tracker reads a small part of its game data again once, in the background (the page's own
+  art and the card frames); it takes a few seconds.
+
 ## 0.6.0
 
 - The additional data and its part of Settings are gone, and the download is about 10 MB smaller. What was already
