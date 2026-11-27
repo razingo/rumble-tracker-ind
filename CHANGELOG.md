@@ -3,6 +3,17 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.4.11
+
+- A file of yours with a few unusable entries in a list (saved armies, G.R.I.D. history, PvP history, progress), as
+  after a change by hand, keeps the rest of that list: only those entries are left out. In 0.4.10 the whole list for
+  that account went. The file as it was is kept beside it as `<name>.corrupt-<date>`.
+- Calendar: the countdowns keep counting after the timeline slider was used; they used to stand still until you
+  clicked somewhere else.
+- The keyboard keeps its place when a tab refreshes or a button is pressed: on the Collection's filters, planner and
+  cards, in a mini's side panel, on the G.R.I.D. tab and on the PvP tab.
+- Collection: the Recent changes list stays where you scrolled it.
+
 ## 0.4.10
 
 - Army: the lists of leaders and minis stay where you scrolled them when you add or remove a mini, and the keyboard
