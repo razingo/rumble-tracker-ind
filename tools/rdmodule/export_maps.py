@@ -299,7 +299,9 @@ def main():
                                     "ground": f"textures/{res['ground']}" if res["ground"] else None,
                                     "lightmaps": [f"textures/{l}" for l in res["lightmaps"]],
                                     "renderers": res["renderers"], "vertices": res["vertices"], "triangles": res["triangles"]}
-        else: m["versions"].pop(vname, None)
+        else:
+            m["versions"].pop(vname, None)
+            if not m["versions"] and not m.get("bundle"): maps.pop(mname)  # (nothing of it came out, and it has no art of its own)
     # ground textures of each map's own bundle (all versions' terrain art, also older ones)
     for mname, m in maps.items():
         if ONLY and not any(ONLY.search(v) for v in m["versions"]) and not ONLY.search(mname): continue

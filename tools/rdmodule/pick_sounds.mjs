@@ -94,15 +94,18 @@ for (const [id, spec] of Object.entries(sprites)) {
   put(`${id}.ready`, own.filter((s) => s.trigger === 'ReactorUnit').flatMap(listed), 3);
   const banks = index.bySlug[SLUG[id] || rigs.units[spec.unit]?.slug || id]?.banks;
   if (!banks) { missing.push(id); continue; }
+  // (while listing, the next choices are wanted too: a file that then can't be decoded leaves them to pick from)
+  const has = (key) => !LIST && out[`${id}.${key}`];
   for (const bank of banks) {
     if (/^DX_/.test(bank)) { // voice: by file name, the events don't list their files
       const lines = (index.banks[bank]?.languages['en-US'] || []);
-      if (!out[`${id}.ready`] && !put(`${id}.ready`, lines.filter((f) => /Ready|Deploy|Spawn/i.test(f)), 3)) put(`${id}.ready`, lines.filter((f) => /Attack/i.test(f)), 3);
+      if (has('ready')) continue;
+      if (!put(`${id}.ready`, lines.filter((f) => /Ready|Deploy|Spawn/i.test(f)), 3) || LIST) put(`${id}.ready`, lines.filter((f) => /Attack/i.test(f)), 3);
     } else {
-      if (!out[`${id}.attack`]) put(`${id}.attack`, eventFiles(bank, /_(Attack|Attack_Launch|Ability\w*_Launch|Throw|Shot|Cast)$/), 3);
-      if (!out[`${id}.hit`]) put(`${id}.hit`, eventFiles(bank, /_(Attack_Impact|Impact)$/), 3);
-      if (!out[`${id}.death`]) put(`${id}.death`, eventFiles(bank, /^(?!.*Generic).*_Death$/), 2);
-      if (!out[`${id}.ready`]) put(`${id}.ready`, eventFiles(bank, /_(Ready|Birth)$/), 2);
+      if (!has('attack')) put(`${id}.attack`, eventFiles(bank, /_(Attack|Attack_Launch|Ability\w*_Launch|Throw|Shot|Cast)$/), 3);
+      if (!has('hit')) put(`${id}.hit`, eventFiles(bank, /_(Attack_Impact|Impact)$/), 3);
+      if (!has('death')) put(`${id}.death`, eventFiles(bank, /^(?!.*Generic).*_Death$/), 2);
+      if (!has('ready')) put(`${id}.ready`, eventFiles(bank, /_(Ready|Birth)$/), 2);
     }
   }
 }

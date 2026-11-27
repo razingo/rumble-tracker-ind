@@ -604,7 +604,8 @@ export function bindArmy() {
       builder.nameText = e.target.value; // cleared on save
     }
   });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePopups(); });
+  // (not an Esc the side panel took: that one closes the panel alone)
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !e.defaultPrevented) closePopups(); });
 }
 
 /** Opens a saved army in the builder (the Armory's Edit). */

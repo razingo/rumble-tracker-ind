@@ -126,7 +126,11 @@ export function schedulePoll() {
 // State that changes without a new revision (the server's liveState).
 const LIVE_FIELDS = ['lastScan', 'lastError', 'problems', 'gameRunning', 'update'];
 
+// An answer that comes in after a later request was made is left out: it was asked before the account was switched
+// or a backup restored, and would put the page back to what it showed then.
+let asked = 0;
 export async function poll() {
+  const mine = ++asked;
   try {
     const q = new URLSearchParams();
     if (ui.account) q.set('account', ui.account);
@@ -136,6 +140,7 @@ export async function poll() {
       q.set('for', String(state.account));
     }
     const s = await getJson(`/api/state?${q}`, 'the tracker\'s state');
+    if (mine !== asked) return;
     if (s.unchanged && state) {
       for (const k of LIVE_FIELDS) state[k] = s[k];
       state.connError = null;
@@ -170,6 +175,7 @@ export async function poll() {
     if (changed) requestRender();
     renderUpdate();
   } catch (e) {
+    if (mine !== asked) return;
     if (state) state.connError = e.message;
   }
   renderStatus();
@@ -179,16 +185,28 @@ export async function poll() {
 // Defer redraws while the user is editing a field. (Not for the lists in the header and above the grid: a redraw
 // leaves them as they are, and picking an account has to show at once though its list keeps the keyboard.)
 const LIVE_LISTS = ['account', 'show', 'sort'];
+// Any other list or slider holds redraws only until something is picked in it: this is the one last picked in,
+// until it is touched again.
+let picked = null;
 function requestRender() {
   const a = document.activeElement;
-  if (a && a.matches('input, select, textarea') && !a.closest('.drawer-body') && !LIVE_LISTS.includes(a.id)) {
+  if (a && a.matches('input, select, textarea') && !a.closest('.drawer-body') && !LIVE_LISTS.includes(a.id) && a !== picked) {
     setDirty(true);
     return;
   }
   setDirty(false);
   render();
 }
-document.addEventListener('focusout', () => setTimeout(() => { if (dirty) requestRender(); }, 0));
+const afterEdit = () => setTimeout(() => { if (dirty) requestRender(); }, 0);
+document.addEventListener('focusout', afterEdit);
+document.addEventListener('change', (e) => {
+  if (!e.target.matches('select, input[type="range"]')) return;
+  picked = e.target;
+  afterEdit();
+});
+for (const touch of ['pointerdown', 'keydown']) {
+  document.addEventListener(touch, (e) => { if (e.target === picked) picked = null; }, true);
+}
 
 // Each tab's page, apart from Collection, which render() always redraws
 const TAB_PAGES = { army: renderArmy, armory: renderArmory, calendar: renderCalendar, pvp: renderPvp, grid: renderGridTab,
