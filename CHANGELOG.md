@@ -3,6 +3,13 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.4.12
+
+- The keyboard also keeps its place on the Army tab's filters above the lists of leaders and minis, and in the
+  Armory: on its tag filters, a card's buttons and its tag box.
+- Restoring a backup says so when a part of it could only be restored in part, and names that part.
+- PvP: a Win, Loss or Undo that could not be saved can be clicked again right away.
+
 ## 0.4.11
 
 - A file of yours with a few unusable entries in a list (saved armies, G.R.I.D. history, PvP history, progress), as
