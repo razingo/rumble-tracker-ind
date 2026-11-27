@@ -3,6 +3,11 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.6.0
+
+- The additional data and its part of Settings are gone, and the download is about 10 MB smaller. What was already
+  extracted stays on the disk until you uninstall the tracker or delete the `rdmodule` folder in its data folder.
+
 ## 0.5.2
 
 - Live changes keep showing after you pick from a list, such as the Army tab's sort; only the first one showed, and
