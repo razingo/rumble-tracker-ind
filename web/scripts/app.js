@@ -176,10 +176,12 @@ export async function poll() {
   renderReportBadge();
 }
 
-// Defer redraws while the user is editing a field.
+// Defer redraws while the user is editing a field. (Not for the lists in the header and above the grid: a redraw
+// leaves them as they are, and picking an account has to show at once though its list keeps the keyboard.)
+const LIVE_LISTS = ['account', 'show', 'sort'];
 function requestRender() {
   const a = document.activeElement;
-  if (a && a.matches('input, select, textarea') && !a.closest('.drawer-body') && a.id !== 'show' && a.id !== 'sort') {
+  if (a && a.matches('input, select, textarea') && !a.closest('.drawer-body') && !LIVE_LISTS.includes(a.id)) {
     setDirty(true);
     return;
   }
@@ -228,11 +230,14 @@ function renderStatus() {
   el.innerHTML = `<span class="dot"></span><span class="status-text">${err ? esc(err) : live}</span>`;
 }
 
+let accountsShown = ''; // the account list as it was last written
 function renderAccounts() {
   const sel = $('#account');
-  sel.innerHTML = state.accounts.map((a) => `<option value="${a.id}"
-    ${a.id === state.account ? 'selected' : ''}>${esc(a.label)} (${a.units} minis)</option>`).join('');
-  if (!state.accounts.length) sel.innerHTML = '<option>No Rumble data found on this PC</option>';
+  const options = state.accounts.map((a) => `<option value="${a.id}"
+    ${a.id === state.account ? 'selected' : ''}>${esc(a.label)} (${a.units} minis)</option>`).join('')
+    || '<option>No Rumble data found on this PC</option>';
+  // (written only when it changed: writing it closes the list while it is open)
+  if (options !== accountsShown) sel.innerHTML = accountsShown = options;
   const current = state.accounts.find((a) => a.id === state.account);
   const input = $('#accountLabel');
   if (document.activeElement !== input) input.value = current && !current.label.startsWith('Account …') ? current.label : '';

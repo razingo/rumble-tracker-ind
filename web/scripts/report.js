@@ -2,6 +2,7 @@
 // can open as a GitHub issue or copy. Nothing is sent until the player submits it. The page loads this module first,
 // so it also catches start-up errors.
 import { $, getJson, post, showMessage, copyText, openExternal, state, ui } from './core.js';
+import { ENTER_STAYS } from './dialogs.js';
 import { esc, plural } from './lib/format.js';
 
 (() => {
@@ -63,7 +64,7 @@ function issueUrl() {
 function renderReportDialog(msg = '') {
   const dlg = $('#reportDialog');
   const d = REPORT.data;
-  dlg.innerHTML = `<form method="dialog" class="report-form">
+  dlg.innerHTML = `<form method="dialog" class="report-form">${ENTER_STAYS}
     <div class="dialog-head"><h2>Report a problem</h2><button class="chip" value="close" aria-label="Close">✕</button></div>
     <div class="dialog-card">
     <p class="muted small">Opens a GitHub issue (free account needed). Nothing is sent until you press <b>Submit</b> there.</p>

@@ -5,6 +5,13 @@ import { esc } from './lib/format.js';
 let queue = Promise.resolve(); // one dialog at a time
 
 /**
+ * Goes first in a dialog's form that has fields to type in. Enter in a field presses the form's first button, which
+ * would be the one that closes the dialog; with this one first, which can't be pressed, Enter only saves the field as
+ * leaving it does.
+ */
+export const ENTER_STAYS = '<button disabled hidden></button>';
+
+/**
  * Shows a dialog and resolves to the value of the button pressed (the first button's when closed with Esc, so Cancel
  * goes first). `message` is plain text, where a blank line starts a new paragraph. `buttons` are
  * [{ label, value, primary, danger }].

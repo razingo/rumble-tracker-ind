@@ -230,11 +230,12 @@ export function bindDrawer() {
     else if (t.dataset.unitSave) saveUnitName(t.dataset.unitSave, $(`[data-unit-name="${t.dataset.unitSave}"]`, t.parentElement));
     else closeDrawer();
   });
+  // (on the way down, so the panel takes Esc before anything else that closes with it, whichever was set up first)
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape' || !panel.open) return;
     e.preventDefault();
     closeDrawer();
-  });
+  }, true);
   // The level slider previews the stats at another level.
   body.addEventListener('input', (e) => {
     if (!e.target.matches('[data-preview-level]')) return;

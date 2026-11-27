@@ -3,7 +3,7 @@
 // web/scripts/rdmodule.js) and uninstalling. The server keeps the settings and sends the notifications, also while
 // the page is closed.
 import { $, getJson, post, showMessage, state, focusKey, refocus } from './core.js';
-import { showDialog, confirmDialog, alertDialog } from './dialogs.js';
+import { showDialog, confirmDialog, alertDialog, ENTER_STAYS } from './dialogs.js';
 import { CLOSE_CHOICES } from './lib/constants.js';
 import { esc, dateTime, ago } from './lib/format.js';
 
@@ -26,7 +26,8 @@ async function loadSettings() {
 const section = (title, body, kind = '') => (body ? `<section class="dialog-card ${kind}"><h3>${title}</h3>${body}</section>` : '');
 const gb = (bytes) => (bytes / 2 ** 30).toFixed(1).replace(/\.0$/, '');
 
-const dialogHead = '<div class="dialog-head"><h2>Settings</h2><button class="chip" value="close" aria-label="Close">✕</button></div>';
+const dialogHead = `${ENTER_STAYS}<div class="dialog-head"><h2>Settings</h2><button class="chip" value="close"
+  aria-label="Close">✕</button></div>`;
 
 /** A folder field with a button beside it that opens the folder in Explorer (`which`: game or storage). */
 const folderField = (id, label, input, which, there) => `<label class="folder-label" for="${id}">${label}</label>
