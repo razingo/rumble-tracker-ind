@@ -195,13 +195,17 @@ function requestRender() {
     return;
   }
   setDirty(false);
+  const wasPicked = Boolean(a) && a === picked;
   render();
+  // (the redraw may have put a new list in its place: the one that has the focus now)
+  if (wasPicked) picked = document.activeElement;
 }
 const afterEdit = () => setTimeout(() => { if (dirty) requestRender(); }, 0);
 document.addEventListener('focusout', afterEdit);
 document.addEventListener('change', (e) => {
   if (!e.target.matches('select, input[type="range"]')) return;
-  picked = e.target;
+  // (a list whose own handler has redrawn it by now is gone from the page: the new one has the focus)
+  picked = e.target.isConnected ? e.target : document.activeElement;
   afterEdit();
 });
 for (const touch of ['pointerdown', 'keydown']) {

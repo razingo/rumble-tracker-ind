@@ -78,6 +78,18 @@ function lastEventFor(id) {
 export const unitNameForm = (u) => `<select data-unit-name="${u.id}">${miniOptions()}</select>
   <button class="button" data-unit-save="${u.id}">Save</button>`;
 
+/** Draws `root` anew with `draw`, and puts back what was chosen in each of its unitNameForm lists, not saved yet. */
+export function keepUnitChoices(root, draw) {
+  const chosen = [...root.querySelectorAll('select[data-unit-name]')].map((s) => [s.dataset.unitName, s.value]);
+  draw();
+  for (const [id, value] of chosen) {
+    const select = root.querySelector(`select[data-unit-name="${CSS.escape(id)}"]`);
+    if (!select || !value) continue;
+    select.value = value;
+    if (select.selectedIndex < 0) select.value = ''; // (that mini has been named meanwhile)
+  }
+}
+
 function miniOptions() {
   const taken = new Set(state.units.map((u) => u.slug).filter(Boolean));
   const groups = { Unit: [], Leader: [], Spell: [] };
@@ -104,8 +116,12 @@ export function renderNeeds() {
   if (unknownUnits.length > 12) rows.push(`<div class="row small">…and ${unknownUnits.length - 12} more. Level up or
     upgrade a mini in the game and it moves to the top, ready to name.</div>`);
   // Shown only when something needs naming.
-  $('#needs').hidden = rows.length === 0;
-  $('#needs').innerHTML = rows.length ? `<h2>Needs your input (${unknownUnits.length})</h2>${rows.join('')}` : '';
+  const needs = $('#needs'), focused = focusKey(needs);
+  needs.hidden = rows.length === 0;
+  keepUnitChoices(needs, () => {
+    needs.innerHTML = rows.length ? `<h2>Needs your input (${unknownUnits.length})</h2>${rows.join('')}` : '';
+  });
+  refocus(needs, focused);
 }
 
 const PLAN_SIZE = 8;
