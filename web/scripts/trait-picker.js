@@ -71,6 +71,10 @@ export function bindTraitPicker(root, scope, on) {
   // A click elsewhere or Esc closes it. The side panel handles Esc first when it is open.
   document.addEventListener('click', (e) => { if (on.isOpen() && !inPicker(e)) on.close(); });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !e.defaultPrevented && on.isOpen()) on.close();
+    if (e.key !== 'Escape' || e.defaultPrevented || !on.isOpen()) return;
+    // the focus goes back to the picker's button when it was in the picker, which is gone once closed
+    const inside = popup()?.contains(document.activeElement);
+    on.close();
+    if (inside) root.querySelector(`[data-trait-picker="${scope}"]`)?.focus();
   });
 }

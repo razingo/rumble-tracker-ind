@@ -200,7 +200,7 @@ function armySlot(i, s, leader) {
       ${typeIcon ? `<span class="medal">${iconImage(typeIcon, typeLabel)}</span>` : ''}<span
         class="army-slot-label">${esc(typeLabel)}</span>${slot.boost ? '<span class="boost-mark">⚡</span>' : ''}
     </div>
-    <button class="army-slot-body" data-army-slot="${i}" ${m && i > 0 ? `draggable="true" data-army-drag-slot="${i}"` : ''}
+    <button class="army-slot-body" data-army-slot="${i}" ${m && i > 0 ? 'draggable="true"' : ''}
       aria-label="${m ? `Remove ${esc(m.name)}` : 'Empty slot'}" title="${m
       ? `Click to remove it${u ? ', right-click for details' : ''}` : ''}">
       ${m ? familyFlag(m) : ''}
@@ -477,8 +477,7 @@ function bindTyping(page) {
     if (!next) return;
     builder.draft.tags = next;
     saveDraftLocal();
-    renderArmy();
-    $('#armyTagInput')?.focus();
+    renderArmy(); // (the tag box keeps the focus)
   });
   page.addEventListener('input', (e) => {
     if (e.target.id === 'armyDesc') {
@@ -508,9 +507,9 @@ function bindDragAndDrop(page) {
   };
   page.addEventListener('dragstart', (e) => {
     const card = e.target.closest('[data-pool-slug]');
-    const fromBoard = e.target.closest('[data-army-drag-slot]');
+    const fromBoard = e.target.closest('[data-army-slot][draggable="true"]'); // (a slot with a mini in it)
     if (card) drag = { slug: card.dataset.poolSlug, kind: card.dataset.poolKind };
-    else if (fromBoard) drag = { fromSlot: Number(fromBoard.dataset.armyDragSlot) };
+    else if (fromBoard) drag = { fromSlot: Number(fromBoard.dataset.armySlot) };
     else return;
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', drag.slug || `slot:${drag.fromSlot}`);

@@ -178,9 +178,7 @@ function cardKeys(e) {
   if (!army) return;
   const next = tagKey(e, army.tags || [], (state.armyTags || []).map((t) => t.tag));
   if (!next) return;
-  updateSavedArmy(army.id, { tags: next }, card).then(() => {
-    $(`#tab-armory [data-armory-id="${CSS.escape(army.id)}"] .armory-tag-input`)?.focus();
-  });
+  updateSavedArmy(army.id, { tags: next }, card); // (the tag box keeps the focus)
 }
 
 async function copyCode(army, msg) {

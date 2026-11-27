@@ -2,7 +2,7 @@
 // and the tracker's own, the notifications, extracting the additional data (for the rdmodule,
 // web/scripts/rdmodule.js) and uninstalling. The server keeps the settings and sends the notifications, also while
 // the page is closed.
-import { $, getJson, post, showMessage, state } from './core.js';
+import { $, getJson, post, showMessage, state, focusKey, refocus } from './core.js';
 import { showDialog, confirmDialog, alertDialog } from './dialogs.js';
 import { CLOSE_CHOICES } from './lib/constants.js';
 import { esc, dateTime, ago } from './lib/format.js';
@@ -261,9 +261,11 @@ function renderSettings() {
     dlg.innerHTML = '<p>Loading…</p>';
     return;
   }
+  const focused = focusKey(dlg); // (a setting that was changed keeps the focus)
   dlg.innerHTML = `<form method="dialog" class="dialog-form">${dialogHead}${section('General', generalSection())}
     ${section('Notifications', notificationsSection())}${section('Recent', recentSection())}
     ${section('Additional data', extraSection())}${section('Uninstall', uninstallSection(), 'danger')}</form>`;
+  refocus(dlg, focused);
 }
 
 const notifyMessage = (dlg) => dlg.querySelector('.dialog-message:not([data-setting-message])');
