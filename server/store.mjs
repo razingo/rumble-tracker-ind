@@ -1,7 +1,7 @@
 // The player's JSON files. Writes to one file are queued and go through a unique temporary file, so saves can't
 // collide. A damaged file, or one that holds something else than the tracker keeps in it, is moved aside instead of
 // stopping the tracker.
-import { readFile, writeFile, rename, rm } from 'node:fs/promises';
+import { readFile, writeFile, rename, rm, copyFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const queues = new Map(); // path -> promise of the last queued write
@@ -40,6 +40,16 @@ export async function readJson(p, fallback, { onCorrupt, shape } = {}) {
   await rename(p, moved);
   onCorrupt(p, moved);
   return fallback;
+}
+
+/**
+ * Keeps a copy of a file as it is now, beside it, as <name>.corrupt-<time>: for a file that is about to be written
+ * without a part of it. Resolves with the copy's path.
+ */
+export async function keepCopy(p) {
+  const copy = `${p}.corrupt-${fileTimestamp()}`;
+  await copyFile(p, copy);
+  return copy;
 }
 
 /** Writes a JSON file atomically. Writes to the same file run one at a time, in call order. */

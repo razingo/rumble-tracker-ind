@@ -676,9 +676,11 @@ export function bindCalendar() {
   page.addEventListener('toggle', (e) => {
     if (e.target.classList?.contains('tree-challenges')) view.challengesOpen = e.target.open;
   }, true);
-  // refresh the countdowns, except while the slider is in use
+  // refresh the countdowns, except while the slider is being dragged (a redraw would take it out of the hand)
+  let sliding = false;
+  page.addEventListener('pointerdown', (e) => { sliding = !!e.target.closest?.('[data-calendar-slider]'); });
+  for (const over of ['pointerup', 'pointercancel']) addEventListener(over, () => { sliding = false; });
   setInterval(() => {
-    const sliding = document.activeElement?.matches('[data-calendar-slider]');
     if (ui.tab === 'calendar' && !document.hidden && !sliding) renderCalendar();
   }, 30 * SECOND);
 }

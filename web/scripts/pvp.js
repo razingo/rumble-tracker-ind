@@ -2,7 +2,7 @@
 // losses the server works out from honor and Victory Point changes. The calculations are in lib/pvp-season.js.
 import { poll } from './app.js';
 import { chartFrame, yLabel, linePath, timeScale } from './chart.js';
-import { $, store, imageUrl, getJson, post, state, onTablesReload, ui } from './core.js';
+import { $, store, imageUrl, getJson, post, state, onTablesReload, ui, focusKey, refocus } from './core.js';
 import { alertDialog } from './dialogs.js';
 import { esc, fmt, plural, when, dayOnly, span, ago } from './lib/format.js';
 import { seasonAt, rankOf, nextRank, setAt, record, streak, matchesWithMods, modifierStats, withModifiers,
@@ -10,6 +10,9 @@ import { seasonAt, rankOf, nextRank, setAt, record, streak, matchesWithMods, mod
 
 // The modifiers chosen to filter the win rate, kept between visits.
 let chosenMods = store.get('pvpMods', []);
+
+// The row of the match that was just marked, as a selector for its first button, until the tab is drawn again.
+let marked = null;
 
 let PVP = null;
 onTablesReload(() => { PVP = null; });
@@ -284,11 +287,15 @@ export async function renderPvp() {
   const stale = !!(mine && season && mySeason && mySeason.id !== season.id);
   const v = { now, season, mine, mySeason, stale, log: state?.pvpLog || [] };
   const current = mine && season && !stale;
+  // (a match just marked has other buttons in its row: the focus goes to the first of them)
+  const focused = marked || focusKey(page);
+  marked = null;
   page.innerHTML = `
     ${stale ? `<div class="panel small">This account's save still shows ${esc(mySeason.name)}. The game updates it
       after the next PvP match.</div>` : ''}
     <section class="pvp-cards">${rankCard(v)}${recordCard(v)}${roadCard(v)}${seasonCard(v)}</section>
     ${modifiersPanel(v)}${current ? historyPanel(v) + winRatePanel(v) : ''}${endRewardsPanel(v)}${roadPanel(v)}`;
+  refocus(page, focused);
 }
 
 /** The win rate over the season after each match, with 50% marked. */
@@ -300,9 +307,9 @@ function pvpWinRateChart(series, season) {
   const x = timeScale(size, t0, t1);
   const y = (r) => 8 + (1 - r) * (H - 16);
   const last = series[series.length - 1];
-  const percent = (r) => yLabel(pad, (y(r) + 4).toFixed(1), `${r * 100}%`);
+  const mark = (r) => yLabel(pad, (y(r) + 4).toFixed(1), `${r * 100}%`);
   return chartFrame(size, `<line x1="${pad}" x2="${W}" y1="${y(0.5).toFixed(1)}" y2="${y(0.5).toFixed(1)}" class="floor"/>
-    ${percent(1)}${percent(0.5)}${percent(0)}${linePath(series.map((p) => [x(p.t), y(p.rate)]), 'var(--gold-1)')}
+    ${mark(1)}${mark(0.5)}${mark(0)}${linePath(series.map((p) => [x(p.t), y(p.rate)]), 'var(--gold-1)')}
     <circle cx="${x(last.t).toFixed(1)}" cy="${y(last.rate).toFixed(1)}" r="3.5"
       class="win"><title>${Math.round(last.rate * 100)}% after ${last.wins + last.losses} matches</title></circle>`);
 }
@@ -324,8 +331,12 @@ export function bindPvp() {
     const b = e.target.closest('[data-pvp-result]');
     if (!b || !state?.account) return;
     b.disabled = true;
-    try { await post('/api/pvp/result', { account: state.account, t: b.dataset.time, result: b.dataset.pvpResult || null }); }
-    catch (err) { alertDialog(err.message, { title: 'Not saved' }); }
+    try {
+      await post('/api/pvp/result', { account: state.account, t: b.dataset.time, result: b.dataset.pvpResult || null });
+      marked = `button[data-pvp-result][data-time="${CSS.escape(b.dataset.time)}"]`;
+    } catch (err) {
+      alertDialog(err.message, { title: 'Not saved' });
+    }
     poll();
   });
 }

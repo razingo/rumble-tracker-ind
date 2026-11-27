@@ -119,16 +119,39 @@ test('what a file holds for one account that is something else is dropped, and t
     'progress.json': { a: 'text', b: { days: [] } }, 'talents.json': { a: [1], b: { u: [0] } } } });
   t.after(cleanup); // (also when the test fails)
   assert.deepEqual(ctx.user.armies, { b: [army] });
-  assert.deepEqual([ctx.user.gridHistory, ctx.user.progress, ctx.user.talents], [{}, { b: { days: [] } }, { b: { u: [0] } }]);
+  assert.deepEqual([ctx.user.gridHistory, ctx.user.progress, ctx.user.talents], [{ a: [] }, { b: { days: [] } }, { b: { u: [0] } }]);
   assert.equal(ctx.errorLog.list().filter((e) => e.source === 'data file').length, 4);
-  // the files are written as they are now, and none is moved aside
+  // the files are written as they are now, and each as it was is kept beside it
   await flushWrites();
   assert.deepEqual(JSON.parse(await readFile(path.join(ctx.paths.DATA, 'armies.json'), 'utf8')), { b: [army] });
-  assert.deepEqual((await readdir(ctx.paths.DATA)).filter((n) => n.includes('.corrupt-')), []);
+  const kept = (await readdir(ctx.paths.DATA)).filter((n) => n.includes('.corrupt-'));
+  assert.deepEqual(kept.map((n) => n.split('.corrupt-')[0]).sort(), ['armies.json', 'grid_history.json', 'progress.json', 'talents.json']);
+  const copy = kept.find((n) => n.startsWith('armies.json'));
+  assert.deepEqual(JSON.parse(await readFile(path.join(ctx.paths.DATA, copy), 'utf8')), { a: 7, b: [army] });
+  assert.match(ctx.errorLog.list().find((e) => e.message.startsWith('armies.json')).message, /kept as armies\.json\.corrupt-/);
   // the same after a restore: repair() says which were changed
   ctx.user.plans.a = 7;
   assert.deepEqual(ctx.user.repair(), ['plans']);
   assert.deepEqual(ctx.user.plans, {});
+});
+
+test('of a list, only the entries that are something else are dropped', async (t) => {
+  const army = (i) => ({ id: `x${i}`, name: `Army ${i}`, tags: [] });
+  const grid = { seen: 't', refresh: 'r', items: [] };
+  const { ctx, cleanup } = await testContext({ files: {
+    'armies.json': { a: [army(1), null, army(2), 'text'] },
+    'grid_history.json': { a: [grid, { seen: 't2' }] },
+    'pvp_history.json': { a: [{ t: '1' }, 7] },
+    'progress.json': { a: { first: null, days: [{ day: '2026-01-01' }, 7] }, b: { first: null } } } });
+  t.after(cleanup); // (also when the test fails)
+  assert.deepEqual(ctx.user.armies, { a: [army(1), army(2)] });
+  assert.deepEqual([ctx.user.gridHistory, ctx.user.pvpHistory], [{ a: [grid] }, { a: [{ t: '1' }] }]);
+  // (a progress without its days has an empty list of them, and that is nothing to report)
+  assert.deepEqual(ctx.user.progress, { a: { first: null, days: [{ day: '2026-01-01' }] }, b: { first: null, days: [] } });
+  const told = ctx.errorLog.list().filter((e) => e.source === 'data file').map((e) => e.message);
+  assert.equal(told.length, 4);
+  assert.match(told.find((m) => m.startsWith('armies.json')), /2 entries of its list were left out; the rest is as it was/);
+  assert.match(told.find((m) => m.startsWith('pvp_history.json')), /One entry of its list was left out/);
 });
 
 test('damaged game tables throw, so the caller can have them read again', async (t) => {

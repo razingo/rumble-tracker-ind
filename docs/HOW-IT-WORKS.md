@@ -46,8 +46,9 @@ save can't give back (G.R.I.D., PvP and progress). Restore one from **Backup →
 *Export backup* saves the same content to a file of your choice; *Import backup…* restores such a file.
 
 If a data file is damaged when the tracker starts, it is moved aside (`<name>.corrupt-<date>`) and the tracker starts
-without it. Automatic backups pause until the next start, so the damage doesn't replace a good backup: restore the
-last good one.
+without it. A file that is whole but holds something else in places (one changed by hand) keeps all but those places,
+and a copy of it as it was stays beside it under the same kind of name. Automatic backups pause until the next start,
+so the damage doesn't replace a good backup: restore the last good one.
 
 ## Game data updates
 

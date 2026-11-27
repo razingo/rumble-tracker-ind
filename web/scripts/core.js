@@ -73,6 +73,23 @@ export function showMessage(el, text, kind = '') {
   if (kind) el.classList.add({ good: 'text-good', warn: 'text-warn', code: 'mono' }[kind]);
 }
 
+/**
+ * A selector for the element inside `root` that has the focus, to give the focus back after `root` is drawn anew
+ * (refocus): the element's tag and its data attributes, which tell the page's buttons apart, or the summary of a
+ * details by that one's class. Null when nothing in `root` has the focus, or what has it can't be told apart.
+ */
+export function focusKey(root) {
+  const el = document.activeElement;
+  if (!root || !el || el === root || !root.contains(el)) return null;
+  if (el.tagName === 'SUMMARY') return el.parentElement.classList.length ? `details.${el.parentElement.classList[0]} > summary` : null;
+  const data = [...el.attributes].filter((a) => a.name.startsWith('data-'));
+  return data.length ? el.tagName.toLowerCase() + data.map((a) => `[${a.name}="${CSS.escape(a.value)}"]`).join('') : null;
+}
+/** Gives the focus to what `key` (from focusKey) names in `root`, if it is still there. */
+export function refocus(root, key) {
+  if (key) root.querySelector(key)?.focus({ preventScroll: true });
+}
+
 /** Copies text to the clipboard. Returns false when the browser blocks it. */
 export async function copyText(text) {
   try {

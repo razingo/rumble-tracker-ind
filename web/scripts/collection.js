@@ -1,6 +1,6 @@
 // Collection tab: currencies, summary, what's needed next, the upgrade planner, filters, the mini grid and recent
 // changes.
-import { $, store, RULES, MINIS, TAG_ICONS, FAMILIES, state } from './core.js';
+import { $, store, RULES, MINIS, TAG_ICONS, FAMILIES, state, focusKey, refocus } from './core.js';
 import { iconImage } from './drawer.js';
 import { esc, fmt, ago } from './lib/format.js';
 import { traitPicker, bindTraitPicker } from './trait-picker.js';
@@ -166,7 +166,8 @@ export function renderPlanner() {
   }).join('');
 
   const empty = (txt) => `<div class="small">${pool.length ? txt : 'No owned minis match the filters.'}</div>`;
-  $('#planner').innerHTML = `<div class="planner-head"><h2>Closest to next step</h2>
+  const planner = $('#planner'), focused = focusKey(planner);
+  planner.innerHTML = `<div class="planner-head"><h2>Closest to next step</h2>
       <span class="small">${narrowed ? `Filtered: ${pool.length} of ${state.units.length} minis`
         : `All ${state.units.length} minis`}</span></div>
     <div class="planner-cols">
@@ -175,6 +176,7 @@ export function renderPlanner() {
     </div>
     ${moreAvailable ? `<div class="planner-more"><button class="chip" data-planner-toggle
       aria-expanded="${expanded}">${expanded ? 'Show less ▴' : `Show more (top ${PLAN_SIZE}) ▾`}</button></div>` : ''}`;
+  refocus(planner, focused);
 }
 
 const TYPES = [['Unit', 'Units'], ['Leader', 'Leaders'], ['Spell', 'Spells'], ['unknown', 'New / unknown']];
@@ -247,7 +249,8 @@ export function renderFilters() {
     label: f.traits.length ? `${f.traits.length} selected` : 'Choose traits', buttonClass: 'chip picker-btn',
   });
 
-  $('#filters').innerHTML = `
+  const filters = $('#filters'), focused = focusKey(filters);
+  filters.innerHTML = `
     <div class="filter-row"><span class="filter-label">Type</span><div class="chips">${typeChips}</div></div>
     <div class="filter-row"><span class="filter-label">Faction</span><div class="chips">${famChips}</div></div>
     <div class="filter-row"><span class="filter-label">Traits</span>
@@ -256,6 +259,7 @@ export function renderFilters() {
       </div>
       <button class="chip clear-filters" data-filter-clear ${filtersActive() ? '' : 'disabled'}>✕ Clear filters</button>
     </div>`;
+  refocus(filters, focused);
 }
 
 /** Card frame class for the mini's family (art.css). */
@@ -336,7 +340,9 @@ export function renderGrid() {
   const total = state.units.length + (view.show === 'all' ? MINIS.length - new Set(state.units.map((u) =>
     u.slug).filter(Boolean)).size : 0);
   $('#gridCount').textContent = filtersActive() ? `Showing ${units.length + missing.length} of ${total}` : `${total} minis`;
-  $('#grid').innerHTML = html || '<p class="muted">No minis match these filters.</p>';
+  const grid = $('#grid'), focused = focusKey(grid);
+  grid.innerHTML = html || '<p class="muted">No minis match these filters.</p>';
+  refocus(grid, focused);
 }
 
 function eventText(e) {
@@ -357,9 +363,11 @@ function eventText(e) {
 export function renderEvents() {
   const list = state.events.slice(-25).reverse(); // latest 25
   $('#eventsCount').textContent = list.length ? `· latest ${list.length}` : '';
-  $('#events').innerHTML = list.length
+  const events = $('#events'), scrolled = events.scrollTop; // (the list stays where it was scrolled to)
+  events.innerHTML = list.length
     ? list.map((e) => `<li><time>${ago(e.t)}</time>${esc(eventText(e))}</li>`).join('')
     : '<li class="muted">No changes yet. Play a battle or upgrade a mini and it shows up here.</li>';
+  events.scrollTop = scrolled;
 }
 
 // What a click on the Collection tab can act on: the filters and the planner (the trait picker has its own handlers).

@@ -1,6 +1,6 @@
 // The user's own files in the data folder: what they entered, and history the save can't give back.
 import path from 'node:path';
-import { writeJson, isRecord } from './store.mjs';
+import { writeJson, isRecord, keepCopy } from './store.mjs';
 import { cleanSettings } from './notifications/notify.mjs';
 import { CLOSE_CHOICES } from '../web/scripts/lib/constants.js';
 
@@ -40,22 +40,36 @@ export const backupShape = (key, value) => (SHAPES[BACKUP_KEYS[key]] || isRecord
 
 // What the files that are kept by account hold for each one. A file may be whole and still hold something else for
 // an account (one changed by hand, or a backup of such a file): that account's part is dropped, the others stay.
-const list = (ok) => (v) => Array.isArray(v) && v.every(ok);
+// Of a list, only the entries that are something else are dropped, and the rest of the list stays.
 const BY_ACCOUNT = {
-  talents: isRecord, army: isRecord, drafts: isRecord, plans: isRecord,
-  armies: list(isRecord),
-  gridHistory: list((g) => isRecord(g) && Array.isArray(g.items)),
-  pvpHistory: list(isRecord),
-  progress: (p) => isRecord(p) && (p.first == null || isRecord(p.first)) && list(isRecord)(p.days),
+  talents: { part: isRecord }, army: { part: isRecord }, drafts: { part: isRecord }, plans: { part: isRecord },
+  armies: { part: Array.isArray, entry: isRecord },
+  gridHistory: { part: Array.isArray, entry: (g) => isRecord(g) && Array.isArray(g.items) },
+  pvpHistory: { part: Array.isArray, entry: isRecord },
+  // (its list is its days; one that is missing is an empty one)
+  progress: { part: (p) => isRecord(p) && (p.first == null || isRecord(p.first)) && (p.days == null || Array.isArray(p.days)),
+    entry: isRecord, list: 'days' },
 };
-/** Drops the accounts' parts of `files` ({ property: contents }) that hold something else: [[property, account]]. */
+/**
+ * Drops from `files` ({ property: contents }) what the accounts' parts hold that is something else: a whole part, or
+ * the entries of its list. Returns [[property, account, the number of entries dropped (null: the whole part)]].
+ */
 export function dropBadParts(files) {
   const dropped = [];
-  for (const [prop, ok] of Object.entries(BY_ACCOUNT)) {
+  for (const [prop, { part: ok, entry, list }] of Object.entries(BY_ACCOUNT)) {
     for (const [account, part] of Object.entries(files[prop] || {})) {
-      if (ok(part)) continue;
-      delete files[prop][account];
-      dropped.push([prop, account]);
+      if (!ok(part)) {
+        delete files[prop][account];
+        dropped.push([prop, account, null]);
+        continue;
+      }
+      if (!entry) continue;
+      if (list) part[list] ??= [];
+      const entries = list ? part[list] : part;
+      const good = entries.filter(entry);
+      if (good.length === entries.length) continue;
+      dropped.push([prop, account, entries.length - good.length]);
+      if (list) part[list] = good; else files[prop][account] = good;
     }
   }
   return dropped;
@@ -102,19 +116,33 @@ export async function loadUserData(ctx) {
      * dropped something from.
      */
     repair() {
-      u.names.accounts ??= {};
-      u.names.units ??= {};
-      Object.assign(u.appSettings, cleanAppSettings(u.appSettings));
-      Object.assign(u.notifySettings, cleanSettings(u.notifySettings));
-      const dropped = dropBadParts(u);
-      for (const [prop, account] of dropped) {
-        ctx.errorLog.add('data file', `${FILES[prop]} held something else than the tracker keeps for account …${account.slice(16, 24)}. `
-          + 'That part was left out; the other accounts in the file are as they were.');
-      }
-      return [...new Set(dropped.map(([prop]) => prop))];
+      fillIn();
+      return report(dropBadParts(u));
     },
   };
-  // (a file a part was dropped from is written as it is now, so the same is not found at every start)
-  for (const prop of u.repair()) await u.save(prop);
+  const fillIn = () => {
+    u.names.accounts ??= {};
+    u.names.units ??= {};
+    Object.assign(u.appSettings, cleanAppSettings(u.appSettings));
+    Object.assign(u.notifySettings, cleanSettings(u.notifySettings));
+  };
+  /** Notes what was dropped as a problem (`kept`: { property: the copy of its file }); returns the properties. */
+  const report = (dropped, kept = {}) => {
+    for (const [prop, account, entries] of dropped) {
+      const what = entries == null ? 'That part was left out; the other accounts in the file are as they were.'
+        : `${entries === 1 ? 'One entry of its list was' : `${entries} entries of its list were`} left out; the rest is as it was.`;
+      ctx.errorLog.add('data file', `${FILES[prop]} held something else than the tracker keeps for account …${account.slice(16, 24)}. `
+        + `${what}${kept[prop] ? ` The file as it was is kept as ${path.basename(kept[prop])}.` : ''}`);
+    }
+    return [...new Set(dropped.map(([prop]) => prop))];
+  };
+  // A file something was dropped from is written as it is now, so the same is not found at every start; a copy of it
+  // as it was stays beside it.
+  fillIn();
+  const dropped = dropBadParts(u), kept = {};
+  for (const prop of new Set(dropped.map(([p]) => p))) {
+    kept[prop] = await keepCopy(path.join(dir, FILES[prop])).catch(() => null);
+  }
+  for (const prop of report(dropped, kept)) await u.save(prop);
   return u;
 }

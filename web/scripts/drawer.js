@@ -1,7 +1,7 @@
 // The side panel for one mini: its stats and talents, which mini a new unit is, and a leader's army slots.
 import { poll } from './app.js';
 import { unitNameForm } from './collection.js';
-import { $, post, RULES, BY_SLUG, TAG_ICONS, state } from './core.js';
+import { $, post, RULES, BY_SLUG, TAG_ICONS, state, focusKey, refocus } from './core.js';
 import { alertDialog } from './dialogs.js';
 import { esc, fmt, plural } from './lib/format.js';
 import { rarityName, rarityColor, miniOf, unitName, balance, currencyName, coreName, nextUpgrade, talentSlots,
@@ -189,12 +189,13 @@ export function renderDrawer() {
   if (panel.open.kind === 'unit' && !u) return closeDrawer();
   const m = u ? miniOf(u) : BY_SLUG.get(panel.open.slug);
   const level = panel.previewLevel ?? (u && !u.synthetic ? Math.max(1, Math.min(totalLevel(u), RULES.maxLevel)) : 1);
-  // Keep the scroll position when redrawing the same mini.
-  const key = JSON.stringify(panel.open);
-  const keepScroll = body.dataset.key === key ? body.scrollTop : 0;
+  // Keep the scroll position and the focus when redrawing the same mini.
+  const key = JSON.stringify(panel.open), same = body.dataset.key === key;
+  const keepScroll = same ? body.scrollTop : 0, focused = same ? focusKey(body) : null;
   body.innerHTML = drawerSections(u, m, level);
   body.dataset.key = key;
   body.scrollTop = keepScroll;
+  refocus(body, focused);
   body.style.setProperty('--rarity-color', u ? rarityColor(u.rarity) : 'var(--line)');
   drawer.hidden = false;
 }

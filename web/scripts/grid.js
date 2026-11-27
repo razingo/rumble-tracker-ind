@@ -2,7 +2,7 @@
 // a number of other minis have been: 12, 16 for leaders, 20 for special leaders. The cooldowns come from the grids the
 // tracker has seen (grid_history.json).
 import { currencyChip } from './collection.js';
-import { $, imageUrl, getJson, RULES, MINIS, BY_SLUG, state, onTablesReload, ui } from './core.js';
+import { $, imageUrl, getJson, RULES, MINIS, BY_SLUG, state, onTablesReload, ui, focusKey, refocus } from './core.js';
 import { SECOND, HOUR, DAY } from './lib/constants.js';
 import { esc, fmt, plural, dateTime, dayWithYear, weekdayTime, span } from './lib/format.js';
 import { rarityColor, ownedUnit, gridRarityOf } from './units.js';
@@ -161,12 +161,14 @@ export async function renderGridTab() {
   // The G.R.I.D. currencies the account has.
   const currencies = (RULES.gridCurrencyIds || []).map((id) => state.currencies.find((c) => c.id === id && c.name)).filter(Boolean);
   const history = state.gridHistory || [];
+  const focused = focusKey(page); // ("Can be offered", which the keyboard opens and closes)
   page.innerHTML = `${gridHeader(shop, currencies)}
     <div class="grid-layout">
       <section class="panel"><div class="grid-board">${shop.grid.rows.map((row) => row.map(gridSlot).join('')).join('')}</div></section>
       ${cooldownPanel(gridCooldowns(), history)}
     </div>
     ${historyPanel(history)}`;
+  refocus(page, focused);
 }
 
 export function bindGridTab() {
