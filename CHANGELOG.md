@@ -3,6 +3,13 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.5.2
+
+- Live changes keep showing after you pick from a list, such as the Army tab's sort; only the first one showed, and
+  the rest waited for a click somewhere else.
+- "Which mini is this?": what you chose stays chosen when the page refreshes before you press Save, in the
+  Collection tab and in the mini's side panel.
+
 ## 0.5.1
 
 - Switching accounts or restoring a backup while the page refreshes no longer shows an error for a moment, or goes
