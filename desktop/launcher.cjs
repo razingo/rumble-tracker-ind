@@ -223,7 +223,7 @@ function startWindowHost(onQuit, show = !NO_WINDOW) {
       RT_PARENT: String(process.pid), RT_GAME: 'WarcraftRumble', RT_LIB: path.join(APP_DIR, 'desktop', 'webview2'),
       RT_PROFILE: path.join(HOME, 'webview2'), RT_FONT: path.join(APP_DIR, 'desktop', 'LilitaOne-Regular.ttf'),
       RT_CACHE: path.join(APP_DIR, 'desktop', 'window-helpers.dll'),
-      RT_SHOW: show ? '1' : '', RT_RDMODULE: `${PAGE}rdmodule/`, RT_RDMODULE_PROFILE: path.join(HOME, 'webview2-rdmodule') },
+      RT_SHOW: show ? '1' : '' },
   });
   windowHost = child;
   let buf = '';
@@ -342,7 +342,7 @@ function dropEmpty(folders) {
 const PROFILE = ['names', 'talents', 'army', 'armies', 'drafts', 'grid_history', 'pvp_history', 'notifications', 'plans',
   'progress', 'settings'];
 // What the tracker makes again by itself: in its folder, and in the data folder.
-const REMADE_HOME = ['app', 'webview2', 'webview2-rdmodule'];
+const REMADE_HOME = ['app', 'webview2'];
 const REMADE_DATA = ['gamedata', 'gamedata-build', 'state', 'update'];
 
 /** The profile data in a data folder as a backup (server/backup.mjs), or null when there is none. */

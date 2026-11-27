@@ -10,13 +10,11 @@ const MAX = 140;
 const MAX_COMMENT = 120;
 const CHECKED = /\.(m?js|cjs|css|html|ps1|ya?ml|py|json)$/;
 const ANY_LENGTH = /\.(py|json)$/; // (.editorconfig turns the line length off for Python; JSON is data)
-// the rdmodule and what draws its pictures and picks its sounds were written in a denser style of their own
-const OTHERS = new RegExp('^(rdmodule/|tools/rdmodule/(render/|apply_catalog|pick_sounds))');
 // a line that is only a comment: //, # (PowerShell, YAML), or a line of a /* */ or /** */ block
 const COMMENT = /^\s*(\/\/|#|\/\*|\*)/;
 
 const files = execFileSync(GIT, ['ls-files', '-co', '--exclude-standard'], { encoding: 'utf8' })
-  .split('\n').filter((f) => CHECKED.test(f) && !OTHERS.test(f));
+  .split('\n').filter((f) => CHECKED.test(f));
 const problems = [];
 for (const f of files) {
   let text;

@@ -5,7 +5,6 @@ import { renderArmy, bindArmy } from './army.js';
 import { bindBackupMenu } from './backup.js';
 import { renderCalendar, bindCalendar } from './calendar.js';
 import { bindClosing } from './closing.js';
-import { bindRdmodule } from './rdmodule.js';
 import { renderCurrencies, renderSummary, renderNeeds, renderPlanner, renderFilters, renderGrid, renderEvents,
   bindCollection } from './collection.js';
 import { $, store, getJson, post, RULES, ALWAYS_OWNED, state, dirty, setTables, setState, setDirty,
@@ -55,7 +54,6 @@ async function reloadTables() {
 
 async function boot() {
   bindClosing(); // first, so the window can close while the page loads
-  bindRdmodule();
   await loadTables();
   $('#accountLabel').maxLength = LIMITS.accountName;
   bindHeader();

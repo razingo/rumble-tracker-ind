@@ -844,9 +844,6 @@ button { cursor: pointer; }
 .folder-open { display: grid; place-items: center; padding: 6px 9px; }
 .folder-open svg { width: 18px; height: 18px; fill: var(--accent); }
 .folder-open:disabled { opacity: .45; cursor: default; }
-.extra-row { align-items: center; gap: 12px; }
-.extra-state { font-size: 13px; opacity: .75; }
-.extra-state.good { color: #8fd98a; opacity: 1; }
 .notify-table { width: 100%; border-collapse: collapse; }
 .notify-table.off { opacity: .5; }
 .notify-table th { font-size: 11px; font-weight: 700; color: var(--muted); text-align: center; line-height: 1.15; }
@@ -868,7 +865,6 @@ button { cursor: pointer; }
   border-bottom: 1px solid rgb(242 179 61 / 35%); }
 .dialog-card.danger { border-color: var(--warn); }
 .dialog-card.danger h3 { color: var(--warn); border-bottom-color: rgb(255 154 98 / 35%); }
-.extra-box { display: grid; gap: 10px; }
 .notify-log { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 180px; overflow: auto; }
 
 /* The note about the game data, and the page's foot */

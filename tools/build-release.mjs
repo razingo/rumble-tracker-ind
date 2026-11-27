@@ -4,7 +4,7 @@
 //   RumbleTracker.exe                     Node.js runtime, launcher and app files
 //   RumbleTracker-<version>-win-x64.zip   exe, README, LICENSE, NOTICE, and in THIRD-PARTY-NOTICES the licenses of
 //                                         everything the exe carries: Node.js, WebView2, the fonts, Python and its
-//                                         packages, three.js and vgmstream
+//                                         packages
 //   SHA256SUMS.txt                        checksums of the zip and the exe
 //
 // Only what APP_FILES lists is bundled. No game data is: the exe reads it from the game install, with the builder in
@@ -80,13 +80,6 @@ const APP_FILES = [
     if (e.name === 'python') APP_FILES.push(['tools/gamedata/python', null]);
     else if (e.name !== 'work') APP_FILES.push([`tools/gamedata/${e.name}`, ['.mjs', '.py', '.json']]);
   }
-  // the rdmodule, and what extracts its additional data (three.js, vgmstream: npm run fetch-rdmodule-tools)
-  try {
-    await stat(path.join(ROOT, 'tools', 'rdmodule', 'vendor', 'vgmstream', 'vgmstream-cli.exe'));
-  } catch {
-    fail('tools/rdmodule/vendor is missing: run  npm run fetch-rdmodule-tools  first.');
-  }
-  APP_FILES.push(['rdmodule', null], ['tools/rdmodule', null], ['desktop/render.ps1', []]);
 }
 async function walk(rel, exts) {
   const abs = path.join(ROOT, rel);
@@ -316,7 +309,6 @@ function zip(entries) {
 }
 // The licenses of the software the exe carries, which go with every copy of it.
 const PYTHON = path.join(ROOT, 'tools', 'gamedata', 'python');
-const VENDOR = path.join(ROOT, 'tools', 'rdmodule', 'vendor');
 const notice = (file) => readFile(file)
   .catch(() => fail(`${path.relative(ROOT, file)} is missing: a license that must ship with the exe.`));
 /** A license file of one of Python's packages, from the folder pip keeps about it (<name>-<version>.dist-info). */
@@ -353,8 +345,6 @@ const zipBuf = zip([
   [`${folder}/THIRD-PARTY-NOTICES/fsspec-LICENSE.txt`, await packageNotice('fsspec', 'LICENSE')],
   [`${folder}/THIRD-PARTY-NOTICES/attrs-LICENSE.txt`, await packageNotice('attrs', 'LICENSE')],
   [`${folder}/THIRD-PARTY-NOTICES/tpk_ar-LICENSE.txt`, await packageNotice('tpk_ar', 'LICENSE')],
-  [`${folder}/THIRD-PARTY-NOTICES/three.js-LICENSE.txt`, await notice(path.join(VENDOR, 'three', 'LICENSE'))],
-  [`${folder}/THIRD-PARTY-NOTICES/vgmstream-COPYING.txt`, await notice(path.join(VENDOR, 'vgmstream', 'COPYING'))],
 ]);
 await writeFile(path.join(OUT, zipName), zipBuf);
 await writeFile(path.join(OUT, 'SHA256SUMS.txt'), `${sha256(zipBuf)}  ${zipName}\n${sha256(exe)}  ${EXE_NAME}\n`);

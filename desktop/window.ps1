@@ -8,14 +8,12 @@
 # From the launcher, one line each on standard input: "show" (open the window, or bring it to the front).
 # With the page: the close button sends it "close?", and the window closes when it answers "close". It answers "asking"
 # while it asks what closing should do, and "stay" when that was canceled. A page that doesn't answer (still loading)
-# lets the window close after CLOSE_WAIT. The page sends "rdmodule" to open the rdmodule (RT_RDMODULE) in a window of
-# its own.
+# lets the window close after CLOSE_WAIT.
 # Environment: RT_TITLE, RT_AUMID (app ID for the taskbar), RT_PAGE (the page's address), RT_DATA (data folder), RT_EXE
 # (icon), RT_PARENT (tracker process id), RT_GAME (the game's process name), RT_LIB (folder with the WebView2
 # libraries), RT_PROFILE (WebView2's data folder), RT_CACHE (where to keep the compiled helpers below), RT_SHOW ("1":
-# open the window right away), RT_CHECK (build everything without showing it, for the tests), RT_RDMODULE (the
-# rdmodule's address), RT_RDMODULE_PROFILE (its window's WebView2 data folder), RT_FONT (the title bar's font file;
-# Segoe UI without it).
+# open the window right away), RT_CHECK (build everything without showing it, for the tests), RT_FONT (the title
+# bar's font file; Segoe UI without it).
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.Windows.Forms, System.Drawing
@@ -370,8 +368,6 @@ function New-TrackerWindow {
         'close' { $script:closeNow = $true }
         'asking' { $script:closeAsked = $null }
         'stay' { $script:closeAsked = $null }
-        # opened by the timer, not inside WebView2's own event
-        'rdmodule' { $script:rdmoduleAsked = $true }
       }
     })
   })
@@ -419,69 +415,6 @@ function Show-Front($f) {
   if ($f.WindowState -eq 'Minimized') { $f.WindowState = 'Normal' }
   $f.Activate()
   [RtWin]::Front($f.Handle)
-}
-
-# The rdmodule's window: the page's hidden key sequence opens it (web/scripts/rdmodule.js). It shows only its page,
-# with a WebView2 data folder of its own, and takes no messages from it. Closing it leaves the tracker as it is.
-$script:rdmodule = $null
-$script:rdmoduleAsked = $false
-$rdmoduleBackground = [System.Drawing.ColorTranslator]::FromHtml('#1b1f2e')
-
-function Test-RdmodulePage($uri) {
-  try { return ([Uri]$uri).AbsoluteUri.StartsWith(([Uri]$env:RT_RDMODULE).AbsoluteUri) } catch { return $false }
-}
-
-# shown instead of WebView2's own error page, when the page does not load
-$RDMODULE_ERROR = @'
-<!doctype html><meta charset="utf-8"><title>rdmodule</title>
-<body style="margin:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
-background:#1b1f2e;color:#f3ead6;font:16px 'Segoe UI',sans-serif">
-<p>Couldn't load the page.</p>
-<a href="{0}" style="padding:6px 18px;border-radius:6px;background:#f2b33d;color:#3a2208;font-weight:600;
-text-decoration:none">Retry</a></body>
-'@
-
-function New-RdmoduleWindow {
-  $f = New-Frame 'rdmodule'
-  $f.ClientSize = New-Object System.Drawing.Size(1280, 620)
-  $f.MinimumSize = New-Object System.Drawing.Size(640, 400)
-  $f.StartPosition = 'CenterScreen'
-  $view = New-Object Microsoft.Web.WebView2.WinForms.WebView2
-  $view.Dock = 'Fill'
-  $view.DefaultBackgroundColor = $rdmoduleBackground
-  $view.CreationProperties = New-Object Microsoft.Web.WebView2.WinForms.CoreWebView2CreationProperties
-  $view.CreationProperties.UserDataFolder = $env:RT_RDMODULE_PROFILE
-  $f.Controls.Add($view)
-  Add-Caption $f
-  $view.add_CoreWebView2InitializationCompleted({
-    param($s, $e)
-    if (-not $e.IsSuccess) { $script:rdmodule.Close(); return }
-    $core = $s.CoreWebView2
-    $core.Settings.IsStatusBarEnabled = $false
-    $core.Settings.AreDevToolsEnabled = $false
-    $core.Settings.IsWebMessageEnabled = $false
-    $core.add_NewWindowRequested({ param($c, $r) $r.Handled = $true; Open-WebLink $r.Uri })
-    $core.add_NavigationStarting({
-      param($c, $n)
-      if (-not (Test-RdmodulePage $n.Uri) -and -not $n.Uri.StartsWith('data:')) { $n.Cancel = $true; Open-WebLink $n.Uri }
-    })
-    $core.add_NavigationCompleted({
-      param($c, $n)
-      if (-not $n.IsSuccess -and $n.WebErrorStatus -ne 'OperationCanceled') {
-        $c.NavigateToString(($RDMODULE_ERROR -f [System.Net.WebUtility]::HtmlEncode($env:RT_RDMODULE)))
-      }
-    })
-  })
-  $f.add_Shown({ param($s) $s.Controls[0].Source = [Uri]$env:RT_RDMODULE })
-  $f.add_FormClosed({ param($s) $script:rdmodule = $null; $s.Dispose() })
-  $f
-}
-
-function Show-RdmoduleWindow {
-  if ($script:rdmodule) { Show-Front $script:rdmodule; return }
-  if (-not $env:RT_RDMODULE -or -not (Test-WebView)) { return }
-  $script:rdmodule = New-RdmoduleWindow
-  Show-Form $script:rdmodule
 }
 
 # Without WebView2 there's no window, and the tracker doesn't open the page in a browser or stay in the tray: this
@@ -622,7 +555,6 @@ $timer.Interval = 100
 $timer.add_Tick({
   $line = $null
   while ([RtInput]::Lines.TryDequeue([ref]$line)) { if ($line -eq 'show') { Show-TrackerWindow } }
-  if ($script:rdmoduleAsked) { $script:rdmoduleAsked = $false; Show-RdmoduleWindow }
   if ($script:closeNow -or ($script:closeAsked -and ([DateTime]::UtcNow - $script:closeAsked).TotalMilliseconds -gt $CLOSE_WAIT)) {
     Close-TrackerWindow
   }

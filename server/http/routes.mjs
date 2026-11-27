@@ -52,7 +52,7 @@ const rateLimit = (n, ms) => ({
 
 /**
  * deps: { shutdown(reason), startUpdate(), checkForUpdate(), notifier: { test }, gameRunning(),
- *   autostart: { get(), set(on) } | null, gameData: { check(), gameFolder() }, rdmodule: { status(), start() } }.
+ *   autostart: { get(), set(on) } | null, gameData: { check(), gameFolder() } }.
  * The ones a test leaves out are not used by what it tests.
  * Returns a Map of "METHOD /path" to handler(req, url).
  */
@@ -202,18 +202,6 @@ export function createRoutes(ctx, deps) {
       return [200, { ok: true }];
     },
   }));
-  if (deps.rdmodule) {
-    // The rdmodule: whether its additional data was extracted, and extracting it (Settings).
-    routes.set('GET /api/rdmodule', async () => [200, await deps.rdmodule.status()]);
-    routes.set('POST /api/rdmodule/extract', async () => {
-      try {
-        if (!(await deps.rdmodule.start())) return [400, { error: 'This tracker cannot extract the additional data.' }];
-      } catch (e) {
-        return [400, { error: e.message }]; // (the disk is too full)
-      }
-      return [200, { ok: true, ...(await deps.rdmodule.status()) }];
-    });
-  }
   if (ctx.standalone) {
     // Take a screenshot in Report a problem opens Windows' snipping overlay, which copies the capture.
     routes.set('POST /api/screenshot', async () => {
@@ -229,9 +217,6 @@ export function createRoutes(ctx, deps) {
     routes.set('POST /api/storage', async (req) => {
       const { folder } = await readBody(req);
       if (!host.options.storage) return [400, { error: 'This tracker\'s folder is set where it was started.' }];
-      if ((await deps.rdmodule?.status())?.state === 'running') {
-        return [400, { error: 'The additional data is being extracted. Move the files once that is done.' }];
-      }
       if (ctx.gameData?.reading) return [400, { error: 'The game data is being read. Move the files once that is done.' }];
       let home;
       try {

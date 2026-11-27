@@ -24,6 +24,4 @@ Thumbs.db
 # The private Python the exe carries: npm run fetch-python prepares it
 /tools/gamedata/python/
 
-# three.js and vgmstream for the rdmodule's extraction: npm run fetch-rdmodule-tools fetches them
-/tools/rdmodule/vendor/
 __pycache__/

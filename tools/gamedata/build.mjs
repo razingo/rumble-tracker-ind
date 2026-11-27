@@ -195,7 +195,7 @@ export function runProgram(cmd, args, env, { background = false, minutes = PROGR
   });
 }
 /** Runs a script (a file path) in a thread of its own (inside the exe there is no node to start). */
-export function runScript(file, args, env) {
+function runScript(file, args, env) {
   return new Promise((resolve, reject) => {
     const worker = new Worker(pathToFileURL(file), { argv: args, env, stdout: true, stderr: true });
     let out = '';
@@ -335,16 +335,16 @@ export function workWhole(work) {
   }
 }
 /**
- * The hash of what a step made: the files and folders given (a folder with everything under it, but the parts of a
- * split step), by name and contents. A file that is not there counts as such.
+ * The hash of what a step made: the files and folders given (a folder with everything under it), by name and
+ * contents. A file that is not there counts as such.
  */
-export async function outputHash(paths) {
+async function outputHash(paths) {
   const h = createHash('sha1');
   const add = async (p, name) => {
     const s = await stat(p).catch(() => null);
     if (!s) h.update(name).update('none');
     else if (!s.isDirectory()) h.update(name).update(await readFile(p));
-    else for (const f of (await readdir(p)).sort()) if (f !== 'parts') await add(join(p, f), `${name}/${f}`);
+    else for (const f of (await readdir(p)).sort()) await add(join(p, f), `${name}/${f}`);
   };
   for (const p of paths) await add(p, basename(p));
   return h.digest('hex').slice(0, 12);

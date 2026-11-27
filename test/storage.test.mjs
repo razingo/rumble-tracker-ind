@@ -66,14 +66,13 @@ test('the first start since there is a choice copies the data and the window\'s 
   try {
     for (const f of ['roaming/RumbleTracker/names.json', 'roaming/RumbleTracker/backups/b.json',
       'roaming/RumbleTracker/gamedata/minis.json', 'local/RumbleTracker/app/v1/main.mjs', 'local/RumbleTracker/window/old.txt',
-      'local/RumbleTracker/webview2/cache', 'local/RumbleTracker/webview2-rdmodule/cache']) s.file(f);
+      'local/RumbleTracker/webview2/cache']) s.file(f);
     const noteDir = s.at('roaming', 'RumbleTracker');
     const moving = { legacy: true, from: s.at('local', 'RumbleTracker'), to: s.at('picked', 'RumbleTracker') };
     launcher.writeNote(path.join(noteDir, 'location.json'), { moving });
     move(s, moving, noteDir);
     assert.deepEqual(s.files(), ['picked/RumbleTracker/data/backups/b.json', 'picked/RumbleTracker/data/gamedata/minis.json',
-      'picked/RumbleTracker/data/names.json', 'picked/RumbleTracker/webview2-rdmodule/cache',
-      'picked/RumbleTracker/webview2/cache', 'roaming/RumbleTracker/location.json']);
+      'picked/RumbleTracker/data/names.json', 'picked/RumbleTracker/webview2/cache', 'roaming/RumbleTracker/location.json']);
     assert.ok(!fs.existsSync(moving.from), 'the old folder is gone, with its unpacked program and what an earlier version left');
   } finally {
     s.cleanup();
@@ -130,7 +129,7 @@ test('a folder in use: a new tracker takes over the data found, one with data of
   const found = () => {
     for (const f of ['there/RumbleTracker/app/v0/main.mjs', 'there/RumbleTracker/webview2/cache',
       'there/RumbleTracker/data/gamedata/minis.json', 'there/RumbleTracker/data/state/a.json',
-      'there/RumbleTracker/data/backups/rumble-tracker-backup-2026-01-01.json', 'there/RumbleTracker/data/rdmodule/ready.json']) s.file(f);
+      'there/RumbleTracker/data/backups/rumble-tracker-backup-2026-01-01.json']) s.file(f);
     s.file('there/RumbleTracker/data/names.json', '{"accounts":{"1":"Found"}}');
     s.file('there/RumbleTracker/data/settings.json', '{"closeWindow":"tray"}');
   };
@@ -144,7 +143,7 @@ test('a folder in use: a new tracker takes over the data found, one with data of
     assert.equal(launcher.inUse(home), true);
     assert.equal(launcher.takeOver(home, false), null);
     assert.deepEqual(s.files(), ['there/RumbleTracker/data/backups/rumble-tracker-backup-2026-01-01.json',
-      'there/RumbleTracker/data/names.json', 'there/RumbleTracker/data/rdmodule/ready.json', 'there/RumbleTracker/data/settings.json']);
+      'there/RumbleTracker/data/names.json', 'there/RumbleTracker/data/settings.json']);
     // a tracker with data of its own: the data found becomes one more backup, which Import backup reads
     found();
     s.file('there/RumbleTracker/data/backups/rumble-tracker-backup-2026-11-23.json', 'found');

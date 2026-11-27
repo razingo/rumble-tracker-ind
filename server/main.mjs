@@ -20,7 +20,6 @@ import { createNotifier } from './notifications/runner.mjs';
 import { writeDailyBackup } from './backup.mjs';
 import { readAutostart, setAutostart, refreshAutostart, autostartCommand } from './autostart.mjs';
 import { createHttpServer } from './http/server.mjs';
-import { createRdmodule } from './rdmodule.mjs';
 import { DEFAULT_PORT, SECOND, MINUTE, DAY, SCAN_MS } from '../web/scripts/lib/constants.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -172,8 +171,7 @@ setInterval(() => gameData.check(), GAME_DATA_CHECK_MS);
 // asked and saved the answer before the window closed (web/scripts/closing.js); without an answer it stays in the tray.
 if (STANDALONE) host.onWindowClosed(() => { if (ctx.user.appSettings.closeWindow === 'quit') shutdown('Window closed'); });
 
-const server = createHttpServer(ctx, { shutdown, startUpdate, checkForUpdate, notifier, gameRunning, autostart, gameData,
-  rdmodule: createRdmodule(ctx) });
+const server = createHttpServer(ctx, { shutdown, startUpdate, checkForUpdate, notifier, gameRunning, autostart, gameData });
 server.listen(ctx.port, '127.0.0.1', () => {
   console.log(`Rumble Collection Tracker running at http://localhost:${ctx.port}`);
   console.log(`Data folder: ${ctx.paths.DATA}`);

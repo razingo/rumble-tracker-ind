@@ -195,7 +195,7 @@ ${page.error ? `<p>${esc(page.error)}</p>${ask || '<p style="opacity:.7">Trying 
     console.log(!sameGame ? `Game data: reading it for the game's version ${version ?? '(not found)'}`
       : `Game data: this version of the tracker reads ${due === 'all' ? 'all of it' : due.join(', ')} anew`);
     try {
-      await ctx.oneAtATime(() => build(game, due));
+      await build(game, due);
       await ctx.tables.load();
     } catch (e) {
       failedAt = Date.now();

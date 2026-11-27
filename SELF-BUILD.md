@@ -11,19 +11,17 @@ You need Windows 10 or 11 (64-bit), [Node.js](https://nodejs.org) 25.5 or newer,
 ```
 npm run fetch-webview2
 npm run fetch-python
-npm run fetch-rdmodule-tools
 npm run build-release
 ```
 
-The three `fetch` commands run once. Everything they download is pinned to a version and a SHA-256 checksum.
+The two `fetch` commands run once. Everything they download is pinned to a version and a SHA-256 checksum.
 
 | Command | What it gets | Where |
 |---|---|---|
 | `fetch-webview2` | The window's WebView2 libraries, from Microsoft's NuGet package | `desktop\webview2` |
 | `fetch-python` | The private Python the exe carries: Python's embeddable package from python.org and the image packages from PyPI (about 28 MB) | `tools\gamedata\python` |
-| `fetch-rdmodule-tools` | three.js and vgmstream, for the rdmodule | `tools\rdmodule\vendor` |
 
-`build-release` then writes `RumbleTracker.exe` (about 133 MB), its zip and `SHA256SUMS.txt` to `dist\release`. It
+`build-release` then writes `RumbleTracker.exe` (about 124 MB), its zip and `SHA256SUMS.txt` to `dist\release`. It
 takes under a minute and does not need the game.
 
 An exe built this way works like a released one, with one difference: when a newer version is out it tells you, and
@@ -98,11 +96,6 @@ are then downloaded on first use.
 `npm run check-gamedata` checks what skipping steps relies on: it reads the game data twice, each time from nothing,
 compares every file, and makes sure every file belongs to a step. It needs the game and takes about two minutes.
 
-`npm run check-extraction` checks that the additional data comes out the same on every run: it extracts twice, each
-time from nothing, and compares every file and what each step made on the way (about four minutes; it needs the game and `build-gamedata`, so it is run
-by hand before a release, not in CI). Effect pictures may differ in a few pixels by the graphics card's rounding; it
-tells those apart from real differences, and keeps both versions of a file that really differs.
-
 `npm run check-pins` lists the pinned software that has a newer version out. A workflow runs it once a month and
 fails when something is behind; taking a newer version means editing its pin and checksum, then testing.
 
@@ -114,8 +107,6 @@ fails when something is behind; taking a newer version means editing its pin and
 | WebView2 libraries | Microsoft's, BSD-style | `THIRD-PARTY-NOTICES` in the zip |
 | Python | PSF | `THIRD-PARTY-NOTICES` in the zip |
 | UnityPy, Pillow, lz4, Brotli, texture2ddecoder, etcpak, astc-encoder-py, archspec, fsspec, attrs, tpk_ar | each its own | `THIRD-PARTY-NOTICES` in the zip |
-| three.js | MIT | `THIRD-PARTY-NOTICES` in the zip |
-| vgmstream, with the codec libraries it ships | ISC and others | `THIRD-PARTY-NOTICES` in the zip |
 
 UnityPy's audio package (fmod_toolkit, which holds FMOD's libraries) is left out. An empty stand-in takes its place,
 as nothing here reads audio through it.

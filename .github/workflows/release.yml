@@ -75,10 +75,6 @@ jobs:
       - name: Python for the exe
         run: npm run fetch-python
 
-      # three.js and vgmstream for the additional data, in pinned versions
-      - name: Tools for the additional data
-        run: npm run fetch-rdmodule-tools
-
       - name: Build
         run: npm run build-release
 

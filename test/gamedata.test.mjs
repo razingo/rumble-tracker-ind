@@ -125,25 +125,6 @@ test('a failed read in the background leaves the game data as it was, and is not
   }
 });
 
-test('heavy background jobs run one at a time, in the order they were asked for', async () => {
-  const { ctx, cleanup } = await testContext();
-  try {
-    const log = [];
-    const first = ctx.oneAtATime(async () => {
-      log.push('first starts');
-      await new Promise((r) => setTimeout(r, 30));
-      log.push('first ends');
-      throw new Error('it failed');
-    });
-    const second = ctx.oneAtATime(async () => log.push('second starts'));
-    await assert.rejects(first, /it failed/);
-    await second; // a job that failed does not hold up the next
-    assert.deepEqual(log, ['first starts', 'first ends', 'second starts']);
-  } finally {
-    await cleanup();
-  }
-});
-
 test('the first start shows a loading page, which asks for the game folder when the game is not found', async () => {
   const { ctx, dir, cleanup } = await testContext();
   try {

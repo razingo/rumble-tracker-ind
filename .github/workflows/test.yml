@@ -42,7 +42,7 @@ jobs:
 
       # the Python scripts need the game to run, so here they are only compiled (the runner's own Python)
       - name: Python scripts compile
-        run: python -m compileall -q -l tools/gamedata tools/rdmodule
+        run: python -m compileall -q -l tools/gamedata
 
   # The exe is built as for a release, to see that it still builds. Nothing is kept or published.
   build:
@@ -64,9 +64,6 @@ jobs:
 
       - name: Python for the exe
         run: npm run fetch-python
-
-      - name: Tools for the additional data
-        run: npm run fetch-rdmodule-tools
 
       - name: Build
         run: npm run build-release

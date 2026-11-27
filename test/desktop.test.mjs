@@ -105,20 +105,21 @@ test('uninstalling knows every file the release zip puts next to the exe', () =>
   const build = readFileSync(path.join(DESKTOP, '..', 'tools', 'build-release.mjs'), 'utf8');
   const uninstall = readFileSync(path.join(DESKTOP, 'uninstall.ps1'), 'utf8');
   const inZip = [...build.matchAll(/`\$\{folder\}\/([^`$]+)`/g)].map((m) => path.basename(m[1])).sort();
+  const earlier = ['three.js-LICENSE.txt', 'vgmstream-COPYING.txt']; // in the zip of an earlier version, and still removed
   const removed = [...uninstall.matchAll(/'([\w.-]+\.(?:md|txt))'/g)].map((m) => m[1]).sort();
   assert.ok(inZip.length > 3, 'found the zip entries in build-release.mjs');
-  assert.deepEqual(removed, inZip);
+  assert.deepEqual(removed, [...inZip, ...earlier].sort());
 });
 
 test('the release zip carries a license for everything the exe carries', () => {
   const build = readFileSync(path.join(DESKTOP, '..', 'tools', 'build-release.mjs'), 'utf8');
   const notices = [...build.matchAll(/`\$\{folder\}\/THIRD-PARTY-NOTICES\/([^`$]+)`/g)].map((m) => m[1]);
-  // Node.js, the window's libraries, the fonts, Python, three.js, vgmstream, and each package fetch-python installs
+  // Node.js, the window's libraries, the fonts, Python, and each package fetch-python installs
   const fetched = readFileSync(path.join(DESKTOP, '..', 'tools', 'fetch-python.mjs'), 'utf8');
   const packages = [...fetched.matchAll(/'([A-Za-z0-9_.-]+)==[\d.]+'/g)].map((m) => m[1].toLowerCase().replace(/[-_.]+/g, ''));
   assert.ok(packages.length > 5, 'found the pinned packages in fetch-python.mjs');
   const named = (name) => notices.some((n) => n.toLowerCase().replace(/[-_.]+/g, '').startsWith(name));
-  for (const name of ['nodejs', 'webview2', 'font', 'python', 'threejs', 'vgmstream', ...packages]) {
+  for (const name of ['nodejs', 'webview2', 'font', 'python', ...packages]) {
     assert.ok(named(name), `a license for ${name}`);
   }
 });

@@ -9,7 +9,7 @@ import { createRoutes } from './routes.mjs';
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon',
-  '.woff2': 'font/woff2', '.txt': 'text/plain; charset=utf-8', '.wav': 'audio/wav',
+  '.woff2': 'font/woff2', '.txt': 'text/plain; charset=utf-8',
 };
 
 // The content security policy allows only the page's own scripts (no inline scripts, handlers or eval), and
@@ -33,21 +33,18 @@ function send(res, status, body, headers = {}) {
   res.end(typeof body === 'string' ? body : JSON.stringify(body));
 }
 
-// The rdmodule plays its sounds from memory (blob: addresses), which the tracker's own page never does.
-const RDMODULE_HEADERS = { 'content-security-policy': `${SECURITY_HEADERS['content-security-policy']}; media-src 'self' blob:` };
-
 /**
  * Sends a file. Its size and the time it was last changed go along as its tag; a window that already has the file
  * with that tag asks with it, and is told the file is the same (304) without it being read or sent again.
  */
-async function serveFile(req, res, base, rel, headers = {}) {
+async function serveFile(req, res, base, rel) {
   const file = path.resolve(base, `.${rel}`);
   if (!file.startsWith(base + path.sep)) return send(res, 403, { error: 'That file is outside the tracker\'s folders.' });
   try {
     const { size, mtimeMs } = await stat(file);
     const etag = `"${size.toString(36)}-${Math.round(mtimeMs).toString(36)}"`;
     const head = { ...SECURITY_HEADERS, 'content-type': TYPES[path.extname(file)] || 'application/octet-stream',
-      'cache-control': 'no-cache', etag, ...headers };
+      'cache-control': 'no-cache', etag };
     if (req.headers['if-none-match'] === etag) {
       res.writeHead(304, head);
       return res.end();
@@ -80,13 +77,6 @@ export function createHttpServer(ctx, deps) {
         return send(res, status, body, headers);
       }
       if (req.method !== 'GET') return send(res, 405, { error: 'The tracker doesn\'t accept this kind of request here.' });
-      // The rdmodule (server/rdmodule.mjs): its code, and what was extracted for it.
-      const rd = deps.rdmodule?.folders;
-      if (rd && p.startsWith('/rdmodule/')) {
-        const rel = p.slice('/rdmodule'.length);
-        if (/^\/(sprites|sounds)\//.test(rel)) return serveFile(req, res, rd.extracted, rel, RDMODULE_HEADERS);
-        return serveFile(req, res, rd.code, rel === '/' ? '/index.html' : rel, RDMODULE_HEADERS);
-      }
       if (p.startsWith('/static/')) {
         // What the tracker read from the game comes first, then what npm run build-gamedata left in gamedata/.
         const rel = p.slice('/static'.length);

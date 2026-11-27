@@ -44,6 +44,7 @@ $targets = @($own) + $left + @($exe, "$exe.old", "$exe.failed", (Join-Path $env:
     'Python-LICENSE.txt', 'UnityPy-LICENSE.txt', 'Pillow-LICENSE.txt', 'lz4-LICENSE.txt', 'Brotli-LICENSE.txt',
     'texture2ddecoder-LICENSE.txt', 'etcpak-LICENSE.txt', 'astc-encoder-py-LICENSE.txt', 'archspec-LICENSE-APACHE.txt',
     'archspec-LICENSE-MIT.txt', 'archspec-NOTICE.txt', 'fsspec-LICENSE.txt', 'attrs-LICENSE.txt', 'tpk_ar-LICENSE.txt',
+    # (the last two came in the zip of an earlier version)
     'three.js-LICENSE.txt', 'vgmstream-COPYING.txt' |
     ForEach-Object { Join-Path $notices $_ })
 # never a drive's root, whatever the environment says

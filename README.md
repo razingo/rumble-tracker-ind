@@ -132,7 +132,7 @@ Start `RumbleTracker.exe` from a Command Prompt or a shortcut to use these:
 
 The tracker's code is MIT-licensed ([LICENSE](LICENSE)). That license doesn't cover the game art and data, which belong
 to Blizzard Entertainment ([NOTICE.md](NOTICE.md)). The exe contains the Node.js runtime, Microsoft's WebView2
-libraries, two open-licensed fonts, Python with the packages that read the game's images, three.js and vgmstream;
+libraries, two open-licensed fonts, Python with the packages that read the game's images;
 their licenses are in `THIRD-PARTY-NOTICES` in the zip.
 
 ## For developers
@@ -179,12 +179,10 @@ Environment variables for development and testing:
 | `server/notifications/` | What's due (`notify.mjs`), sending it (`runner.mjs`) and the Windows notification itself (`toast.mjs`) |
 | `server/gamedata.mjs` | Reading the game data from the game install: the first time behind a loading page, after a game patch in the background |
 | `web/` | The page. `scripts/app.js` starts it and switches tabs, `core.js` holds what the modules share, and each tab, dialog and menu has its own module; the Army tab also has `army-code.js` (army codes) and `army-pools.js`. `scripts/lib/` has the code the server and build tools use too: shared names and units, formatting, the protobuf reader and writer, schedules, PvP seasons, input limits and the reward-tree planner. `styles/style.css` is the page's look; `styles/art.css` adds the textures and frames from the game files |
-| `server/rdmodule.mjs`, `rdmodule/` | The rdmodule and its page |
 | `gamedata/` | Game data and art (© Blizzard, see NOTICE), served as `/static/…`. Not in the repository; read from the game install |
-| `desktop/` | The exe's launcher (`launcher.cjs`), the unseen window the rdmodule's pictures are drawn in (`render.ps1`), the window and tray icon (`window.ps1`, with the WebView2 libraries in `webview2/`), the pop-ups shown before the window can open (`popup.ps1`, with the title font `LilitaOne-Regular.ttf`), Windows integration (`integration.ps1`), Uninstall in Settings (`uninstall.ps1`) and the script that draws the icon (`make-icon.ps1`, into `web/favicon.ico`) |
+| `desktop/` | The exe's launcher (`launcher.cjs`), the window and tray icon (`window.ps1`, with the WebView2 libraries in `webview2/`), the pop-ups shown before the window can open (`popup.ps1`, with the title font `LilitaOne-Regular.ttf`), Windows integration (`integration.ps1`), Uninstall in Settings (`uninstall.ps1`) and the script that draws the icon (`make-icon.ps1`, into `web/favicon.ico`) |
 | `tools/gamedata/` | The game-data builder: `build.mjs` runs the steps, with the table builders, the image extractors and `seed/`, the tracker's own few tables |
-| `tools/rdmodule/` | The rdmodule's exports and render pages |
-| `tools/` | What the exe carries (`fetch-python.mjs`, `fetch-rdmodule-tools.mjs`, `fetch-webview2.ps1`), building the release (`build-release.mjs`, Node.js 25.5+) and the checks: style (`check-style.mjs`), that two reads of the game data and two extractions give the same files (`check-gamedata.mjs`, `check-extraction.mjs`) and pinned software with a newer version out (`check-pins.mjs`). `git.mjs` finds Git for the ones that need it |
+| `tools/` | What the exe carries (`fetch-python.mjs`, `fetch-webview2.ps1`), building the release (`build-release.mjs`, Node.js 25.5+) and the checks: style (`check-style.mjs`), that two reads of the game data give the same files (`check-gamedata.mjs`) and pinned software with a newer version out (`check-pins.mjs`). `git.mjs` finds Git for the ones that need it |
 | `test/` | Node's built-in test runner. `helpers.mjs` builds save values and a tracker in a temporary folder; the tests of the window, tray and Windows integration (`desktop.test.mjs`) run on Windows only |
 | `.github/workflows/` | `test.yml` runs the tests and the style check on every push, compiles the Python scripts, and builds the exe on pushes to `main`; `pins.yml` runs `check-pins` once a month; `release.yml` builds and attests a release when a `v<version>` tag is pushed, once the tests of that commit passed |
 | `docs/` | The player guide with its screenshots, and how the tracker works in the background |

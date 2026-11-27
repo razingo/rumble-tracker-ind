@@ -1,6 +1,6 @@
-# Once a month, lists the pinned software that has a newer version out (Node.js, Python and its packages, three.js,
-# vgmstream, the WebView2 libraries). The run fails when something is behind, so GitHub sends a notice; it changes
-# nothing by itself. Read-only: no permissions beyond reading the repository and no stored git credentials.
+# Once a month, lists the pinned software that has a newer version out (Node.js, Python and its packages, the WebView2
+# libraries). The run fails when something is behind, so GitHub sends a notice; it changes nothing by itself.
+# Read-only: no permissions beyond reading the repository and no stored git credentials.
 name: Pinned versions
 
 on:

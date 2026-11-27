@@ -1,9 +1,8 @@
-// Lists the pinned software that has a newer version out: Node.js, Python and its packages, three.js, vgmstream and
-// the WebView2 libraries. The pins are read from the files that hold them, so there is nothing to keep in step here.
+// Lists the pinned software that has a newer version out: Node.js, Python and its packages and the WebView2
+// libraries. The pins are read from the files that hold them, so there is nothing to keep in step here.
 // It changes nothing: a newer version is taken by editing the pin (and its checksum) and testing the result.
 //   npm run check-pins      (exit code 1 when something is behind or could not be checked; pins.yml runs it monthly)
-// The requests go to nodejs.org, python.org, pypi.org, registry.npmjs.org, api.github.com and api.nuget.org, and carry
-// nothing but the package's name.
+// The requests go to nodejs.org, python.org, pypi.org and api.nuget.org, and carry nothing but the package's name.
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -47,10 +46,6 @@ const pins = [
       .map((m) => m[1]), v, 2))],
   ...packages.map(([name, version]) => [name, 'tools/fetch-python.mjs', version,
     async () => (await json(`https://pypi.org/pypi/${name}/json`)).info.version]),
-  ['three.js', 'tools/fetch-rdmodule-tools.mjs', pin('tools/fetch-rdmodule-tools.mjs', /const THREE = '([\d.]+)'/),
-    async () => (await json('https://registry.npmjs.org/three/latest')).version],
-  ['vgmstream', 'tools/fetch-rdmodule-tools.mjs', pin('tools/fetch-rdmodule-tools.mjs', /const VGM = '(r\d+)'/),
-    async () => (await json('https://api.github.com/repos/vgmstream/vgmstream/releases/latest')).tag_name],
   ['WebView2 libraries', 'tools/fetch-webview2.ps1', pin('tools/fetch-webview2.ps1', /\$version = '([\d.]+)'/),
     async () => newest((await json('https://api.nuget.org/v3-flatcontainer/microsoft.web.webview2/index.json')).versions)],
 ];
@@ -60,8 +55,7 @@ for (const [what, file, pinned, latestOf] of pins) {
   try {
     const latest = await latestOf(pinned);
     if (!latest) throw new Error('no version found');
-    // (vgmstream numbers its releases r<number>)
-    const older = /^r\d+$/.test(pinned) ? Number(pinned.slice(1)) < Number(String(latest).slice(1)) : compare(pinned, latest) < 0;
+    const older = compare(pinned, latest) < 0;
     if (older) behind++;
     console.log(`${older ? 'behind ' : 'current'}  ${what} ${pinned}${older ? ` -> ${latest}   (${file})` : ''}`);
   } catch (e) {
