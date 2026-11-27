@@ -1,5 +1,5 @@
 // Calendar tab: the event schedules from gamedata/events.json and the events the save reports as running.
-import { $, imageUrl, getJson, post, RULES, BY_SLUG, TAG_ICONS, state, onTablesReload, ui } from './core.js';
+import { $, imageUrl, getJson, post, RULES, BY_SLUG, TAG_ICONS, state, onTablesReload, ui, focusKey, refocus } from './core.js';
 import { STORE, loadStore } from './grid.js';
 import { SECOND, MINUTE, DAY } from './lib/constants.js';
 import { esc, fmt, plural, when, dayOnly, dayWithYear, longDay, timeOnly, span, ago, titleCase } from './lib/format.js';
@@ -565,7 +565,8 @@ export async function renderCalendar() {
 
   const treeEv = view.tree && EVENTS.events.find((e) => e.id === view.tree);
   const scrollY = window.scrollY; // keep the scroll position on periodic re-renders
-  const focused = focusKey(page);
+  // (the one goal button keeps the focus, whether it sets the goal or removes it)
+  const focused = focusKey(page, { loose: ['data-tree-goal'] });
   page.innerHTML = `
     ${renderTickets(now)}
     <section class="panel">
@@ -585,22 +586,8 @@ export async function renderCalendar() {
     </section>
     ${renderCalendarTimeline(now)}
     ${renderCalendarRules()}`;
-  if (focused) page.querySelector(focused)?.focus({ preventScroll: true });
+  refocus(page, focused);
   window.scrollTo(0, scrollY);
-}
-
-// What the keyboard can reach on the tab and a redraw makes anew, by the attribute that tells one from another.
-const FOCUSABLE = ['data-tree-pick', 'data-tree-goal', 'data-calendar-tree', 'data-calendar-today', 'data-calendar-slider'];
-/** A selector for the element of the tab that has the focus, to give it back after a redraw; null when none has. */
-function focusKey(page) {
-  const el = document.activeElement;
-  if (!el || !page.contains(el)) return null;
-  if (el.matches('.tree-challenges > summary')) return '.tree-challenges > summary';
-  const attr = FOCUSABLE.find((a) => el.hasAttribute(a));
-  if (!attr) return null;
-  if (attr === 'data-tree-goal') return `[${attr}]`; // (the one goal button, whether it sets the goal or removes it)
-  // (a reward and the path's Clear button share an attribute: the tag tells them apart)
-  return `${el.tagName.toLowerCase()}[${attr}="${CSS.escape(el.getAttribute(attr))}"]`;
 }
 
 /** A click picks one reward and a second click clears it; Ctrl+click adds or removes it from the picks. */

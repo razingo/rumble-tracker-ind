@@ -4,7 +4,7 @@ import { setTab, poll } from './app.js';
 import { encodeArmyCode } from './army-code.js';
 import { nameField, descriptionField, tagEditor, armyStats, persistArmies, editArmy, syncDraft, deleteSavedArmy } from './army.js';
 import { toggleIn } from './collection.js';
-import { $, showMessage, copyText, post, BY_SLUG, state } from './core.js';
+import { $, showMessage, copyText, post, BY_SLUG, state, focusKey, refocus } from './core.js';
 import { alertDialog } from './dialogs.js';
 import { esc, plural } from './lib/format.js';
 import { LIMITS, tagKey } from './lib/limits.js';
@@ -65,12 +65,8 @@ export function renderArmory() {
   const tags = state.armyTags || [];
   view.tags = view.tags.filter((t) => tags.some((x) => x.tag.toLowerCase() === t.toLowerCase()));
   const list = armoryFiltered();
-  // Keep the focus and caret across redraws.
-  const active = document.activeElement;
-  const focusKey = active?.closest?.('#tab-armory') && active.closest('[data-armory-id]')
-    ? { id: active.closest('[data-armory-id]').dataset.armoryId,
-      cls: [...active.classList].find((c) => c.startsWith('armory-')), pos: active.selectionStart }
-    : null;
+  // The focus and the caret stay where they were (every card has the same fields: the card tells them apart).
+  const focused = focusKey(page, { within: '[data-armory-id]' });
 
   page.innerHTML = `<div class="panel armory-toolbar">
       <h2>Armory <span class="muted small">${plural(all.length, 'saved army', 'saved armies')}</span></h2>
@@ -92,17 +88,7 @@ export function renderArmory() {
         ? '<div class="panel muted">No armies match the search or tags.</div>'
         : `<div class="armory-grid">${list.map(armoryCard).join('')}</div>`}`;
 
-  if (focusKey?.cls) {
-    const el = page.querySelector(`[data-armory-id="${CSS.escape(focusKey.id)}"] .${focusKey.cls}`);
-    if (el) {
-      el.focus();
-      try {
-        el.setSelectionRange(focusKey.pos, focusKey.pos);
-      } catch {
-        // not a text field
-      }
-    }
-  }
+  refocus(page, focused);
 }
 
 async function updateSavedArmy(id, change, card) {
@@ -126,15 +112,11 @@ function armyOfCard(el) {
   return card ? { card, army: (state.savedArmies || []).find((a) => a.id === card.dataset.armoryId) } : {};
 }
 
-/** Redraws on every key in the search, keeping the caret. */
+/** Redraws on every key in the search (the caret stays where it was). */
 function searchInput(e) {
   if (e.target.id !== 'armorySearch') return;
   view.q = e.target.value;
-  const caret = e.target.selectionStart;
   renderArmory();
-  const search = $('#armorySearch');
-  search.focus();
-  search.setSelectionRange(caret, caret);
 }
 
 const NOT_ARMORY = 'This file is not an Armory exported from the tracker.';

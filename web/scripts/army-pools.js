@@ -1,7 +1,7 @@
 // The Army tab's two pools, Leaders and Units & Spells: their filters, sorting and cards.
 import { builder, draftLeader, addFromPool } from './army.js';
 import { allTraits, toggleIn } from './collection.js';
-import { $, store, TAG_ICONS, FAMILIES, state } from './core.js';
+import { $, store, TAG_ICONS, FAMILIES, state, focusKey, refocus } from './core.js';
 import { iconImage } from './drawer.js';
 import { esc } from './lib/format.js';
 import { traitPicker } from './trait-picker.js';
@@ -98,6 +98,7 @@ export function renderPool(kind, scrollTop = 0) {
     scope: kind, traits, filter: p, open: builder.poolTraitOpen === kind, query: builder.poolTraitQ[kind] || '',
     label: `Traits${p.traits.length ? ` (${p.traits.length})` : ''}`, buttonClass: 'chip small-chip',
   });
+  const focused = focusKey(el); // (a filter that was clicked keeps the focus)
   el.innerHTML = `<div class="pool-head">
       <h2>${kind === 'leaders' ? 'Leaders' : 'Units & Spells'}</h2>
       <input class="pool-search" type="search" data-pool-search="${kind}" placeholder="Search…" value="${esc(p.q)}">
@@ -117,6 +118,7 @@ export function renderPool(kind, scrollTop = 0) {
     })()}
     <div class="pool-well"><div class="pool-grid" id="pool-grid-${kind}"></div></div>`;
   renderPoolGrid(kind, scrollTop);
+  refocus(el, focused);
 }
 
 export function renderPoolGrid(kind, scrollTop = 0) {

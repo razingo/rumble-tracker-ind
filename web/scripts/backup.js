@@ -24,11 +24,13 @@ async function restoreBackup(what, restore) {
     setState(null);
     await poll();
     const named = (keys) => keys.map((k) => LABELS[k] || k).join(', ');
-    const leftOut = r.leftOut?.length
-      ? `Left out, as they did not hold what the tracker keeps: ${named(r.leftOut)}.` : '';
-    if (!r.restored.length) {
-      alertDialog(`Nothing in this backup could be restored.${leftOut ? `\n\n${leftOut}` : ''}`, { title: 'Not restored' });
-    } else alertDialog(`Restored ${named(r.restored)}.${leftOut ? `\n\n${leftOut}` : ''}`, { title: 'Backup restored' });
+    const notes = [
+      r.leftOut?.length ? `Left out, as they did not hold what the tracker keeps: ${named(r.leftOut)}.` : '',
+      r.incomplete?.length ? `Restored only in part, as some of what they held was not what the tracker keeps: ${
+        named(r.incomplete)}. Report a problem lists what was left out.` : '',
+    ].filter(Boolean).map((n) => `\n\n${n}`).join('');
+    if (!r.restored.length) alertDialog(`Nothing in this backup could be restored.${notes}`, { title: 'Not restored' });
+    else alertDialog(`Restored ${named(r.restored)}.${notes}`, { title: 'Backup restored' });
   } catch (err) {
     alertDialog(err.message, { title: 'Not restored' });
   }

@@ -11,7 +11,7 @@ import { seasonAt, rankOf, nextRank, setAt, record, streak, matchesWithMods, mod
 // The modifiers chosen to filter the win rate, kept between visits.
 let chosenMods = store.get('pvpMods', []);
 
-// The row of the match that was just marked, as a selector for its first button, until the tab is drawn again.
+// The row of the match that was just marked, as { selector } for its first button, until the tab is drawn again.
 let marked = null;
 
 let PVP = null;
@@ -333,10 +333,13 @@ export function bindPvp() {
     b.disabled = true;
     try {
       await post('/api/pvp/result', { account: state.account, t: b.dataset.time, result: b.dataset.pvpResult || null });
-      marked = `button[data-pvp-result][data-time="${CSS.escape(b.dataset.time)}"]`;
+      marked = { selector: `button[data-pvp-result][data-time="${CSS.escape(b.dataset.time)}"]` };
     } catch (err) {
+      b.disabled = false; // (nothing changed, so nothing is drawn anew: it can be tried again)
       alertDialog(err.message, { title: 'Not saved' });
     }
-    poll();
+    await poll();
+    // the tab drawn after the poll has used it by now; on another tab it is not kept for a later visit
+    setTimeout(() => { marked = null; });
   });
 }

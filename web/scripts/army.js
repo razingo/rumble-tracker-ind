@@ -3,7 +3,7 @@ import { poll } from './app.js';
 import { encodeArmyCode, decodeArmyCode } from './army-code.js';
 import { pools, savePools, matchingSlots, renderPool, renderPoolGrid, updatePool, poolClick, poolFiltered } from './army-pools.js';
 import { toggleIn } from './collection.js';
-import { $, post, copyText, RULES, BY_SLUG, TAG_ICONS, FAMILY_PAIRS, state } from './core.js';
+import { $, post, copyText, RULES, BY_SLUG, TAG_ICONS, FAMILY_PAIRS, state, focusKey, refocus } from './core.js';
 import { confirmDialog, alertDialog } from './dialogs.js';
 import { iconImage, openDrawer } from './drawer.js';
 import { SECOND } from './lib/constants.js';
@@ -269,21 +269,10 @@ export function renderArmy() {
       <section class="panel pool" id="pool-units"></section>
     </div>`;
   POOLS.forEach((kind, i) => renderPool(kind, scrolled[i]));
-  if (focused) page.querySelector(focused)?.focus({ preventScroll: true });
+  refocus(page, focused);
 }
 
 const POOLS = ['leaders', 'units'];
-// The tab's buttons that keep the focus over a redraw, by the attribute that names each.
-const FOCUSABLE = ['data-pool-slug', 'data-army-slot', 'data-army-talent', 'data-army-action'];
-/** A selector for the button of the tab that has the focus, to give it back after a redraw; null when none has. */
-function focusKey(page) {
-  const el = document.activeElement;
-  if (!el || !page.contains(el)) return null;
-  const attr = FOCUSABLE.find((a) => el.hasAttribute(a));
-  if (!attr) return null;
-  const kind = attr === 'data-pool-slug' ? `[data-pool-kind="${el.dataset.poolKind}"]` : '';
-  return `[${attr}="${CSS.escape(el.getAttribute(attr))}"]${kind}`;
-}
 
 // Placing minis
 function placeLeader(slug) {

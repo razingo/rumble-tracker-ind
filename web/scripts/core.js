@@ -73,21 +73,51 @@ export function showMessage(el, text, kind = '') {
   if (kind) el.classList.add({ good: 'text-good', warn: 'text-warn', code: 'mono' }[kind]);
 }
 
+const dataSelector = (el) => [...el.attributes].filter((a) => a.name.startsWith('data-'))
+  .map((a) => `[${a.name}="${CSS.escape(a.value)}"]`).join('');
 /**
- * A selector for the element inside `root` that has the focus, to give the focus back after `root` is drawn anew
- * (refocus): the element's tag and its data attributes, which tell the page's buttons apart, or the summary of a
- * details by that one's class. Null when nothing in `root` has the focus, or what has it can't be told apart.
+ * What names the element inside `root` that has the focus, to give the focus back after `root` is drawn anew
+ * (refocus): { selector, nth (which of the elements the selector finds), caret (of a text field) }. The selector is
+ * the element's id, or its tag and data attributes, which tell the page's buttons apart; the summary of a details goes
+ * by that one's class, and a field without either by its classes. Null when nothing in `root` has the focus, or what
+ * has it can't be told apart.
+ * `loose`: data attributes that name an element whatever their value (a button that changes it when clicked).
+ * `within`: a selector for the part of `root` an element belongs to (a card), where every part has the same fields.
  */
-export function focusKey(root) {
+export function focusKey(root, { loose = [], within = '' } = {}) {
   const el = document.activeElement;
   if (!root || !el || el === root || !root.contains(el)) return null;
-  if (el.tagName === 'SUMMARY') return el.parentElement.classList.length ? `details.${el.parentElement.classList[0]} > summary` : null;
-  const data = [...el.attributes].filter((a) => a.name.startsWith('data-'));
-  return data.length ? el.tagName.toLowerCase() + data.map((a) => `[${a.name}="${CSS.escape(a.value)}"]`).join('') : null;
+  const tag = el.tagName.toLowerCase(), free = loose.find((a) => el.hasAttribute(a));
+  let selector;
+  if (el.id) selector = `#${CSS.escape(el.id)}`;
+  else if (free) selector = `${tag}[${free}]`;
+  else if (tag === 'summary') selector = el.parentElement.classList.length ? `details.${el.parentElement.classList[0]} > summary` : '';
+  else if (dataSelector(el)) selector = tag + dataSelector(el);
+  else if (/^(input|textarea|select)$/.test(tag)) selector = tag + [...el.classList].map((c) => `.${CSS.escape(c)}`).join('');
+  if (!selector || selector === tag) return null;
+  const part = within && el.closest(within);
+  if (part && part !== el && root.contains(part) && dataSelector(part)) selector = `${dataSelector(part)} ${selector}`;
+  let caret = null;
+  try {
+    if (typeof el.selectionStart === 'number') caret = [el.selectionStart, el.selectionEnd];
+  } catch {
+    // a field without a caret
+  }
+  return { selector, nth: [...root.querySelectorAll(selector)].indexOf(el), caret };
 }
-/** Gives the focus to what `key` (from focusKey) names in `root`, if it is still there. */
+/** Gives the focus to what `key` (from focusKey, or { selector }) names in `root`, if it is still there. */
 export function refocus(root, key) {
-  if (key) root.querySelector(key)?.focus({ preventScroll: true });
+  if (!key) return;
+  const found = root.querySelectorAll(key.selector);
+  const el = found[key.nth] || found[0];
+  if (!el) return;
+  el.focus({ preventScroll: true });
+  if (!key.caret) return;
+  try {
+    el.setSelectionRange(...key.caret);
+  } catch {
+    // a field without a caret
+  }
 }
 
 /** Copies text to the clipboard. Returns false when the browser blocks it. */

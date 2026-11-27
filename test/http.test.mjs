@@ -180,7 +180,15 @@ test('backup and restore', async () => {
   assert.equal(res.status, 200);
   assert.ok(res.body.restored.includes('pvp_history'));
   assert.equal(ctx.user.names.accounts[ACC], 'Main');
+  assert.deepEqual(res.body.incomplete, []);
   assert.equal((await api('POST', '/api/restore', { backup: { format: 'x' } })).status, 400);
+  // a part that holds something else for an account is restored without it, and the answer says which part
+  const armies = ctx.user.armies[ACC];
+  const part = await api('POST', '/api/restore', { backup: { ...backup,
+    data: { armies: { [ACC]: [...armies, 7] }, plans: { [ACC]: 'text' }, names: backup.data.names } } });
+  assert.deepEqual([part.body.restored, part.body.incomplete], [['names', 'armies', 'plans'], ['armies', 'plans']]);
+  assert.deepEqual([ctx.user.armies[ACC], ctx.user.plans[ACC]], [armies, undefined]);
+  ctx.errorLog.clear(); // (the two parts left out are noted as problems)
 });
 
 test('notification settings are saved whole, and a request without them changes nothing', async () => {
