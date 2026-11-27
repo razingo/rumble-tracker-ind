@@ -3,6 +3,12 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.4.13
+
+- Army: the keyboard keeps its place on a slot when its mini is removed, as before 0.4.12.
+- Settings: the keyboard keeps its place on a setting after it is changed.
+- Esc in the traits list puts the keyboard back on the Traits button.
+
 ## 0.4.12
 
 - The keyboard also keeps its place on the Army tab's filters above the lists of leaders and minis, and in the
