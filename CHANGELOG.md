@@ -3,6 +3,16 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.5.1
+
+- Switching accounts or restoring a backup while the page refreshes no longer shows an error for a moment, or goes
+  back to the account shown before.
+- Esc closes a window that is open over a mini's side panel first, then the panel. On the Army tab, Esc closes the
+  side panel and leaves an open talent list for the next Esc.
+- Live changes show right after you pick from a list, such as the Army tab's sort; they used to wait for a click
+  somewhere else.
+- The additional data shows as out of date after this update: two of its steps changed. Its content stays the same.
+
 ## 0.5.0
 
 - Switching to another account shows it at once; it used to show only after a click somewhere else.
