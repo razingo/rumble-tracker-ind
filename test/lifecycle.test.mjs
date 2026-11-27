@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { writeFile, readdir } from 'node:fs/promises';
+import { writeFile, readFile, readdir } from 'node:fs/promises';
+import { flushWrites } from '../server/store.mjs';
 import { createUpdater } from '../server/update/updater.mjs';
 import { host } from '../server/host.mjs';
 import { createUpdateChecker } from '../server/update/checker.mjs';
@@ -110,6 +111,24 @@ test('a user file that holds something else than the tracker keeps in it is move
   const moved = (await readdir(ctx.paths.DATA)).filter((n) => n.includes('.corrupt-')).map((n) => n.split('.corrupt-')[0]).sort();
   assert.deepEqual(moved, ['armies.json', 'names.json', 'plans.json']);
   assert.equal(ctx.errorLog.list().length, 3);
+});
+
+test('what a file holds for one account that is something else is dropped, and the other accounts stay', async (t) => {
+  const army = { id: 'x', name: 'Rush', tags: [] };
+  const { ctx, cleanup } = await testContext({ files: { 'armies.json': { a: 7, b: [army] }, 'grid_history.json': { a: [1] },
+    'progress.json': { a: 'text', b: { days: [] } }, 'talents.json': { a: [1], b: { u: [0] } } } });
+  t.after(cleanup); // (also when the test fails)
+  assert.deepEqual(ctx.user.armies, { b: [army] });
+  assert.deepEqual([ctx.user.gridHistory, ctx.user.progress, ctx.user.talents], [{}, { b: { days: [] } }, { b: { u: [0] } }]);
+  assert.equal(ctx.errorLog.list().filter((e) => e.source === 'data file').length, 4);
+  // the files are written as they are now, and none is moved aside
+  await flushWrites();
+  assert.deepEqual(JSON.parse(await readFile(path.join(ctx.paths.DATA, 'armies.json'), 'utf8')), { b: [army] });
+  assert.deepEqual((await readdir(ctx.paths.DATA)).filter((n) => n.includes('.corrupt-')), []);
+  // the same after a restore: repair() says which were changed
+  ctx.user.plans.a = 7;
+  assert.deepEqual(ctx.user.repair(), ['plans']);
+  assert.deepEqual(ctx.user.plans, {});
 });
 
 test('damaged game tables throw, so the caller can have them read again', async (t) => {

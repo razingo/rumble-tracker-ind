@@ -37,10 +37,10 @@ function runsBetween(from, to) {
 /** "2nd Wednesday of every month · 7 days" */
 function ruleText(s) {
   if (s.kind === 'once') return null;
-  const when = s.kind === 'nthWeekday'
+  const rule = s.kind === 'nthWeekday'
     ? `${ordinal(s.nth)} ${WEEKDAY_NAMES[s.weekday]} of ${s.every === 'month' ? 'every month' : MONTH_NAMES[s.month - 1]}`
     : `${s.every === 'month' ? 'Every month on the' : MONTH_NAMES[s.month - 1]} ${ordinal(s.day)}`;
-  return `${when} · ${s.days} days`;
+  return `${rule} · ${s.days} days`;
 }
 
 // Events and their tickets

@@ -79,7 +79,8 @@ export function poolFiltered(kind) {
   const p = pools()[kind];
   return !!(p.q || chosenFactions(kind).length || p.type?.length || p.traits.length);
 }
-export function renderPool(kind) {
+/** Draws a pool; `scrollTop` is where its list was scrolled to before the tab was drawn anew. */
+export function renderPool(kind, scrollTop = 0) {
   const el = $(`#pool-${kind}`);
   if (!el) return;
   const p = pools()[kind];
@@ -115,10 +116,10 @@ export function renderPool(kind) {
       </div>`;
     })()}
     <div class="pool-well"><div class="pool-grid" id="pool-grid-${kind}"></div></div>`;
-  renderPoolGrid(kind);
+  renderPoolGrid(kind, scrollTop);
 }
 
-export function renderPoolGrid(kind) {
+export function renderPoolGrid(kind, scrollTop = 0) {
   const grid = $(`#pool-grid-${kind}`);
   if (!grid) return;
   const items = poolItems(kind);
@@ -129,6 +130,7 @@ export function renderPoolGrid(kind) {
     // Also on first display and on resize.
     if (window.ResizeObserver) new ResizeObserver(() => poolFade(grid)).observe(grid);
   }
+  if (scrollTop) grid.scrollTop = scrollTop;
   poolFade(grid);
 }
 

@@ -115,7 +115,10 @@ export function createRoutes(ctx, deps) {
         pending: sentLog.pending.length, playing: await deps.gameRunning() }];
     },
     'POST /api/notifications': async (req) => {
-      replaceContents(ctx.user.notifySettings, cleanSettings((await readBody(req)).settings));
+      const { settings } = await readBody(req);
+      // (without them, every setting would go back to what it is at first)
+      if (!isRecord(settings)) return [400, { error: 'The notification settings were not sent. Reload the page and try again.' }];
+      replaceContents(ctx.user.notifySettings, cleanSettings(settings));
       await ctx.user.save('notifySettings');
       return [200, { ok: true, settings: ctx.user.notifySettings }];
     },

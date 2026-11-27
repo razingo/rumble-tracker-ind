@@ -38,6 +38,29 @@ const SHAPES = {
 /** Whether `value` is what a backup may hold under `key`: a restore leaves out a part that is something else. */
 export const backupShape = (key, value) => (SHAPES[BACKUP_KEYS[key]] || isRecord)(value);
 
+// What the files that are kept by account hold for each one. A file may be whole and still hold something else for
+// an account (one changed by hand, or a backup of such a file): that account's part is dropped, the others stay.
+const list = (ok) => (v) => Array.isArray(v) && v.every(ok);
+const BY_ACCOUNT = {
+  talents: isRecord, army: isRecord, drafts: isRecord, plans: isRecord,
+  armies: list(isRecord),
+  gridHistory: list((g) => isRecord(g) && Array.isArray(g.items)),
+  pvpHistory: list(isRecord),
+  progress: (p) => isRecord(p) && (p.first == null || isRecord(p.first)) && list(isRecord)(p.days),
+};
+/** Drops the accounts' parts of `files` ({ property: contents }) that hold something else: [[property, account]]. */
+export function dropBadParts(files) {
+  const dropped = [];
+  for (const [prop, ok] of Object.entries(BY_ACCOUNT)) {
+    for (const [account, part] of Object.entries(files[prop] || {})) {
+      if (ok(part)) continue;
+      delete files[prop][account];
+      dropped.push([prop, account]);
+    }
+  }
+  return dropped;
+}
+
 /** App settings with unknown or missing values replaced by the defaults. */
 export const cleanAppSettings = (s) => ({
   closeWindow: Object.hasOwn(CLOSE_CHOICES, s?.closeWindow ?? '') ? s.closeWindow : 'ask',
@@ -73,14 +96,25 @@ export async function loadUserData(ctx) {
     save: (key) => writeJson(path.join(dir, FILES[key]), u[key]),
     /** The files a backup holds, by backup key. */
     backupFiles: () => Object.fromEntries(Object.entries(BACKUP_KEYS).map(([k, prop]) => [k, u[prop]])),
-    /** After a restore, fills in what older, partial or hand-edited backups may lack. */
+    /**
+     * After a restore, fills in what older, partial or hand-edited backups may lack, and drops what they hold for an
+     * account that is something else than the tracker keeps there (noted as a problem). Returns the properties it
+     * dropped something from.
+     */
     repair() {
       u.names.accounts ??= {};
       u.names.units ??= {};
       Object.assign(u.appSettings, cleanAppSettings(u.appSettings));
       Object.assign(u.notifySettings, cleanSettings(u.notifySettings));
+      const dropped = dropBadParts(u);
+      for (const [prop, account] of dropped) {
+        ctx.errorLog.add('data file', `${FILES[prop]} held something else than the tracker keeps for account …${account.slice(16, 24)}. `
+          + 'That part was left out; the other accounts in the file are as they were.');
+      }
+      return [...new Set(dropped.map(([prop]) => prop))];
     },
   };
-  u.repair();
+  // (a file a part was dropped from is written as it is now, so the same is not found at every start)
+  for (const prop of u.repair()) await u.save(prop);
   return u;
 }

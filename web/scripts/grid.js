@@ -16,7 +16,7 @@ export async function loadStore() {
 
 let eligibleOpen = false; // whether the "Can be offered" list is open, kept across redraws
 
-const isLeaderSlug =(slug) => BY_SLUG.get(slug)?.category === 'Leader';
+const isLeaderSlug = (slug) => BY_SLUG.get(slug)?.category === 'Leader';
 
 /** How many other minis must be offered before one comes back, by kind. */
 function cooldownLimits() {
@@ -39,7 +39,7 @@ function gridCooldowns() {
   const out = new Map();
   const seen = new Set();
   const counters = { mini: 0, leader: 0 };
-  for (const g of [...state.gridHistory].reverse()) {
+  for (const g of [...(state.gridHistory || [])].reverse()) {
     const fresh = g.items.filter((x) => x.slug && !seen.has(x.slug));
     for (const x of fresh) {
       seen.add(x.slug);

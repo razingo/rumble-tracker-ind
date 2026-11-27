@@ -183,6 +183,16 @@ test('backup and restore', async () => {
   assert.equal((await api('POST', '/api/restore', { backup: { format: 'x' } })).status, 400);
 });
 
+test('notification settings are saved whole, and a request without them changes nothing', async () => {
+  const settings = (await api('GET', '/api/notifications')).body.settings;
+  settings.quiet.on = true;
+  assert.equal((await api('POST', '/api/notifications', { settings })).body.settings.quiet.on, true);
+  for (const body of [{}, { settings: null }, { settings: [1] }]) {
+    assert.equal((await api('POST', '/api/notifications', body)).status, 400, JSON.stringify(body));
+  }
+  assert.equal(ctx.user.notifySettings.quiet.on, true);
+});
+
 test('turns Start with Windows on and off', async () => {
   assert.equal((await api('GET', '/api/settings')).body.startWithWindows, false);
   assert.equal((await api('POST', '/api/settings', { startWithWindows: true })).body.startWithWindows, true);

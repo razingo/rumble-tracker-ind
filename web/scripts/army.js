@@ -244,7 +244,11 @@ export function renderArmy() {
   const d = builder.draft;
   const leader = draftLeader();
   const stats = armyStats(d);
-  $('#tab-army').innerHTML = `${armyToolbar(d)}
+  const page = $('#tab-army');
+  // the tab is drawn anew: the lists stay where they were scrolled to, and the focus on the button it was on
+  const scrolled = POOLS.map((kind) => $(`#pool-grid-${kind}`)?.scrollTop || 0);
+  const focused = focusKey(page);
+  page.innerHTML = `${armyToolbar(d)}
     <div class="army-wrap panel board-${leader ? String(familiesOf(miniOf(leader))[0]).toLowerCase() : 'neutral'}">
       <div class="army-head">
         <div class="army-stat" title="Average level"><span class="hex">⬢</span>${stats.avgLevel}</div>
@@ -264,8 +268,21 @@ export function renderArmy() {
       <section class="panel pool" id="pool-leaders"></section>
       <section class="panel pool" id="pool-units"></section>
     </div>`;
-  renderPool('leaders');
-  renderPool('units');
+  POOLS.forEach((kind, i) => renderPool(kind, scrolled[i]));
+  if (focused) page.querySelector(focused)?.focus({ preventScroll: true });
+}
+
+const POOLS = ['leaders', 'units'];
+// The tab's buttons that keep the focus over a redraw, by the attribute that names each.
+const FOCUSABLE = ['data-pool-slug', 'data-army-slot', 'data-army-talent', 'data-army-action'];
+/** A selector for the button of the tab that has the focus, to give it back after a redraw; null when none has. */
+function focusKey(page) {
+  const el = document.activeElement;
+  if (!el || !page.contains(el)) return null;
+  const attr = FOCUSABLE.find((a) => el.hasAttribute(a));
+  if (!attr) return null;
+  const kind = attr === 'data-pool-slug' ? `[data-pool-kind="${el.dataset.poolKind}"]` : '';
+  return `[${attr}="${CSS.escape(el.getAttribute(attr))}"]${kind}`;
 }
 
 // Placing minis

@@ -3,7 +3,7 @@
 import { chartFrame, yLabel, linePath } from './chart.js';
 import { $, RULES, state } from './core.js';
 import { HOUR, DAY } from './lib/constants.js';
-import { esc, fmt, dateTime, dayWithYear, span } from './lib/format.js';
+import { esc, fmt, dateTime, dayWithYear } from './lib/format.js';
 import { balance, currencyName, remainingToLegendary } from './units.js';
 
 const MIN_SPAN = 12 * HOUR; // minimum history for rates
