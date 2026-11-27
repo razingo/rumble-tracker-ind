@@ -92,7 +92,7 @@ test('the real builder: a step is due when its own script or inputs changed, eve
   }
 });
 
-test('a working folder is gone by only when the last build left it whole', async () => {
+test('a working folder is trusted only when the last build left it whole', async () => {
   const { dir, cleanup } = await testContext();
   try {
     const work = path.join(dir, 'work');

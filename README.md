@@ -102,8 +102,7 @@ A mini that a patch adds is read with the rest, once the game's files name it.
   the login tokens stored next to it.
 - It sends nothing about you anywhere. Its only request to the internet asks GitHub for the tracker's latest version,
   when its window opens and once a day, and can be turned off in **⚙ Settings**; a new version is downloaded only when
-  you click *Download now*.
-  *Report a problem* and the other links open in your own browser.
+  you click *Download now*. *Report a problem* and the other links open in your own browser.
 - The local page is only reachable from this PC, and only by the tracker's own page.
 
 ## Found a problem?
@@ -171,11 +170,11 @@ Environment variables for development and testing:
 
 | Folder | What |
 |---|---|
-| `server/` | The local server. `main.mjs` starts the parts and runs the timers. `host.mjs` connects it to the exe's launcher when there is one. Also the shared state (`context.mjs`), game tables (`tables.mjs`), the user's files (`userdata.mjs`, `store.mjs`), the page's state (`state.mjs`), backups, request filtering (`guard.mjs`), Start with Windows (`autostart.mjs`), the problem report's details (`report.mjs`), downloads with a size limit (`download.mjs`) and the Windows programs it runs (`system.mjs`) |
+| `server/` | The local server. `main.mjs` starts the parts and runs the timers. `host.mjs` connects it to the exe's launcher when there is one. Also the shared state (`context.mjs`), game tables (`tables.mjs`), the user's files (`userdata.mjs`, `store.mjs`), the page's state (`state.mjs`), backups, request filtering (`guard.mjs`), Start with Windows (`autostart.mjs`), the problem report's details (`report.mjs`), moving the tracker's folder (`storage.mjs`), downloads with a size limit (`download.mjs`) and the Windows programs it runs (`system.mjs`) |
 | `server/scan/` | Reading the save on a timer (`scanner.mjs`) and the history kept from it (`history.mjs`) |
 | `server/http/` | The HTTP server and static files (`server.mjs`), the API routes (`routes.mjs`) and the handlers that change the user's data (`handlers.mjs`) |
 | `server/update/` | New versions: asking GitHub for the latest release (`checker.mjs`), the download and its checks (`appupdate.mjs`), and *Download now* (`updater.mjs`) |
-| `server/game/` | The save: reading it from the registry (`prefs.mjs`), decoding it (`model.mjs`, with `web/scripts/lib/protobuf.js`), currency names, PvP match results and whether the game runs (`watch.mjs`) |
+| `server/game/` | The save: reading it from the registry (`prefs.mjs`), decoding it (`model.mjs`, with `web/scripts/lib/protobuf.js`), currency names, PvP match results, whether the game runs (`watch.mjs`) and the game's folder when it is given by hand (`folder.mjs`) |
 | `server/notifications/` | What's due (`notify.mjs`), sending it (`runner.mjs`) and the Windows notification itself (`toast.mjs`) |
 | `server/gamedata.mjs` | Reading the game data from the game install: the first time behind a loading page, after a game patch in the background |
 | `web/` | The page. `scripts/app.js` starts it and switches tabs, `core.js` holds what the modules share, and each tab, dialog and menu has its own module; the Army tab also has `army-code.js` (army codes) and `army-pools.js`. `scripts/lib/` has the code the server and build tools use too: shared names and units, formatting, the protobuf reader and writer, schedules, PvP seasons, input limits and the reward-tree planner. `styles/style.css` is the page's look; `styles/art.css` adds the textures and frames from the game files |

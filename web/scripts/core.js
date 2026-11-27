@@ -84,10 +84,9 @@ const dataSelector = (el) => [...el.attributes].filter((a) => a.name.startsWith(
 /**
  * What names the element inside `root` that has the focus, to give the focus back after `root` is drawn anew
  * (refocus): { selector, nth (which of the elements the selector finds), caret (of a text field), picked (it is the
- * list or slider last picked in) }. The selector is
- * the element's id, or its tag and data attributes, which tell the page's buttons apart; the summary of a details goes
- * by that one's class, and a field without either by its classes. Null when nothing in `root` has the focus, or what
- * has it can't be told apart.
+ * list or slider last picked in) }. The selector is the element's id, or its tag and data attributes, which tell the
+ * page's buttons apart; the summary of a details goes by that one's class, and a field without either by its classes.
+ * Null when nothing in `root` has the focus, or what has it can't be told apart.
  * `loose`: data attributes that name an element whatever their value (a button that changes it when clicked).
  * `within`: a selector for the part of `root` an element belongs to (a card), where every part has the same fields.
  */

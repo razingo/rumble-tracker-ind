@@ -72,8 +72,7 @@ shows is extracted, and a step that runs again first clears what it wrote before
 which family a two-family mini is filed under, the order it keeps talents in, the colors and names of rarities and
 army slots, and which of the save's currencies is which. A mini added by a game patch needs no new exe: it gets its
 key from its name when the game data is read. A faction the tracker doesn't know yet is filed under Neutral until a
-new version of the tracker names it.
-The level and upgrade rules and the army code numbers are read from the game too.
+new version of the tracker names it. The level and upgrade rules and the army code numbers are read from the game too.
 
 Each step of the reading has a version, made of its own script, its inputs, its settings (an image size, for
 example) and the versions of the tools it uses (Python and its packages). After a new version of the tracker, only
@@ -107,6 +106,7 @@ fails when something is behind; taking a newer version means editing its pin and
 | WebView2 libraries | Microsoft's, BSD-style | `THIRD-PARTY-NOTICES` in the zip |
 | Python | PSF | `THIRD-PARTY-NOTICES` in the zip |
 | UnityPy, Pillow, lz4, Brotli, texture2ddecoder, etcpak, astc-encoder-py, archspec, fsspec, attrs, tpk_ar | each its own | `THIRD-PARTY-NOTICES` in the zip |
+| Lilita One and Nunito, the page's fonts | SIL Open Font License 1.1 | `THIRD-PARTY-NOTICES` in the zip |
 
 UnityPy's audio package (fmod_toolkit, which holds FMOD's libraries) is left out. An empty stand-in takes its place,
 as nothing here reads audio through it.

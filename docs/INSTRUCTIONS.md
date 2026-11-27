@@ -54,8 +54,8 @@ still missing.
 
 Further down, filter the grid of minis by type (units, leaders, spells), faction and traits, and use *Show* (owned, or
 owned + not owned) and *Sort*. *Neutral* holds the minis of no faction, and those of a faction the tracker doesn't
-know yet. Click a mini for its details: level, XP, stars and rarity, the next upgrade and its cost,
-traits and talents, and its stats, which the slider shows at any level.
+know yet. Click a mini for its details: level, XP, stars and rarity, the next upgrade and its cost, traits and
+talents, and its stats, which the slider shows at any level.
 
 A leader's details also hold its **Army slots**. Copy each slot's type and tier (Bronze to Diamond) and the Boost from
 the game's Army screen: the Army tab plays minis at the levels these give, and the Valor count above comes from them.

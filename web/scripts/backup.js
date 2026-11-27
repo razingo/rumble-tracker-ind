@@ -85,7 +85,8 @@ export function bindBackupMenu() {
       alertDialog(`The file could not be read (${err.message}).`, { title: 'Not restored' });
       return;
     }
-    await restoreBackup(`the backup from ${backup.created ? dateTime(backup.created) : 'an unknown date'}`,
+    // (a file that holds no backup, `null` included, is refused by the server like any other)
+    await restoreBackup(`the backup from ${backup?.created ? dateTime(backup.created) : 'an unknown date'}`,
       () => post('/api/restore', { backup }));
   });
 }

@@ -3,7 +3,7 @@ MIT License
 Copyright (c) 2026 the Rumble Collection Tracker authors
 
 This license applies to the tracker's own source code only. It does not cover game art, game data or other
-third-party material included with or downloaded by the tracker; see NOTICE.md.
+third-party material included with the tracker or read by it from the game; see NOTICE.md.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

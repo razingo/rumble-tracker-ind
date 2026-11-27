@@ -87,8 +87,7 @@ never replaced by a released one.
 
 Notifications are checked every 30 seconds while the tracker runs (in the tray is enough); each is sent once. The
 first time the tracker has read your save, what is already due is only recorded, so you don't get a burst of old
-notifications.
-Choose them in **⚙ Settings**. Clicking one opens the tracker.
+notifications. Choose them in **⚙ Settings**. Clicking one opens the tracker.
 
 ## Windows integration (RumbleTracker.exe)
 

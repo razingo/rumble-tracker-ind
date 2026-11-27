@@ -54,7 +54,7 @@ const BY_ACCOUNT = {
  * Drops from `files` ({ property: contents }) what the accounts' parts hold that is something else: a whole part, or
  * the entries of its list. Returns [[property, account, the number of entries dropped (null: the whole part)]].
  */
-export function dropBadParts(files) {
+function dropBadParts(files) {
   const dropped = [];
   for (const [prop, { part: ok, entry, list }] of Object.entries(BY_ACCOUNT)) {
     for (const [account, part] of Object.entries(files[prop] || {})) {
