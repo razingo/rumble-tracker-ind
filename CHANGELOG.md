@@ -3,6 +3,20 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.4.9
+
+- G.R.I.D.: the "Can be offered" list no longer closes by itself after a few seconds.
+- Calendar: the keyboard keeps its place in a reward tree when the tab refreshes, and after a reward is picked or a
+  goal is set.
+- With more than one account, the game's version is the newest any of them names. An account not played since a
+  game patch could keep the "game was updated" note from showing.
+- A change in the save shows on the page at once, also when it could not be written to the disk just then.
+- After a tracker update, a reward picture that events and PvP share could go missing until the next game patch.
+- Report a problem: a report no longer mentions a screenshot taken for an earlier one.
+- Uninstalling and the tracker's start check every folder that the note of where its files are lists, not only the
+  first.
+- From source in a browser: a tab's name typed into the address after # opens that tab.
+
 ## 0.4.8
 
 - Restoring a backup says which parts it left out, and says so plainly when nothing in the backup could be restored
