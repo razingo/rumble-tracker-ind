@@ -3,6 +3,13 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.5.0
+
+- Switching to another account shows it at once; it used to show only after a click somewhere else.
+- Settings and Report a problem: Enter in a field no longer closes the window. In Settings it saves the field, and
+  you see whether that worked, such as when a folder you typed is not the game's.
+- Collection: with a mini's side panel and the traits list both open, Esc closes the side panel first.
+
 ## 0.4.13
 
 - Army: the keyboard keeps its place on a slot when its mini is removed, as before 0.4.12.
