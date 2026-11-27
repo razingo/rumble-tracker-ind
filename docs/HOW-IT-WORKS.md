@@ -123,9 +123,9 @@ finds there. A tracker that brings data of its own keeps its own. The backups it
 too as one more file (`found-<date>.json`). *Backup → Import backup…* reads all of them.
 
 If the folder is not there when the tracker starts (its disk is not connected, or the folder was moved, renamed or
-deleted), the tracker does not make a new one by itself. It asks: try again, pick a folder, or quit. In a folder you pick it
-starts empty, also when you pick the same one again, or with a tracker's files if it finds them there; files in
-another place are left as they are.
+deleted), the tracker does not make a new one by itself. It asks: try again, pick a folder, or quit. In a folder you
+pick it starts empty, also when you pick the same one again, or with a tracker's files if it finds them there; files
+in another place are left as they are.
 
 The question, and a message that the tracker can't start, are shown before the tracker's own window can open. They
 have the tracker's look; if that can't be shown, Windows' own message box and folder picker are.
@@ -145,11 +145,10 @@ have the tracker's look; if that can't be shown, Windows' own message box and fo
 backup** saves the same file as *Backup → Export backup* where you choose, and nothing is uninstalled if that file
 isn't saved. The tracker then stops (writing its last backup, as always), and a moment later the exe, the tracker's
 folder, `%APPDATA%\RumbleTracker` and `%LOCALAPPDATA%\RumbleTracker` (whichever of them are there), the Start menu
-shortcut, the
-`rumble-tracker:` link (`HKEY_CURRENT_USER\Software\Classes\rumble-tracker`), Start with Windows and the notification
-settings Windows keeps for the tracker are removed. Next to the exe, only the files from the release zip go; the folder
-goes too if nothing else is left in it. Of the folder you picked, only the `RumbleTracker` folder in it is removed.
-A data folder you set yourself with `RUMBLE_DATA_DIR` is left as it is.
+shortcut, the `rumble-tracker:` link (`HKEY_CURRENT_USER\Software\Classes\rumble-tracker`), Start with Windows and the
+notification settings Windows keeps for the tracker are removed. Next to the exe, only the files from the release zip
+go; the folder goes too if nothing else is left in it. Of the folder you picked, only the `RumbleTracker` folder in it
+is removed. A data folder you set yourself with `RUMBLE_DATA_DIR` is left as it is.
 
 By hand:
 

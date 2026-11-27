@@ -99,7 +99,7 @@ const PYTHON_STEPS = ['Event icons', ...Object.keys(IMAGE_STEPS), 'Card frames']
  * Python found on the PC is taken as it is. They count in the versions of the steps Python runs, as another UnityPy
  * or Pillow may read an image differently.
  */
-export function pythonVersions() {
+function pythonVersions() {
   const file = join(HERE, 'python', 'versions.json');
   return existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : null;
 }
@@ -211,7 +211,7 @@ function runScript(file, args, env) {
  * Python with the packages the image steps need: RUMBLE_PYTHON, the private one beside these scripts (npm run
  * fetch-python; the exe carries it), or a virtual environment in `work`, made on first use.
  */
-export async function python(work, log) {
+async function python(work, log) {
   if (process.env.RUMBLE_PYTHON) return process.env.RUMBLE_PYTHON;
   if (existsSync(OWN_PYTHON)) return OWN_PYTHON;
   const venv = join(work, '.venv'), exe = join(venv, 'Scripts', 'python.exe');

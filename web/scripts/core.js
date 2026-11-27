@@ -57,9 +57,9 @@ async function request(url, options, what) {
 /** Loads JSON. `what` names it for error messages, as in "the event schedule". */
 export const getJson = (url, what) => request(url, undefined, `load ${what}`);
 
-/** Sends JSON. With `keepalive`, the request still finishes when the page closes. */
-export const post = (url, body, { keepalive = false } = {}) => request(url, {
-  method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), keepalive,
+/** Sends JSON. */
+export const post = (url, body) => request(url, {
+  method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
 }, 'do that');
 
 /**
@@ -73,11 +73,18 @@ export function showMessage(el, text, kind = '') {
   if (kind) el.classList.add({ good: 'text-good', warn: 'text-warn', code: 'mono' }[kind]);
 }
 
+// The list or slider last picked in, until it is touched again: it no longer holds redraws back (requestRender in
+// app.js). A redraw that puts a new element in its place passes the mark on (focusKey, refocus).
+let picked = null;
+export const setPicked = (el) => { picked = el; };
+export const isPicked = (el) => el === picked;
+
 const dataSelector = (el) => [...el.attributes].filter((a) => a.name.startsWith('data-'))
   .map((a) => `[${a.name}="${CSS.escape(a.value)}"]`).join('');
 /**
  * What names the element inside `root` that has the focus, to give the focus back after `root` is drawn anew
- * (refocus): { selector, nth (which of the elements the selector finds), caret (of a text field) }. The selector is
+ * (refocus): { selector, nth (which of the elements the selector finds), caret (of a text field), picked (it is the
+ * list or slider last picked in) }. The selector is
  * the element's id, or its tag and data attributes, which tell the page's buttons apart; the summary of a details goes
  * by that one's class, and a field without either by its classes. Null when nothing in `root` has the focus, or what
  * has it can't be told apart.
@@ -103,7 +110,7 @@ export function focusKey(root, { loose = [], within = '' } = {}) {
   } catch {
     // a field without a caret
   }
-  return { selector, nth: [...root.querySelectorAll(selector)].indexOf(el), caret };
+  return { selector, nth: [...root.querySelectorAll(selector)].indexOf(el), caret, picked: isPicked(el) };
 }
 /** Gives the focus to what `key` (from focusKey, or { selector }) names in `root`, if it is still there. */
 export function refocus(root, key) {
@@ -112,6 +119,7 @@ export function refocus(root, key) {
   const el = found[key.nth] || found[0];
   if (!el) return;
   el.focus({ preventScroll: true });
+  if (key.picked) picked = el;
   if (!key.caret) return;
   try {
     el.setSelectionRange(...key.caret);

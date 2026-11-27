@@ -8,7 +8,7 @@ import { bindClosing } from './closing.js';
 import { renderCurrencies, renderSummary, renderNeeds, renderPlanner, renderFilters, renderGrid, renderEvents,
   bindCollection } from './collection.js';
 import { $, store, getJson, post, RULES, ALWAYS_OWNED, state, dirty, setTables, setState, setDirty,
-  resetTableCaches, ui } from './core.js';
+  resetTableCaches, ui, isPicked, setPicked } from './core.js';
 import { confirmDialog, alertDialog } from './dialogs.js';
 import { panel, renderDrawer, bindDrawer } from './drawer.js';
 import { renderGridTab, bindGridTab } from './grid.js';
@@ -183,31 +183,27 @@ export async function poll() {
 // Defer redraws while the user is editing a field. (Not for the lists in the header and above the grid: a redraw
 // leaves them as they are, and picking an account has to show at once though its list keeps the keyboard.)
 const LIVE_LISTS = ['account', 'show', 'sort'];
-// Any other list or slider holds redraws only until something is picked in it: this is the one last picked in,
-// until it is touched again.
-let picked = null;
+// Any other list or slider holds redraws only until something is picked in it: from then on it is the picked one
+// (core.js), until it is touched again.
 function requestRender() {
   const a = document.activeElement;
-  if (a && a.matches('input, select, textarea') && !a.closest('.drawer-body') && !LIVE_LISTS.includes(a.id) && a !== picked) {
+  if (a && a.matches('input, select, textarea') && !a.closest('.drawer-body') && !LIVE_LISTS.includes(a.id) && !isPicked(a)) {
     setDirty(true);
     return;
   }
   setDirty(false);
-  const wasPicked = Boolean(a) && a === picked;
   render();
-  // (the redraw may have put a new list in its place: the one that has the focus now)
-  if (wasPicked) picked = document.activeElement;
 }
 const afterEdit = () => setTimeout(() => { if (dirty) requestRender(); }, 0);
 document.addEventListener('focusout', afterEdit);
 document.addEventListener('change', (e) => {
   if (!e.target.matches('select, input[type="range"]')) return;
   // (a list whose own handler has redrawn it by now is gone from the page: the new one has the focus)
-  picked = e.target.isConnected ? e.target : document.activeElement;
+  setPicked(e.target.isConnected ? e.target : document.activeElement);
   afterEdit();
 });
 for (const touch of ['pointerdown', 'keydown']) {
-  document.addEventListener(touch, (e) => { if (e.target === picked) picked = null; }, true);
+  document.addEventListener(touch, (e) => { if (isPicked(e.target)) setPicked(null); }, true);
 }
 
 // Each tab's page, apart from Collection, which render() always redraws

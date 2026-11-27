@@ -96,10 +96,10 @@ test('a working folder is gone by only when the last build left it whole', async
   const { dir, cleanup } = await testContext();
   try {
     const work = path.join(dir, 'work');
-    await mkdir(path.join(work, 'effects'), { recursive: true });
+    await mkdir(path.join(work, 'lists'), { recursive: true });
     await mkdir(path.join(work, '.venv'));
     await writeFile(path.join(work, 'index.json'), '{"a":1}');
-    await writeFile(path.join(work, 'effects', 'index.json'), '[1,2,3]');
+    await writeFile(path.join(work, 'lists', 'index.json'), '[1,2,3]');
     await writeFile(path.join(work, '.venv', 'pip.json'), '{}');
     assert.equal(workWhole(work), true, 'a folder from before sizes were written down is taken as it is');
     // a build of everything that never finished
@@ -107,11 +107,11 @@ test('a working folder is gone by only when the last build left it whole', async
     assert.equal(workWhole(work), false);
     closeWork(work);
     assert.equal(workWhole(work), true);
-    assert.deepEqual(JSON.parse(await readFile(path.join(work, 'sizes.json'), 'utf8')), { 'effects/index.json': 7, 'index.json': 7 });
+    assert.deepEqual(JSON.parse(await readFile(path.join(work, 'sizes.json'), 'utf8')), { 'index.json': 7, 'lists/index.json': 7 });
     // a file cut off, then gone
-    await writeFile(path.join(work, 'effects', 'index.json'), '[1,');
+    await writeFile(path.join(work, 'lists', 'index.json'), '[1,');
     assert.equal(workWhole(work), false);
-    await rm(path.join(work, 'effects', 'index.json'));
+    await rm(path.join(work, 'lists', 'index.json'));
     assert.equal(workWhole(work), false);
     // a build of some steps that did not finish: its steps are still due, and write their files again
     openWork(work, false);
@@ -158,16 +158,13 @@ test('the tools a step uses count in its version, and only in that step', async 
   const { dir, cleanup } = await testContext();
   try {
     await writeFile(path.join(dir, 'a.py'), 'one');
-    const sources = { Icons: ['a.py'], Sounds: ['a.py'], Tables: ['a.py'] };
-    const versions = (python, decoder) => versionsOf(sources, dir,
-      withTools(withTools({ Icons: ['64'] }, ['Icons', 'Sounds'], python), ['Sounds'], decoder));
-    const before = versions({ python: '3.14.10', packages: { pillow: '13.0.0' } }, 'r2168');
-    const newPillow = versions({ python: '3.14.10', packages: { pillow: '13.1.0' } }, 'r2168');
+    const sources = { Icons: ['a.py'], Frames: ['a.py'], Tables: ['a.py'] };
+    const versions = (python) => versionsOf(sources, dir, withTools({ Icons: ['64'] }, ['Icons', 'Frames'], python));
+    const before = versions({ python: '3.14.10', packages: { pillow: '13.0.0' } });
+    const newPillow = versions({ python: '3.14.10', packages: { pillow: '13.1.0' } });
     assert.notEqual(newPillow.Icons, before.Icons);
+    assert.notEqual(newPillow.Frames, before.Frames, 'a step without settings of its own counts them too');
     assert.equal(newPillow.Tables, before.Tables, 'a step Python does not run stays as it was');
-    const newDecoder = versions({ python: '3.14.10', packages: { pillow: '13.0.0' } }, 'r2200');
-    assert.notEqual(newDecoder.Sounds, before.Sounds);
-    assert.equal(newDecoder.Icons, before.Icons);
     // without the private Python (a Python found on the PC), the settings stand alone
     assert.deepEqual(withTools({ Icons: ['64'] }, ['Icons'], null), { Icons: ['64'] });
   } finally {

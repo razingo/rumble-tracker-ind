@@ -68,8 +68,8 @@ const APP_FILES = [
   ['desktop/uninstall.ps1', []],
   ...WEBVIEW2_LIBS.map((lib) => [`desktop/webview2/${lib}`, []]),
 ];
-// The game-data builder (its working folder, tools/gamedata/work, has no place in the exe; of its Python every file
-// goes in)
+// The game-data builder (its working folder, tools/gamedata/work, and what Python leaves behind when the scripts are
+// run from source have no place in the exe; of its Python every file goes in)
 {
   try {
     await stat(path.join(ROOT, 'tools', 'gamedata', 'python', 'python.exe'));
@@ -78,7 +78,7 @@ const APP_FILES = [
   }
   for (const e of await readdir(path.join(ROOT, 'tools', 'gamedata'), { withFileTypes: true })) {
     if (e.name === 'python') APP_FILES.push(['tools/gamedata/python', null]);
-    else if (e.name !== 'work') APP_FILES.push([`tools/gamedata/${e.name}`, ['.mjs', '.py', '.json']]);
+    else if (e.name !== 'work' && e.name !== '__pycache__') APP_FILES.push([`tools/gamedata/${e.name}`, ['.mjs', '.py', '.json']]);
   }
 }
 async function walk(rel, exts) {

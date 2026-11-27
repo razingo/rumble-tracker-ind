@@ -1,5 +1,5 @@
-// Reading the game data from the game install: the game's folder given by hand, the first start's loading page, the
-// read in the background after a game patch or a tracker update, and the queue the heavy background jobs share.
+// Reading the game data from the game install: the game's folder given by hand, the first start's loading page, and
+// the read in the background after a game patch or a tracker update.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import net from 'node:net';

@@ -10,7 +10,7 @@ insert_final_newline = true
 trim_trailing_whitespace = true
 max_line_length = 140
 
-# (written in a denser style of their own, and not checked)
+# (their lines may be of any length)
 [*.py]
 indent_size = 4
 max_line_length = off

@@ -7,10 +7,6 @@
   "sprite": "Taskbar_Tex_Background",
   "width": 1800
  },
- "divider": {
-  "sprite": "Global_InfoDivider",
-  "width": 700
- },
  "keyart": {
   "sprite": "LoadingScreen_Tex_Background",
   "width": 1260

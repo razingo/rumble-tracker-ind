@@ -68,8 +68,8 @@ in; the tracker makes the `RumbleTracker` folder there. **⚙ Settings → The t
 it, and moves it: type another folder and the tracker moves its files there and restarts. A small note of where the
 folder is stays in `%APPDATA%\RumbleTracker`.
 
-*Backup → Export backup* in the tracker saves everything
-to one JSON file, which *Import backup…* restores, also on another PC.
+*Backup → Export backup* in the tracker saves everything to one JSON file, which *Import backup…* restores, also on
+another PC.
 
 ### Updating
 
@@ -132,8 +132,8 @@ Start `RumbleTracker.exe` from a Command Prompt or a shortcut to use these:
 
 The tracker's code is MIT-licensed ([LICENSE](LICENSE)). That license doesn't cover the game art and data, which belong
 to Blizzard Entertainment ([NOTICE.md](NOTICE.md)). The exe contains the Node.js runtime, Microsoft's WebView2
-libraries, two open-licensed fonts, Python with the packages that read the game's images;
-their licenses are in `THIRD-PARTY-NOTICES` in the zip.
+libraries, two open-licensed fonts, and Python with the packages that read the game's images; their licenses are in
+`THIRD-PARTY-NOTICES` in the zip.
 
 ## For developers
 
