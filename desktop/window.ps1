@@ -57,7 +57,6 @@ public class RtFrame : Form {
   [StructLayout(LayoutKind.Sequential)] struct Rect { public int Left, Top, Right, Bottom; }
   public int Grip = 6;          // how far in from an edge the window is resized
   public int CaptionHeight = 36; // the strip on top that drags the window
-  public bool Maximized { get { return IsHandleCreated && IsZoomed(Handle); } }
   protected override void WndProc(ref Message m) {
     if (m.Msg == 0x83 && m.WParam != IntPtr.Zero) { // WM_NCCALCSIZE: no frame around the content
       if (IsZoomed(Handle)) {
@@ -214,7 +213,7 @@ try {
 }
 $background = [System.Drawing.ColorTranslator]::FromHtml('#161a2e')
 
-# The windows' own title bar, in the page's look: a dark strip with the icon, the title in gold, and buttons to
+# The window's own title bar, in the page's look: a dark strip with the icon, the title in gold, and buttons to
 # minimize, maximize and close. The strip also is the window's edge on the other three sides, where it is resized.
 $frameColor = [System.Drawing.ColorTranslator]::FromHtml('#1b2036')
 $titleColor = [System.Drawing.ColorTranslator]::FromHtml('#ffd76a')

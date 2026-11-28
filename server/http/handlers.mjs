@@ -144,7 +144,7 @@ export function createHandlers(ctx) {
     async importArmory({ account, file }) {
       if (!isId(account)) return STALE;
       const r = addArmory(u().armies[account] || [], file, ctx.tables.slugs);
-      if (!r) return [400, { error: 'This file is not an armory exported from the tracker.' }];
+      if (!r) return [400, { error: 'This file is not an Armory exported from the tracker.' }];
       u().armies[account] = r.armies;
       return ok('armies', { ok: true, added: r.added, duplicates: r.duplicates, full: r.full });
     },
