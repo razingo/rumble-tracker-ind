@@ -3,6 +3,11 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.6.3
+
+- The Settings button's tip also names the tracker's folder.
+- Armory → Import armory…: the message for a file that is not an Armory reads the same wherever it comes from.
+
 ## 0.6.2
 
 - Backup → Import backup…: a file that holds no backup at all now says so, instead of doing nothing.
