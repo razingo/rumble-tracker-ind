@@ -3,6 +3,10 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.6.4
+
+- Small cleanup inside the page; nothing changes on screen.
+
 ## 0.6.3
 
 - The Settings button's tip also names the tracker's folder.
