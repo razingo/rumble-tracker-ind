@@ -1,8 +1,6 @@
 // API handlers that change the user's data. Each takes the parsed JSON body and returns [status, body]; error
 // messages are shown to the player as they are.
-import { restoreBackup } from '../backup.mjs';
-import { BACKUP_KEYS, backupShape, unitSlug } from '../userdata.mjs';
-import { manualResult } from '../game/pvp.mjs';
+import { unitSlug } from '../userdata.mjs';
 import { LIMITS, cleanTags } from '../../web/scripts/lib/limits.js';
 import { APP_NAME } from '../../web/scripts/lib/constants.js';
 
@@ -62,8 +60,9 @@ export function addArmory(saved, file, slugs) {
 
 export function createHandlers(ctx) {
   const u = () => ctx.user;
-  const ok = async (key, body = { ok: true }, bump = true) => {
-    await u().save(key);
+  /** The answer once `saved` (the write of what changed) is done. */
+  const ok = async (saved, body = { ok: true }, bump = true) => {
+    await saved;
     if (bump) ctx.bump();
     return [200, body];
   };
@@ -79,22 +78,17 @@ export function createHandlers(ctx) {
         const ids = new Set([...Object.keys(ctx.tables.builtinUnits), ...Object.keys(names.units)]);
         const takenBy = [...ids].find((other) => other !== id && unitSlug(ctx, other) === v);
         if (v && takenBy) return [409, { error: 'That mini is already assigned to another unit.', takenBy }];
-        if (v) names.units[id] = v;
-        else delete names.units[id];
-      } else {
-        if (v.length > LIMITS.accountName) return [400, { error: `An account name can be at most ${LIMITS.accountName} characters long.` }];
-        if (v) names.accounts[id] = v;
-        else delete names.accounts[id];
+        return ok(u().setUnitSlug(id, v));
       }
-      return ok('names');
+      if (v.length > LIMITS.accountName) return [400, { error: `An account name can be at most ${LIMITS.accountName} characters long.` }];
+      return ok(u().setAccountName(id, v));
     },
 
     /** Talents the user picked for a unit: { account, unitId, picks: [0..2] }. */
     async talents({ account, unitId, picks }) {
       if (!isId(account) || !isId(unitId) || !Array.isArray(picks)) return STALE;
       const clean = [...new Set(picks.filter(isTalent))].sort();
-      (u().talents[account] ??= {})[unitId] = clean;
-      return ok('talents', { ok: true, picks: clean });
+      return ok(u().setTalents(account, unitId, clean), { ok: true, picks: clean });
     },
 
     /** A leader's army slots: { account, unitId, slots: [{ type, tier, boost? }] }. */
@@ -108,26 +102,23 @@ export function createHandlers(ctx) {
         // Only the bottom-right slot can be a Boost slot.
         ...(i === A.boostSlot && s?.boost === true ? { boost: true } : {}),
       }));
-      (u().army[account] ??= {})[unitId] = clean;
-      return ok('army', { ok: true, slots: clean });
+      return ok(u().setArmySlots(account, unitId, clean), { ok: true, slots: clean });
     },
 
     /** Sets or clears a reward goal: { account, eventId, plan: { cost, label } | null }. */
     async plan({ account, eventId, plan }) {
       if (!isId(account) || typeof eventId !== 'string' || eventId.length > 80) return STALE;
-      const mine = (u().plans[account] ??= {});
-      if (plan && Number.isInteger(plan.cost) && plan.cost > 0) {
-        mine[eventId] = { cost: plan.cost, label: String(plan.label || 'your picks').slice(0, LIMITS.goalLabel),
-          set: new Date().toISOString() };
-      } else delete mine[eventId];
-      return ok('plans');
+      const clean = plan && Number.isInteger(plan.cost) && plan.cost > 0
+        ? { cost: plan.cost, label: String(plan.label || 'your picks').slice(0, LIMITS.goalLabel), set: new Date().toISOString() }
+        : null;
+      return ok(u().setPlan(account, eventId, clean));
     },
 
     /** The army being edited: { account, draft }. No new revision, as the sending page already shows it. */
     async draft({ account, draft }) {
       if (!isId(account) || !draft || typeof draft !== 'object') return STALE;
-      u().drafts[account] = { ...cleanArmy(draft, ctx.tables.slugs, { keepEmptyId: true }), updated: new Date().toISOString() };
-      return ok('drafts', { ok: true }, false);
+      const clean = { ...cleanArmy(draft, ctx.tables.slugs, { keepEmptyId: true }), updated: new Date().toISOString() };
+      return ok(u().setDraft(account, clean), { ok: true }, false);
     },
 
     /** All saved armies of an account: { account, armies }. */
@@ -136,8 +127,7 @@ export function createHandlers(ctx) {
       if (armies.length > LIMITS.savedArmies) return [400, {
         error: `You can keep at most ${LIMITS.savedArmies} saved armies. Delete one first.` }];
       const clean = armies.map((a) => cleanArmy(a, ctx.tables.slugs));
-      u().armies[account] = clean;
-      return ok('armies', { ok: true, armies: clean });
+      return ok(u().setArmies(account, clean), { ok: true, armies: clean });
     },
 
     /** Adds the armies of an exported armory to an account's saved armies: { account, file }. */
@@ -145,16 +135,16 @@ export function createHandlers(ctx) {
       if (!isId(account)) return STALE;
       const r = addArmory(u().armies[account] || [], file, ctx.tables.slugs);
       if (!r) return [400, { error: 'This file is not an Armory exported from the tracker.' }];
-      u().armies[account] = r.armies;
-      return ok('armies', { ok: true, added: r.added, duplicates: r.duplicates, full: r.full });
+      return ok(u().setArmies(account, r.armies), { ok: true, added: r.added, duplicates: r.duplicates, full: r.full });
     },
 
     /** The player's own result for an unexplained PvP change: { account, t, result: 'win' | 'loss' | null }. */
     async pvpResult({ account, t, result }) {
       if (!isId(account) || typeof t !== 'string') return STALE;
-      const entry = (u().pvpHistory[account] || []).find((e) => e.t === t);
-      if (!manualResult(entry, result ?? null)) return [400, { error: 'Only changes marked as unexplained can be set by hand.' }];
-      return ok('pvpHistory');
+      if (!(await u().setPvpResult(account, t, result ?? null))) {
+        return [400, { error: 'Only changes marked as unexplained can be set by hand.' }];
+      }
+      return ok();
     },
 
     /**
@@ -162,14 +152,10 @@ export function createHandlers(ctx) {
      * what was restored the parts that lost some of what they held for an account (`incomplete`).
      */
     async restore({ backup }) {
-      const leftOut = [];
-      const restored = restoreBackup(u().backupFiles(), backup, backupShape, leftOut);
-      if (!restored) return [400, { error: `This file is not a ${APP_NAME} backup.` }];
-      const dropped = u().repair();
-      const incomplete = restored.filter((key) => dropped.includes(BACKUP_KEYS[key]));
-      for (const key of restored) await u().save(BACKUP_KEYS[key]);
+      const r = await u().restore(backup);
+      if (!r) return [400, { error: `This file is not a ${APP_NAME} backup.` }];
       ctx.bump();
-      return [200, { ok: true, restored, leftOut, incomplete, created: backup.created }];
+      return [200, { ok: true, ...r, created: backup.created }];
     },
   };
 }

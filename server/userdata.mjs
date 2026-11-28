@@ -1,7 +1,12 @@
-// The user's own files in the data folder: what they entered, and history the save can't give back.
+// The user's own files in the data folder: what they entered, and history the save can't give back. Everything that
+// changes them goes through the object loadUserData returns, so there is one place that knows what changed. The rest
+// of the server reads its parts (user.armies, user.talents, ...) and leaves them as they are.
 import path from 'node:path';
 import { writeJson, isRecord, keepCopy } from './store.mjs';
+import { restoreBackup, replaceContents } from './backup.mjs';
 import { cleanSettings } from './notifications/notify.mjs';
+import { manualResult } from './game/pvp.mjs';
+import { recordProgress, logGrid, recordPvp } from './scan/history.mjs';
 import { CLOSE_CHOICES } from '../web/scripts/lib/constants.js';
 
 // property -> file name
@@ -108,6 +113,87 @@ export async function loadUserData(ctx) {
     notifyBaseline: !notified, // first run: record what is already due without notifying
     /** Saves one file. Writes to the same file are queued. */
     save: (key) => writeJson(path.join(dir, FILES[key]), u[key]),
+
+    // What the player enters. Each takes values that are already checked (http/handlers.mjs) and saves its file.
+    /** Names an account; an empty name takes the name away. */
+    setAccountName(id, name) {
+      if (name) u.names.accounts[id] = name;
+      else delete u.names.accounts[id];
+      return u.save('names');
+    },
+    /** Assigns a mini to a unit ID; an empty slug takes the assignment away. */
+    setUnitSlug(id, slug) {
+      if (slug) u.names.units[id] = slug;
+      else delete u.names.units[id];
+      return u.save('names');
+    },
+    setTalents(account, unitId, picks) {
+      (u.talents[account] ??= {})[unitId] = picks;
+      return u.save('talents');
+    },
+    setArmySlots(account, unitId, slots) {
+      (u.army[account] ??= {})[unitId] = slots;
+      return u.save('army');
+    },
+    /** Sets a reward goal, or clears it with null. */
+    setPlan(account, eventId, plan) {
+      const mine = (u.plans[account] ??= {});
+      if (plan) mine[eventId] = plan;
+      else delete mine[eventId];
+      return u.save('plans');
+    },
+    setDraft(account, draft) {
+      u.drafts[account] = draft;
+      return u.save('drafts');
+    },
+    /** Replaces all saved armies of an account. */
+    setArmies(account, armies) {
+      u.armies[account] = armies;
+      return u.save('armies');
+    },
+    /** The player's own result for the unexplained PvP entry read at `t`. Resolves with false when not allowed. */
+    async setPvpResult(account, t, result) {
+      const entry = (u.pvpHistory[account] || []).find((e) => e.t === t);
+      if (!manualResult(entry, result)) return false;
+      await u.save('pvpHistory');
+      return true;
+    },
+    setNotifySettings(settings) {
+      replaceContents(u.notifySettings, cleanSettings(settings));
+      return u.save('notifySettings');
+    },
+    setAppSetting(key, value) {
+      u.appSettings[key] = value;
+      return u.save('appSettings');
+    },
+
+    // What scans add. Each returns whether it changed something; the scanner saves the files once per scan (save).
+    /** The day's progress sample from a snapshot (scan/history.mjs); 'progress' is then to be saved. */
+    recordProgress: (account, snap, now, rules) => recordProgress(u.progress, account, snap, now, rules),
+    /** A G.R.I.D. when it is a new one; 'gridHistory' is then to be saved. */
+    recordGrid: (account, grid, now) => logGrid(u.gridHistory, account, grid, now),
+    /** A PvP reading when it differs from the last one in `acc`; 'pvpHistory' is then to be saved. */
+    recordPvp: (account, acc, cur, now, vpRules) => recordPvp(u.pvpHistory, account, acc, cur, now, vpRules),
+    /** Takes over a PvP log kept elsewhere by an earlier tracker, unless the account has one here. */
+    adoptPvpLog(account, log) {
+      if (u.pvpHistory[account]) return false;
+      u.pvpHistory[account] = log;
+      return true;
+    },
+
+    /**
+     * Restores a backup file and saves what it restored. Resolves with { restored, leftOut, incomplete }: the backup
+     * keys restored, those left out for what they hold, and of the restored ones those that lost some of what they
+     * held for an account. Null when this isn't a backup.
+     */
+    async restore(backup) {
+      const leftOut = [];
+      const restored = restoreBackup(u.backupFiles(), backup, backupShape, leftOut);
+      if (!restored) return null;
+      const dropped = u.repair();
+      for (const key of restored) await u.save(BACKUP_KEYS[key]);
+      return { restored, leftOut, incomplete: restored.filter((key) => dropped.includes(BACKUP_KEYS[key])) };
+    },
     /** The files a backup holds, by backup key. */
     backupFiles: () => Object.fromEntries(Object.entries(BACKUP_KEYS).map(([k, prop]) => [k, u[prop]])),
     /**

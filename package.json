@@ -1,6 +1,6 @@
 {
   "name": "rumble-tracker-ind",
-  "version": "0.6.8",
+  "version": "0.6.9",
   "private": true,
   "description": "Unofficial Warcraft Rumble collection, army and event tracker in a window of its own (not affiliated with Blizzard Entertainment).",
   "license": "MIT",

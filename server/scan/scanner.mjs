@@ -4,7 +4,6 @@ import { writeJson, isRecord } from '../store.mjs';
 import { parsePvp } from '../game/pvp.mjs';
 import { parseUnits, parseCurrencies, parseActiveEvents, parseIncomeBonuses, parseOwnedAvatars, parseStore,
   parseGameBuild, compareVersions, diffSnapshots } from '../game/model.mjs';
-import { recordProgress, logGrid, recordPvp } from './history.mjs';
 import { accountLabel } from '../userdata.mjs';
 
 const MAX_EVENTS = 500;
@@ -48,10 +47,7 @@ export function createScanner(ctx, { readPrefs }) {
     acc = await ctx.readUserJson(path.join(ctx.paths.STATE, `${id}.json`), { snapshot: null, events: [] }, stateShape);
     ctx.accounts.set(id, acc);
     if (acc.pvpLog) { // the earlier tracker, whose data this one uses, kept the PvP log here
-      if (!ctx.user.pvpHistory[id]) {
-        ctx.user.pvpHistory[id] = acc.pvpLog;
-        dirty.add('pvpHistory');
-      }
+      if (ctx.user.adoptPvpLog(id, acc.pvpLog)) dirty.add('pvpHistory');
       delete acc.pvpLog;
     }
     return acc;
@@ -81,7 +77,7 @@ export function createScanner(ctx, { readPrefs }) {
       changed = true;
     }
     acc.snapshot = cur;
-    if (recordProgress(ctx.user.progress, id, cur, Date.parse(now), rules)) dirty.add('progress');
+    if (ctx.user.recordProgress(id, cur, Date.parse(now), rules)) dirty.add('progress');
     return changed;
   }
 
@@ -98,13 +94,13 @@ export function createScanner(ctx, { readPrefs }) {
     if (entries.store && replace('activeEvents', parseActiveEvents(entries.store))) acc.activeEventsAt = now;
     if (entries.profile) replace('ownedAvatars', parseOwnedAvatars(entries.profile));
     const shop = parseStore(entries.store);
-    if (shop && replace('shop', shop, null) && logGrid(ctx.user.gridHistory, id, shop.grid, now)) dirty.add('gridHistory');
+    if (shop && replace('shop', shop, null) && ctx.user.recordGrid(id, shop.grid, now)) dirty.add('gridHistory');
     if (entries.store) replace('incomeBonuses', parseIncomeBonuses(entries.store));
     return changed;
   }
 
   function updatePvp(acc, id, entries, now, dirty) {
-    if (!recordPvp(ctx.user.pvpHistory, id, acc, parsePvp(entries.pvp), now, ctx.tables.pvp?.victoryPoints)) return false;
+    if (!ctx.user.recordPvp(id, acc, parsePvp(entries.pvp), now, ctx.tables.pvp?.victoryPoints)) return false;
     dirty.add('pvpHistory');
     return true;
   }

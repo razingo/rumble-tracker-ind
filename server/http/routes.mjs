@@ -1,8 +1,8 @@
 // The API: one handler per "METHOD /path", each returning [status, body] and optionally extra headers. The routes
 // that act on the exe (quitting, updates, screenshots, showing the window, uninstalling) exist only when the server
 // runs inside it.
-import { buildBackup, replaceContents, listDailyBackups, readDailyBackup, backupFileName } from '../backup.mjs';
-import { NOTIFY_TYPES, cleanSettings } from '../notifications/notify.mjs';
+import { buildBackup, listDailyBackups, readDailyBackup, backupFileName } from '../backup.mjs';
+import { NOTIFY_TYPES } from '../notifications/notify.mjs';
 import { ISSUES_REPO, diagnostics } from '../report.mjs';
 import { buildState, liveState, resolveAccount, dataStale } from '../state.mjs';
 import { createHandlers, armoryFile } from './handlers.mjs';
@@ -118,8 +118,7 @@ export function createRoutes(ctx, deps) {
       const { settings } = await readBody(req);
       // (without them, every setting would go back to what it is at first)
       if (!isRecord(settings)) return [400, { error: 'The notification settings were not sent. Reload the page and try again.' }];
-      replaceContents(ctx.user.notifySettings, cleanSettings(settings));
-      await ctx.user.save('notifySettings');
+      await ctx.user.setNotifySettings(settings);
       return [200, { ok: true, settings: ctx.user.notifySettings }];
     },
     'POST /api/notifications/test': async () => {
@@ -135,8 +134,7 @@ export function createRoutes(ctx, deps) {
         if (!(await deps.autostart.set(b.startWithWindows))) return [500, { error: 'Windows did not accept the change.' }];
       }
       if (typeof b.checkUpdates === 'boolean') {
-        ctx.user.appSettings.checkUpdates = b.checkUpdates;
-        await ctx.user.save('appSettings');
+        await ctx.user.setAppSetting('checkUpdates', b.checkUpdates);
         deps.checkForUpdate?.();
       }
       if (b.gameFolder !== undefined) {
@@ -150,8 +148,7 @@ export function createRoutes(ctx, deps) {
       if (b.closeWindow !== undefined) {
         if (!ctx.standalone) return [400, { error: 'Closing the window only matters in the RumbleTracker.exe version.' }];
         if (!Object.hasOwn(CLOSE_CHOICES, b.closeWindow)) return [400, { error: 'That is not a choice for closing the window.' }];
-        ctx.user.appSettings.closeWindow = b.closeWindow;
-        await ctx.user.save('appSettings');
+        await ctx.user.setAppSetting('closeWindow', b.closeWindow);
       }
       return [200, { ok: true, ...(await settings()) }];
     },

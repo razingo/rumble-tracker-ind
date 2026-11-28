@@ -3,6 +3,11 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.6.9
+
+- Groundwork inside the tracker: everything that changes your data now goes through one place. Nothing changes on
+  screen.
+
 ## 0.6.8
 
 - Collection: a leader's card lights up under the mouse like the other cards.
