@@ -50,6 +50,10 @@ without it. A file that is whole but holds something else in places (one changed
 and a copy of it as it was stays beside it under the same kind of name. Automatic backups pause until the next start,
 so the damage doesn't replace a good backup: restore the last good one.
 
+When a new version of the tracker changes how it keeps your data, it first writes the data as it was to
+`data\backups\rumble-tracker-backup-before-data-v<number>.json`. That file is not deleted after 7 days; *Import
+backup…* reads it like any other backup.
+
 ## Game data updates
 
 The tracker reads its game data from the Warcraft Rumble installed on this PC. The game's files are only read, and
@@ -128,6 +132,8 @@ in another place are left as they are.
 
 The question, and a message that the tracker can't start, are shown before the tracker's own window can open. They
 have the tracker's look; if that can't be shown, Windows' own message box and folder picker are.
+
+What each data file holds is described in [The tracker's data files](DATA-FORMAT.md).
 
 | Where | What |
 |---|---|

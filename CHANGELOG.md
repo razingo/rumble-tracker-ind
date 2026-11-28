@@ -3,6 +3,12 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.6.10
+
+- Groundwork inside the tracker: your data files now carry a version number, so a later version can change how it
+  keeps your data safely. If it ever does, the data as it was is kept as a backup file first.
+- New for contributors: `docs/DATA-FORMAT.md` describes the data files.
+
 ## 0.6.9
 
 - Groundwork inside the tracker: everything that changes your data now goes through one place. Nothing changes on

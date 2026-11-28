@@ -1,13 +1,17 @@
 import { mkdir, writeFile, rename, readdir, rm, stat, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { localDay } from '../web/scripts/lib/format.js';
+import { SCHEMA } from './migrations.mjs';
 
 // A backup is one JSON file with everything the player entered and the history the save can't give back.
 export const BACKUP_FORMAT = 'rumble-tracker-backup';
 
-/** `files` maps each data file's name (without .json) to its contents. */
-export function buildBackup(files, now = new Date()) {
-  return { format: BACKUP_FORMAT, version: 1, created: now.toISOString(), data: files };
+/**
+ * `files` maps each data file's name (without .json) to its contents. `schema` is the version of what the files hold
+ * (migrations.mjs); `version` is that of the backup file itself.
+ */
+export function buildBackup(files, now = new Date(), schema = SCHEMA) {
+  return { format: BACKUP_FORMAT, version: 1, schema, created: now.toISOString(), data: files };
 }
 
 /** Replaces an object's contents in place (other code holds references to it). */

@@ -356,7 +356,16 @@ function profileBackup(data, now = new Date()) {
       // not there, or not readable
     }
   }
-  return Object.keys(files).length ? { format: 'rumble-tracker-backup', version: 1, created: now.toISOString(), data: files } : null;
+  if (!Object.keys(files).length) return null;
+  // the version of what the files hold (server/migrations.mjs): data without a note of it is version 1
+  let schema = 1;
+  try {
+    const noted = JSON.parse(fs.readFileSync(path.join(data, 'schema.json'), 'utf8')).schema;
+    if (Number.isInteger(noted) && noted >= 1) schema = noted;
+  } catch {
+    // no note
+  }
+  return { format: 'rumble-tracker-backup', version: 1, schema, created: now.toISOString(), data: files };
 }
 
 const PRE_EXISTING = 'pre_existing';

@@ -2,8 +2,10 @@
 // changes them goes through the object loadUserData returns, so there is one place that knows what changed. The rest
 // of the server reads its parts (user.armies, user.talents, ...) and leaves them as they are.
 import path from 'node:path';
-import { writeJson, isRecord, keepCopy } from './store.mjs';
-import { restoreBackup, replaceContents } from './backup.mjs';
+import { mkdir } from 'node:fs/promises';
+import { readJson, writeJson, isRecord, keepCopy } from './store.mjs';
+import { buildBackup, restoreBackup, replaceContents } from './backup.mjs';
+import { SCHEMA, migrate, schemaOf } from './migrations.mjs';
 import { cleanSettings } from './notifications/notify.mjs';
 import { manualResult } from './game/pvp.mjs';
 import { recordProgress, logGrid, recordPvp } from './scan/history.mjs';
@@ -92,8 +94,14 @@ export const accountLabel = (ctx, id) => ctx.user.names.accounts[id] || `Account
 /** The mini a unit ID stands for: the user's assignment, else the game data's, else null. */
 export const unitSlug = (ctx, id) => ctx.user.names.units[id] || ctx.tables.builtinUnits[id] || null;
 
-/** Loads every file (missing ones start empty). */
-export async function loadUserData(ctx) {
+// The note of the version of what the files hold: { schema } (migrations.mjs).
+const SCHEMA_FILE = 'schema.json';
+
+/**
+ * Loads every file (missing ones start empty) and brings data of an older version up to date. `schema` and `steps`
+ * are the version and the steps to it, for tests.
+ */
+export async function loadUserData(ctx, { schema = SCHEMA, steps } = {}) {
   const dir = ctx.paths.DATA;
   const read = (key, fallback) => ctx.readUserJson(path.join(dir, FILES[key]), fallback, SHAPES[key]);
   const notified = await read('sentLog', null); // (its missing parts are filled in below)
@@ -191,7 +199,9 @@ export async function loadUserData(ctx) {
       const restored = restoreBackup(u.backupFiles(), backup, backupShape, leftOut);
       if (!restored) return null;
       const dropped = u.repair();
-      for (const key of restored) await u.save(BACKUP_KEYS[key]);
+      // (a backup from an older tracker; its steps leave alone what is already up to date)
+      const migrated = schemaOf(backup.schema) < schema ? migrate(u, schemaOf(backup.schema), steps) : [];
+      for (const prop of new Set([...restored.map((key) => BACKUP_KEYS[key]), ...migrated])) await u.save(prop);
       return { restored, leftOut, incomplete: restored.filter((key) => dropped.includes(BACKUP_KEYS[key])) };
     },
     /** The files a backup holds, by backup key. */
@@ -222,6 +232,30 @@ export async function loadUserData(ctx) {
     }
     return [...new Set(dropped.map(([prop]) => prop))];
   };
+  /**
+   * Brings data of an older version up to date. The data as it was is kept as a backup file first, which Backup →
+   * Import backup… reads. Data of a newer tracker is used as it is: a newer version only adds to the files.
+   */
+  const upgrade = async () => {
+    const file = path.join(dir, SCHEMA_FILE);
+    const noted = await readJson(file, null).catch(() => null);
+    const from = schemaOf(noted?.schema);
+    if (from > schema) {
+      ctx.errorLog.add('data version', `The data folder was last used by a newer tracker (data version ${from}; this one `
+        + `knows ${schema}). Its data is used as it is.`);
+      return;
+    }
+    if (from < schema) {
+      const before = JSON.stringify(buildBackup(u.backupFiles(), new Date(), from));
+      const changed = migrate(u, from, steps);
+      if (changed.length) {
+        await mkdir(ctx.paths.BACKUPS, { recursive: true });
+        await writeJson(path.join(ctx.paths.BACKUPS, `rumble-tracker-backup-before-data-v${schema}.json`), JSON.parse(before));
+        for (const prop of changed) await u.save(prop);
+      }
+    }
+    if (noted?.schema !== schema) await writeJson(file, { schema });
+  };
   // A file something was dropped from is written as it is now, so the same is not found at every start; a copy of it
   // as it was stays beside it.
   fillIn();
@@ -230,5 +264,6 @@ export async function loadUserData(ctx) {
     kept[prop] = await keepCopy(path.join(dir, FILES[prop])).catch(() => null);
   }
   for (const prop of report(dropped, kept)) await u.save(prop);
+  await upgrade();
   return u;
 }
