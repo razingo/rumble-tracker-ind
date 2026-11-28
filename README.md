@@ -1,5 +1,7 @@
 # Rumble Collection Tracker
 
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/razingo)
+
 An unofficial collection, army and event tracker for **Warcraft Rumble on PC**. It reads your progress from the
 game's saved data on your own PC (read-only) and shows it in a window of its own: your minis and their levels, talents
 and upgrade costs, armies, the G.R.I.D. and what's on cooldown, events and reward trees, shop offers, PvP seasons,
