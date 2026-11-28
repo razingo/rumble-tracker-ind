@@ -192,8 +192,7 @@ function armySlot(i, s, leader) {
       title="Talent: ${esc(talent.name)}. Click to choose another.">${iconImage(talent.icon,
       talent.name).replace('class="icon"', 'class="icon talent-icon"')}</button>`
     : '';
-  return `<div class="${cls}" data-army-drop-slot="${i}" style="--type-color:${tier.color};--rarity-color:${u
-    ? rarityColor(u.rarity) : 'var(--line)'}">
+  return `<div class="${cls}" data-army-drop-slot="${i}" style="--rarity-color:${u ? rarityColor(u.rarity) : 'var(--line)'}">
     <div class="army-slot-head${typeIcon ? ' has-icon' : ''}" title="${esc(typeLabel)} · ${tier.name}${tier.bonus
       ? ` +${tier.bonus}` : ''}${slot.boost ? ' · Boost' : ''}">
       ${typeIcon ? `<span class="medal">${iconImage(typeIcon, typeLabel)}</span>` : ''}<span

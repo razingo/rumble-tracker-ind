@@ -217,7 +217,7 @@ export function createRoutes(ctx, deps) {
     routes.set('POST /api/storage', async (req) => {
       const { folder } = await readBody(req);
       if (!host.options.storage) return [400, { error: 'This tracker\'s folder is set where it was started.' }];
-      if (ctx.gameData?.reading) return [400, { error: 'The game data is being read. Move the files once that is done.' }];
+      if (ctx.gameData.reading) return [400, { error: 'The game data is being read. Move the files once that is done.' }];
       let home;
       try {
         home = await noteMove(host.options.storage, folder);
