@@ -53,9 +53,11 @@ test('a PvP log from an older version moves to pvp_history.json', async (t) => {
   const { scan } = createScanner(ctx, { readPrefs: async () => save() });
   await scan();
   await flushWrites();
-  assert.deepEqual(ctx.user.pvpHistory[ACC], old);
+  const { id } = ctx.user.pvpHistory[ACC][0];
+  assert.ok(id, 'the entries get the ID that those of an older tracker lack');
+  assert.deepEqual(ctx.user.pvpHistory[ACC], [{ ...old[0], id }]);
   assert.equal(ctx.accounts.get(ACC).pvpLog, undefined);
-  assert.deepEqual((await readJsonFile(path.join(ctx.paths.DATA, 'pvp_history.json')))[ACC], old);
+  assert.deepEqual((await readJsonFile(path.join(ctx.paths.DATA, 'pvp_history.json')))[ACC], [{ ...old[0], id }]);
 });
 
 test('read failures are reported only when they persist', async (t) => {

@@ -31,7 +31,7 @@ before(async () => {
   ({ ctx, cleanup } = await testContext({ standalone: true }));
   ctx.port = await freePort();
   ctx.accounts.set(ACC, { snapshot: { units: [{ id: UNIT, level: 1 }], currencies: [] }, events: [] });
-  ctx.user.pvpHistory[ACC] = [{ t: 'T1', season: 's', honor: 5, vp: 50, dh: 5, dv: 50, unexplained: true }];
+  ctx.user.pvpHistory[ACC] = [{ id: 'P1', t: 'T1', season: 's', honor: 5, vp: 50, dh: 5, dv: 50, unexplained: true }];
   server = createHttpServer(ctx, {
     shutdown: (reason) => calls.quit.push(reason),
     startUpdate: async () => {
@@ -163,11 +163,16 @@ test('an imported Armory is cleaned and stops at the limit', () => {
 });
 
 test('marks an unexplained PvP change as a win or a loss', async () => {
-  assert.equal((await api('POST', '/api/pvp/result', { account: ACC, t: 'T1', result: 'win' })).status, 200);
+  assert.equal((await api('POST', '/api/pvp/result', { account: ACC, id: 'P1', result: 'win' })).status, 200);
   assert.equal(ctx.user.pvpHistory[ACC][0].wins, 1);
-  assert.equal((await api('POST', '/api/pvp/result', { account: ACC, t: 'nope', result: 'win' })).status, 400);
-  assert.equal((await api('POST', '/api/pvp/result', { account: ACC, t: 'T1', result: null })).status, 200);
+  assert.equal((await api('POST', '/api/pvp/result', { account: ACC, id: 'nope', result: 'win' })).status, 400);
+  assert.equal((await api('POST', '/api/pvp/result', { account: ACC, id: 'P1', result: null })).status, 200);
   assert.equal(ctx.user.pvpHistory[ACC][0].wins, undefined);
+  // a page that was open across an update still names the entry by its time
+  assert.equal((await api('POST', '/api/pvp/result', { account: ACC, t: 'T1', result: 'loss' })).status, 200);
+  assert.equal(ctx.user.pvpHistory[ACC][0].losses, 1);
+  assert.equal((await api('POST', '/api/pvp/result', { account: ACC, t: 'T1', result: null })).status, 200);
+  assert.equal((await api('POST', '/api/pvp/result', { account: ACC, result: 'win' })).status, 400);
 });
 
 test('backup and restore', async () => {

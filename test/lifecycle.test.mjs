@@ -145,7 +145,10 @@ test('of a list, only the entries that are something else are dropped', async (t
     'progress.json': { a: { first: null, days: [{ day: '2026-01-01' }, 7] }, b: { first: null } } } });
   t.after(cleanup); // (also when the test fails)
   assert.deepEqual(ctx.user.armies, { a: [army(1), army(2)] });
-  assert.deepEqual([ctx.user.gridHistory, ctx.user.pvpHistory], [{ a: [grid] }, { a: [{ t: '1' }] }]);
+  // (the entries that stay get the ID that entries of an older tracker lack)
+  const [seen] = ctx.user.gridHistory.a, [reading] = ctx.user.pvpHistory.a;
+  assert.deepEqual([ctx.user.gridHistory, ctx.user.pvpHistory], [{ a: [{ ...grid, id: seen.id }] }, { a: [{ t: '1', id: reading.id }] }]);
+  assert.ok(seen.id && reading.id && seen.id !== reading.id);
   // (a progress without its days has an empty list of them, and that is nothing to report)
   assert.deepEqual(ctx.user.progress, { a: { first: null, days: [{ day: '2026-01-01' }] }, b: { first: null, days: [] } });
   const told = ctx.errorLog.list().filter((e) => e.source === 'data file').map((e) => e.message);

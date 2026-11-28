@@ -8,6 +8,7 @@ import { confirmDialog, alertDialog } from './dialogs.js';
 import { iconImage, openDrawer } from './drawer.js';
 import { SECOND } from './lib/constants.js';
 import { esc } from './lib/format.js';
+import { newId } from './lib/ids.js';
 import { LIMITS, withTag, tagKey } from './lib/limits.js';
 import { bindTraitPicker } from './trait-picker.js';
 import { rarityColor, ownedUnit, miniOf, effectivePicks, armyOf, familiesOf, levelInSlot, talentIndex } from './units.js';
@@ -394,7 +395,7 @@ async function saveArmy(asNew) {
   const d = builder.draft;
   const list = [...(state.savedArmies || [])];
   const replace = !asNew && d.id;
-  const id = replace ? d.id : `a${Date.now().toString(36)}`;
+  const id = replace ? d.id : newId();
   // the typed name, else the saved name, else a generated one
   const leaderName = d.leader ? BY_SLUG.get(d.leader)?.name : null;
   const fallback = replace ? d.name : `${leaderName ? `${leaderName} army` : 'Army'} ${list.length + 1}`;

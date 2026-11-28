@@ -3,6 +3,11 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.6.11
+
+- Groundwork inside the tracker: saved armies, PvP results and G.R.I.D.s in the history get IDs that stay unique across
+  PCs. Your data is brought up to date at the first start, and a backup of it as it was is kept in `data\backups`.
+
 ## 0.6.10
 
 - Groundwork inside the tracker: your data files now carry a version number, so a later version can change how it

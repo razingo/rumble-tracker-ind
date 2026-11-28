@@ -3,6 +3,7 @@
 import { unitSlug } from '../userdata.mjs';
 import { LIMITS, cleanTags } from '../../web/scripts/lib/limits.js';
 import { APP_NAME } from '../../web/scripts/lib/constants.js';
+import { newId } from '../../web/scripts/lib/ids.js';
 
 const isId = (s) => typeof s === 'string' && /^[0-9a-f]{32}$/.test(s);
 // every mini has three talents, numbered 0 to 2
@@ -15,7 +16,7 @@ const STALE = [400, { error: 'The tracker could not save this. Reload the page a
 export function cleanArmy(a, slugs, { keepEmptyId = false } = {}) {
   const okSlug = (s) => typeof s === 'string' && slugs.has(s);
   return {
-    id: String(a?.id || '').slice(0, 40) || (keepEmptyId ? null : `a${Date.now().toString(36)}`),
+    id: String(a?.id || '').slice(0, 40) || (keepEmptyId ? null : newId()),
     name: String(a?.name || 'Army').trim().slice(0, LIMITS.armyName) || 'Army',
     leader: okSlug(a?.leader) ? a.leader : null,
     minis: Array.from({ length: 6 }, (_, i) => (okSlug(a?.minis?.[i]) ? a.minis[i] : null)),
@@ -43,10 +44,9 @@ export function addArmory(saved, file, slugs) {
   const key = (a) => JSON.stringify([a.name, a.leader, a.minis, Object.entries(a.talents).sort()]);
   const have = new Set(saved.map(key));
   const armies = [...saved];
-  const stamp = Date.now().toString(36);
   let added = 0, duplicates = 0, full = 0;
-  for (const [i, raw] of file.armies.slice(0, 10 * LIMITS.savedArmies).entries()) {
-    const army = cleanArmy({ ...raw, id: `i${stamp}${i.toString(36)}` }, slugs);
+  for (const raw of file.armies.slice(0, 10 * LIMITS.savedArmies)) {
+    const army = cleanArmy({ ...raw, id: newId() }, slugs);
     if (have.has(key(army))) duplicates++;
     else if (armies.length >= LIMITS.savedArmies) full++;
     else {
@@ -138,10 +138,13 @@ export function createHandlers(ctx) {
       return ok(u().setArmies(account, r.armies), { ok: true, added: r.added, duplicates: r.duplicates, full: r.full });
     },
 
-    /** The player's own result for an unexplained PvP change: { account, t, result: 'win' | 'loss' | null }. */
-    async pvpResult({ account, t, result }) {
-      if (!isId(account) || typeof t !== 'string') return STALE;
-      if (!(await u().setPvpResult(account, t, result ?? null))) {
+    /**
+     * The player's own result for an unexplained PvP change: { account, id, result: 'win' | 'loss' | null }. A page
+     * from before the entries had IDs names it by its time, `t`.
+     */
+    async pvpResult({ account, id, t, result }) {
+      if (!isId(account) || typeof (id ?? t) !== 'string') return STALE;
+      if (!(await u().setPvpResult(account, id == null ? { t } : { id }, result ?? null))) {
         return [400, { error: 'Only changes marked as unexplained can be set by hand.' }];
       }
       return ok();

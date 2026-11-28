@@ -5,11 +5,29 @@
 // To change what a file holds: raise SCHEMA, add a step for it and describe the change in docs/DATA-FORMAT.md. A step
 // must leave data alone that already has the change, as a backup is only restored in parts and its step then runs
 // over files that were not restored too.
-export const SCHEMA = 1;
+import { newId } from '../web/scripts/lib/ids.js';
+
+export const SCHEMA = 2;
+
+/** Gives an ID to the entries of each account's list that have none. Returns whether any did. */
+export function giveIds(byAccount) {
+  let changed = false;
+  for (const list of Object.values(byAccount || {})) {
+    for (const entry of Array.isArray(list) ? list : []) {
+      if (entry.id) continue;
+      entry.id = newId();
+      changed = true;
+    }
+  }
+  return changed;
+}
 
 // [{ to: the version a step brings the data to, run(files): the properties it changed }], oldest first.
 // `files` is { property: contents } as in userdata.mjs.
-const STEPS = [];
+const STEPS = [
+  // 2 (0.6.11): PvP readings and G.R.I.D.s have an ID
+  { to: 2, run: (files) => ['pvpHistory', 'gridHistory'].filter((prop) => giveIds(files[prop])) },
+];
 
 /** Brings `files` from version `from` up to date, in place. Returns the properties that changed. */
 export function migrate(files, from, steps = STEPS) {

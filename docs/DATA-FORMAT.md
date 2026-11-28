@@ -10,7 +10,7 @@ are named by their slug from the game data (`kobold-miner`).
 
 ## The data version
 
-`schema.json` holds `{ "schema": 1 }`: one version number for all the files below together. A folder without the file
+`schema.json` holds `{ "schema": 2 }`: one version number for all the files below together. A folder without the file
 holds version 1, which is what every tracker before 0.6.10 wrote. Backups carry the same number as `schema`.
 
 At start the tracker compares the number with the one it knows (`SCHEMA` in `server/migrations.mjs`):
@@ -26,6 +26,24 @@ A restored backup goes through the same steps, from the version it names.
 
 To change what a file holds: raise `SCHEMA`, add a step, and describe the change here. A step has to leave alone data
 that already has the change.
+
+The versions so far:
+
+| Version | Tracker | What changed |
+|---|---|---|
+| 1 | up to 0.6.10 | The files as described here, without what later versions added |
+| 2 | 0.6.11 | PvP readings and G.R.I.D.s have an `id` |
+
+## IDs
+
+What the game made has the game's ID (accounts, units, events, seasons). What the tracker makes has an ID of its own:
+a random UUID from `newId()` in `web/scripts/lib/ids.js`, so that two trackers never make the same one. Saved armies,
+PvP readings and G.R.I.D.s have one, as `id`. Armies saved before 0.6.11 keep the shorter IDs they got then (`a`
+or `i` and a time), which stay valid: an ID is any text of up to 40 characters, and nothing reads a meaning into it.
+
+`device.json` holds `{ id, created }` for this install: the ID of this copy of the tracker's data folder. It is made
+at the first start and is not in backups, so restoring a backup on another PC does not make two installs look like
+one. (Copying the whole data folder to another PC does.)
 
 ## The files
 
@@ -51,7 +69,7 @@ in the tracker changes what they hold.
 
 ```json
 {
-  "id": "amh2k1x9",
+  "id": "6f1c2a0e-8f0b-4c58-9a59-3f6f7b1f5d11",
   "name": "Rend air",
   "leader": "rend-blackhand",
   "minis": ["drake", "harpies", null, null, null, null],
@@ -70,8 +88,8 @@ The save has no match history, so the tracker logs each change of honor or Victo
 matches from it (`server/game/pvp.mjs`).
 
 ```json
-{ "t": "2026-11-20T18:02:11.000Z", "season": "…", "honor": 5120, "vp": 960, "dh": 25, "dv": 160,
-  "wins": 1, "losses": 0, "estimated": false, "honorOnly": false }
+{ "id": "0b9d6c1e-4f3a-4b7e-8a53-2f1d9f0c7a44", "t": "2026-11-20T18:02:11.000Z", "season": "…", "honor": 5120,
+  "vp": 960, "dh": 25, "dv": 160, "wins": 1, "losses": 0, "estimated": false, "honorOnly": false }
 ```
 
 - The first reading of a season has `start: true` and no matches.
@@ -81,7 +99,7 @@ matches from it (`server/game/pvp.mjs`).
 
 ### A G.R.I.D.
 
-`{ seen, refresh, items }`: when the tracker first saw it, the refresh time the game gives it, and its unbought
+`{ id, seen, refresh, items }`: when the tracker first saw it, the refresh time the game gives it, and its unbought
 offers, each `{ mini: unitId, rarity }` or `{ xpBoost }`.
 
 ### A progress sample
@@ -95,6 +113,7 @@ the latest sample of each day.
 - `state\<accountId>.json`: the last read of an account's save (`snapshot`), the changes seen between reads
   (`events`) and what the shop and PvP looked like. The next read rebuilds it, so it is not in backups.
 - `config.json`: the game's folder, if the player gave one.
+- `schema.json` and `device.json`: see above.
 - `backups`, `gamedata`, `gamedata-build`, `update`, the logs: see
   [How the tracker works](HOW-IT-WORKS.md#files-and-folders).
 

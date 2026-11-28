@@ -182,13 +182,13 @@ function matchTable(log) {
   const result = (e) => {
     if (e.unexplained && !e.manual) {
       return `<td><span class="flag warn" title="No combination of wins and losses gives this change">unexplained</span>
-        <button class="chip" data-pvp-result="win" data-time="${esc(e.t)}">Win</button> <button class="chip"
-          data-pvp-result="loss" data-time="${esc(e.t)}">Loss</button></td>`;
+        <button class="chip" data-pvp-result="win" data-entry="${esc(e.id)}">Win</button> <button class="chip"
+          data-pvp-result="loss" data-entry="${esc(e.id)}">Loss</button></td>`;
     }
     const cls = e.wins && !e.losses ? 'pvp-win' : e.losses && !e.wins ? 'pvp-loss' : '';
     const note = e.manual
       ? ` <span class="muted small">(set by you)</span> <button class="chip" data-pvp-result=""
-        data-time="${esc(e.t)}" title="Mark as unexplained again">Undo</button>`
+        data-entry="${esc(e.id)}" title="Mark as unexplained again">Undo</button>`
       : e.estimated ? ' <span class="muted small" title="More than one combination fits this change">(est.)</span>' : '';
     return `<td class="${cls}">${esc(pvpResult(e))}${note}</td>`;
   };
@@ -332,8 +332,8 @@ export function bindPvp() {
     if (!b || !state?.account) return;
     b.disabled = true;
     try {
-      await post('/api/pvp/result', { account: state.account, t: b.dataset.time, result: b.dataset.pvpResult || null });
-      marked = { selector: `button[data-pvp-result][data-time="${CSS.escape(b.dataset.time)}"]` };
+      await post('/api/pvp/result', { account: state.account, id: b.dataset.entry, result: b.dataset.pvpResult || null });
+      marked = { selector: `button[data-pvp-result][data-entry="${CSS.escape(b.dataset.entry)}"]` };
     } catch (err) {
       b.disabled = false; // (nothing changed, so nothing is drawn anew: it can be tried again)
       alertDialog(err.message, { title: 'Not saved' });

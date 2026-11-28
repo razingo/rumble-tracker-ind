@@ -2,6 +2,7 @@
 // the user-data objects; each returns whether it changed.
 import { localDay } from '../../web/scripts/lib/format.js';
 import { pvpReading } from '../game/pvp.mjs';
+import { newId } from '../../web/scripts/lib/ids.js';
 
 const PROGRESS_DAYS = 400;
 const GRID_HISTORY_MAX = 400;
@@ -45,7 +46,7 @@ export function logGrid(gridHistory, account, grid, now) {
   const known = new Set((last?.items || []).map(idOf));
   const isNew = !last || last.refresh !== grid.refresh || items.some((x) => !known.has(idOf(x)));
   if (!isNew || !items.length) return false;
-  list.push({ seen: now, refresh: grid.refresh, items });
+  list.push({ id: newId(), seen: now, refresh: grid.refresh, items });
   if (list.length > GRID_HISTORY_MAX) list.splice(0, list.length - GRID_HISTORY_MAX);
   return true;
 }
@@ -54,7 +55,7 @@ export function logGrid(gridHistory, account, grid, now) {
 export function recordPvp(pvpHistory, account, acc, cur, now, vpRules) {
   const entry = pvpReading(acc.pvp, cur, now, vpRules);
   if (!entry) return false;
-  pvpHistory[account] = [...(pvpHistory[account] || []), entry].slice(-MAX_PVP_LOG);
+  pvpHistory[account] = [...(pvpHistory[account] || []), { id: newId(), ...entry }].slice(-MAX_PVP_LOG);
   acc.pvp = cur;
   return true;
 }

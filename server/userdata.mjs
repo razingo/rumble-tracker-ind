@@ -5,11 +5,12 @@ import path from 'node:path';
 import { mkdir } from 'node:fs/promises';
 import { readJson, writeJson, isRecord, keepCopy } from './store.mjs';
 import { buildBackup, restoreBackup, replaceContents } from './backup.mjs';
-import { SCHEMA, migrate, schemaOf } from './migrations.mjs';
+import { SCHEMA, migrate, schemaOf, giveIds } from './migrations.mjs';
 import { cleanSettings } from './notifications/notify.mjs';
 import { manualResult } from './game/pvp.mjs';
 import { recordProgress, logGrid, recordPvp } from './scan/history.mjs';
 import { CLOSE_CHOICES } from '../web/scripts/lib/constants.js';
+import { newId } from '../web/scripts/lib/ids.js';
 
 // property -> file name
 const FILES = {
@@ -96,6 +97,10 @@ export const unitSlug = (ctx, id) => ctx.user.names.units[id] || ctx.tables.buil
 
 // The note of the version of what the files hold: { schema } (migrations.mjs).
 const SCHEMA_FILE = 'schema.json';
+// This install: { id, created }. It names the copy of the tracker that made a change, so it belongs to the data
+// folder on this PC and is not in backups.
+const DEVICE_FILE = 'device.json';
+const isDevice = (v) => isRecord(v) && typeof v.id === 'string' && !!v.id;
 
 /**
  * Loads every file (missing ones start empty) and brings data of an older version up to date. `schema` and `steps`
@@ -159,9 +164,9 @@ export async function loadUserData(ctx, { schema = SCHEMA, steps } = {}) {
       u.armies[account] = armies;
       return u.save('armies');
     },
-    /** The player's own result for the unexplained PvP entry read at `t`. Resolves with false when not allowed. */
-    async setPvpResult(account, t, result) {
-      const entry = (u.pvpHistory[account] || []).find((e) => e.t === t);
+    /** The player's own result for an unexplained PvP entry, named by { id } or { t }. False when not allowed. */
+    async setPvpResult(account, { id, t }, result) {
+      const entry = (u.pvpHistory[account] || []).find((e) => (id == null ? e.t === t : e.id === id));
       if (!manualResult(entry, result)) return false;
       await u.save('pvpHistory');
       return true;
@@ -186,6 +191,7 @@ export async function loadUserData(ctx, { schema = SCHEMA, steps } = {}) {
     adoptPvpLog(account, log) {
       if (u.pvpHistory[account]) return false;
       u.pvpHistory[account] = log;
+      giveIds({ [account]: log });
       return true;
     },
 
@@ -265,5 +271,10 @@ export async function loadUserData(ctx, { schema = SCHEMA, steps } = {}) {
   }
   for (const prop of report(dropped, kept)) await u.save(prop);
   await upgrade();
+  u.device = await readJson(path.join(dir, DEVICE_FILE), null).then((v) => (isDevice(v) ? v : null), () => null);
+  if (!u.device) {
+    u.device = { id: newId(), created: new Date().toISOString() };
+    await writeJson(path.join(dir, DEVICE_FILE), u.device);
+  }
   return u;
 }

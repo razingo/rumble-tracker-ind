@@ -10,8 +10,9 @@ import { testContext } from './helpers.mjs';
 
 const ACC = 'a'.repeat(32);
 const json = async (...parts) => JSON.parse(await readFile(path.join(...parts), 'utf8'));
-// a made-up step to version 2: every saved army gets a mark, once
-const steps = [{ to: 2, run(files) {
+// a made-up step to the version after the current one: every saved army gets a mark, once
+const NEXT = SCHEMA + 1;
+const steps = [{ to: NEXT, run(files) {
   let changed = false;
   for (const list of Object.values(files.armies)) for (const a of list) if (!a.marked) changed = a.marked = true;
   return changed ? ['armies'] : [];
@@ -38,18 +39,18 @@ test('a data folder gets a note of its version, and a backup names it', async (t
 test('data of an older version is brought up to date once, and kept as it was in a backup', async (t) => {
   const { ctx, cleanup } = await testContext({ files: { 'armies.json': { [ACC]: [{ id: 'a1', name: 'One' }] } } });
   t.after(cleanup);
-  const u = await loadUserData(ctx, { schema: 2, steps });
+  const u = await loadUserData(ctx, { schema: NEXT, steps });
   await flushWrites();
   assert.equal(u.armies[ACC][0].marked, true);
   assert.equal((await json(ctx.paths.DATA, 'armies.json'))[ACC][0].marked, true);
-  assert.deepEqual(await json(ctx.paths.DATA, 'schema.json'), { schema: 2 });
-  assert.deepEqual(await readdir(ctx.paths.BACKUPS), ['rumble-tracker-backup-before-data-v2.json']);
-  const before = await json(ctx.paths.BACKUPS, 'rumble-tracker-backup-before-data-v2.json');
-  assert.equal(before.schema, 1);
+  assert.deepEqual(await json(ctx.paths.DATA, 'schema.json'), { schema: NEXT });
+  assert.deepEqual(await readdir(ctx.paths.BACKUPS), [`rumble-tracker-backup-before-data-v${NEXT}.json`]);
+  const before = await json(ctx.paths.BACKUPS, `rumble-tracker-backup-before-data-v${NEXT}.json`);
+  assert.equal(before.schema, SCHEMA);
   assert.deepEqual(before.data.armies, { [ACC]: [{ id: 'a1', name: 'One' }] });
   // the next start finds the note and leaves the data alone
   await writeFile(path.join(ctx.paths.DATA, 'armies.json'), JSON.stringify({ [ACC]: [{ id: 'a2', name: 'Two' }] }));
-  assert.equal((await loadUserData(ctx, { schema: 2, steps })).armies[ACC][0].marked, undefined);
+  assert.equal((await loadUserData(ctx, { schema: NEXT, steps })).armies[ACC][0].marked, undefined);
 });
 
 test('data of a newer tracker is used as it is, and its note stays', async (t) => {
@@ -65,8 +66,8 @@ test('data of a newer tracker is used as it is, and its note stays', async (t) =
 test('a backup of an older version is brought up to date when it is restored', async (t) => {
   const { ctx, cleanup } = await testContext();
   t.after(cleanup);
-  const u = await loadUserData(ctx, { schema: 2, steps });
-  const old = buildBackup({ armies: { [ACC]: [{ id: 'a1', name: 'One' }] } }, new Date(), 1);
+  const u = await loadUserData(ctx, { schema: NEXT, steps });
+  const old = buildBackup({ armies: { [ACC]: [{ id: 'a1', name: 'One' }] } }, new Date(), SCHEMA);
   assert.deepEqual((await u.restore(JSON.parse(JSON.stringify(old)))).restored, ['armies']);
   assert.equal(u.armies[ACC][0].marked, true);
   await flushWrites();
@@ -76,4 +77,24 @@ test('a backup of an older version is brought up to date when it is restored', a
   old.data.armies[ACC][0].marked = undefined;
   await u.restore(JSON.parse(JSON.stringify(old)));
   assert.equal(u.armies[ACC][0].marked, true);
+});
+
+test('version 2: PvP readings and G.R.I.D.s without an ID get one, and those with one keep it', async (t) => {
+  const { ctx, cleanup } = await testContext({ files: {
+    'pvp_history.json': { [ACC]: [{ t: '1', season: 's' }, { id: 'kept', t: '2', season: 's' }] },
+    'grid_history.json': { [ACC]: [{ seen: 't', refresh: 'r', items: [] }] },
+    'armies.json': { [ACC]: [{ id: 'a1', name: 'One' }] } } });
+  t.after(cleanup);
+  await flushWrites();
+  const [first, second] = (await json(ctx.paths.DATA, 'pvp_history.json'))[ACC];
+  assert.match(first.id, /^[0-9a-f-]{36}$/);
+  assert.equal(second.id, 'kept');
+  assert.match((await json(ctx.paths.DATA, 'grid_history.json'))[ACC][0].id, /^[0-9a-f-]{36}$/);
+  assert.equal(ctx.user.armies[ACC][0].id, 'a1');
+  const before = await json(ctx.paths.BACKUPS, 'rumble-tracker-backup-before-data-v2.json');
+  assert.deepEqual(before.data.pvp_history[ACC][0], { t: '1', season: 's' });
+  // this install has an ID of its own, which stays from start to start
+  const device = await json(ctx.paths.DATA, 'device.json');
+  assert.match(device.id, /^[0-9a-f-]{36}$/);
+  assert.deepEqual((await loadUserData(ctx)).device, device);
 });
