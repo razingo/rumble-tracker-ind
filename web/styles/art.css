@@ -69,7 +69,8 @@ body {
   filter: drop-shadow(0 3px 0 rgb(0 0 0 / 45%)) drop-shadow(0 8px 12px rgb(0 0 0 / 35%));
   transition: transform .12s ease, filter .12s ease;
 }
-.card:hover {
+/* (a leader's card too: named here, its own halo further down does not take the glow's place) */
+.card:hover, .card.leader:hover {
   transform: translateY(-3px);
   filter: drop-shadow(0 0 6px rgb(255 214 120 / 70%)) drop-shadow(0 8px 12px rgb(0 0 0 / 35%));
 }
