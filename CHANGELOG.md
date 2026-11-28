@@ -3,6 +3,10 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.6.7
+
+- Collection: a card reached with the keyboard keeps its focus ring while the mouse is over it.
+
 ## 0.6.6
 
 - Small cleanup inside the page; nothing changes on screen.
