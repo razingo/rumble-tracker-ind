@@ -121,13 +121,29 @@ export function createHandlers(ctx) {
       return ok(u().setDraft(account, clean), { ok: true }, false);
     },
 
-    /** All saved armies of an account: { account, armies }. */
+    /** All saved armies of an account: { account, armies }. The page saves and deletes them one by one instead. */
     async armies({ account, armies }) {
       if (!isId(account) || !Array.isArray(armies)) return STALE;
       if (armies.length > LIMITS.savedArmies) return [400, {
         error: `You can keep at most ${LIMITS.savedArmies} saved armies. Delete one first.` }];
       const clean = armies.map((a) => cleanArmy(a, ctx.tables.slugs));
       return ok(u().setArmies(account, clean), { ok: true, armies: clean });
+    },
+
+    /** Adds a saved army, or replaces the one with its ID: { account, army }. */
+    async saveArmy({ account, army }) {
+      if (!isId(account) || !army || typeof army !== 'object') return STALE;
+      const clean = cleanArmy(army, ctx.tables.slugs);
+      const list = u().armies[account] || [];
+      if (!list.some((a) => a.id === clean.id) && list.length >= LIMITS.savedArmies) return [400, {
+        error: `You can keep at most ${LIMITS.savedArmies} saved armies. Delete one first.` }];
+      return ok(u().saveArmy(account, clean), { ok: true, army: clean });
+    },
+
+    /** Deletes a saved army: { account, id }. One that is not there any more is no error. */
+    async deleteArmy({ account, id }) {
+      if (!isId(account) || typeof id !== 'string') return STALE;
+      return ok(u().deleteArmy(account, id));
     },
 
     /** Adds the armies of an exported armory to an account's saved armies: { account, file }. */

@@ -3,6 +3,12 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.6.12
+
+- Groundwork inside the tracker: it now notes which of your entries changed and when (names, talents, army slots,
+  saved armies, reward goals), and the Army and Armory tabs save one army at a time instead of the whole list.
+  Nothing changes on screen.
+
 ## 0.6.11
 
 - Groundwork inside the tracker: saved armies, PvP results and G.R.I.D.s in the history get IDs that stay unique across

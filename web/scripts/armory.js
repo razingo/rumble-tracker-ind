@@ -2,7 +2,7 @@
 // Armory exported to a file or imported from one.
 import { setTab, poll } from './app.js';
 import { encodeArmyCode } from './army-code.js';
-import { nameField, descriptionField, tagEditor, armyStats, persistArmies, editArmy, syncDraft, deleteSavedArmy } from './army.js';
+import { nameField, descriptionField, tagEditor, armyStats, persistArmy, editArmy, syncDraft, deleteSavedArmy } from './army.js';
 import { toggleIn } from './collection.js';
 import { $, showMessage, copyText, post, BY_SLUG, state, focusKey, refocus } from './core.js';
 import { alertDialog } from './dialogs.js';
@@ -91,10 +91,10 @@ export function renderArmory() {
 }
 
 async function updateSavedArmy(id, change, card) {
-  const list = (state.savedArmies || []).map((a) => (a.id === id ? { ...a, ...change } : a));
+  const army = (state.savedArmies || []).find((a) => a.id === id);
   const msg = card?.querySelector('.armory-message');
   try {
-    await persistArmies(list);
+    if (army) await persistArmy({ ...army, ...change });
     syncDraft(id, change);
     // Redraw at once; the focus is restored.
     renderArmory();

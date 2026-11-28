@@ -342,8 +342,9 @@ function talentPopup(i, u) {
 }
 
 // Saving
-export async function persistArmies(list) {
-  await post('/api/armies', { account: state.account, armies: list });
+/** Saves one army: a new one, or over the saved army with its ID. */
+export async function persistArmy(army) {
+  await post('/api/armies/save', { account: state.account, army });
   await poll();
 }
 
@@ -402,11 +403,7 @@ async function saveArmy(asNew) {
   const name = ($('#armyName')?.value || '').trim() || fallback;
   // a tag typed but not confirmed with Enter is kept too
   const tags = withTag(d.tags || [], $('#armyTagInput')?.value || '', tagsInUse()) || d.tags || [];
-  const entry = { id, name, leader: d.leader, minis: d.minis, talents: d.talents, description: d.description || '', tags };
-  const at = list.findIndex((x) => x.id === id);
-  if (at >= 0) list[at] = entry;
-  else list.push(entry);
-  await persistArmies(list);
+  await persistArmy({ id, name, leader: d.leader, minis: d.minis, talents: d.talents, description: d.description || '', tags });
   builder.nameText = '';
   builder.codeMsg = { ok: true, text: `Saved "${name}".` };
   setDraft({ ...d, id, name, tags });
@@ -628,7 +625,8 @@ export async function deleteSavedArmy(army) {
   const ok = await confirmDialog(`"${army.name}" is removed from your saved armies.`,
     { title: 'Delete this army?', ok: 'Delete', danger: true });
   if (!ok) return false;
-  await persistArmies((state.savedArmies || []).filter((a) => a.id !== army.id));
+  await post('/api/armies/delete', { account: state.account, id: army.id });
+  await poll();
   if (builder.draft?.id === army.id) {
     builder.draft = { ...builder.draft, id: null };
     saveDraftLocal();

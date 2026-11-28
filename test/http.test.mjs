@@ -124,6 +124,28 @@ test('talents, army slots, plans, drafts and saved armies are cleaned', async ()
   assert.equal((await api('POST', '/api/armies', { account: ACC, armies: Array(51).fill({}) })).status, 400);
 });
 
+test('saved armies are saved and deleted one by one', async () => {
+  const other = 'f'.repeat(32);
+  const save = (army) => api('POST', '/api/armies/save', { account: other, army });
+  const first = (await save({ name: 'One', leader: 'nope' })).body.army;
+  assert.match(first.id, /^[0-9a-f-]{36}$/);
+  assert.equal(first.leader, null);
+  await save({ name: 'Two' });
+  assert.equal((await save({ ...first, name: 'One again' })).body.army.id, first.id);
+  assert.deepEqual(ctx.user.armies[other].map((a) => a.name), ['One again', 'Two']);
+  assert.equal((await api('POST', '/api/armies/delete', { account: other, id: first.id })).status, 200);
+  assert.equal((await api('POST', '/api/armies/delete', { account: other, id: first.id })).status, 200); // already gone
+  assert.deepEqual(ctx.user.armies[other].map((a) => a.name), ['Two']);
+  assert.equal((await api('POST', '/api/armies/delete', { account: other })).status, 400);
+  assert.equal((await api('POST', '/api/armies/save', { account: other })).status, 400);
+  // a full Armory takes no new army, and still saves over one of its own
+  ctx.user.armies[other] = Array.from({ length: 50 }, (_, i) => ({ id: `x${i}`, name: `Army ${i}` }));
+  assert.equal((await save({ name: 'One too many' })).status, 400);
+  assert.equal((await save({ id: 'x3', name: 'Changed' })).status, 200);
+  assert.equal(ctx.user.armies[other][3].name, 'Changed');
+  delete ctx.user.armies[other];
+});
+
 test('army cleaning', () => {
   const slugs = new Set(['a']);
   assert.deepEqual(cleanArmy({ id: '', leader: 'x', minis: ['a'], talents: { a: 1, b: 2, c: 9 } }, slugs, { keepEmptyId: true }),

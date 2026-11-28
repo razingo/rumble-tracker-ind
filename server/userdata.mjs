@@ -5,6 +5,7 @@ import path from 'node:path';
 import { mkdir } from 'node:fs/promises';
 import { readJson, writeJson, isRecord, keepCopy } from './store.mjs';
 import { buildBackup, restoreBackup, replaceContents } from './backup.mjs';
+import { createChangeLog, changesShape } from './changes.mjs';
 import { SCHEMA, migrate, schemaOf, giveIds } from './migrations.mjs';
 import { cleanSettings } from './notifications/notify.mjs';
 import { manualResult } from './game/pvp.mjs';
@@ -100,6 +101,9 @@ const SCHEMA_FILE = 'schema.json';
 // This install: { id, created }. It names the copy of the tracker that made a change, so it belongs to the data
 // folder on this PC and is not in backups.
 const DEVICE_FILE = 'device.json';
+// What changed and when (changes.mjs). It tells of this data folder, so it is not in backups: a restore is noted as
+// a change of what it restored.
+const CHANGES_FILE = 'changes.json';
 const isDevice = (v) => isRecord(v) && typeof v.id === 'string' && !!v.id;
 
 /**
@@ -109,6 +113,7 @@ const isDevice = (v) => isRecord(v) && typeof v.id === 'string' && !!v.id;
 export async function loadUserData(ctx, { schema = SCHEMA, steps } = {}) {
   const dir = ctx.paths.DATA;
   const read = (key, fallback) => ctx.readUserJson(path.join(dir, FILES[key]), fallback, SHAPES[key]);
+  let changes = null; // the notes of what changed, once the files are loaded
   const notified = await read('sentLog', null); // (its missing parts are filled in below)
   const u = {
     names: await read('names', { accounts: {}, units: {} }),
@@ -124,8 +129,12 @@ export async function loadUserData(ctx, { schema = SCHEMA, steps } = {}) {
     plans: await read('plans', {}),
     sentLog: { sent: {}, log: [], pending: [], ...notified },
     notifyBaseline: !notified, // first run: record what is already due without notifying
-    /** Saves one file. Writes to the same file are queued. */
-    save: (key) => writeJson(path.join(dir, FILES[key]), u[key]),
+    /** Saves one file, and notes what changed in it. Writes to the same file are queued. */
+    async save(key) {
+      const noted = changes?.tracks(key) && changes.note(key, u[key]);
+      await writeJson(path.join(dir, FILES[key]), u[key]);
+      if (noted) await writeJson(path.join(dir, CHANGES_FILE), changes.log);
+    },
 
     // What the player enters. Each takes values that are already checked (http/handlers.mjs) and saves its file.
     /** Names an account; an empty name takes the name away. */
@@ -159,6 +168,18 @@ export async function loadUserData(ctx, { schema = SCHEMA, steps } = {}) {
       u.drafts[account] = draft;
       return u.save('drafts');
     },
+    /** Adds a saved army, or puts it in the place of the one with its ID. */
+    saveArmy(account, army) {
+      const list = (u.armies[account] ??= []);
+      const at = list.findIndex((a) => a.id === army.id);
+      if (at >= 0) list[at] = army;
+      else list.push(army);
+      return u.save('armies');
+    },
+    deleteArmy(account, id) {
+      u.armies[account] = (u.armies[account] || []).filter((a) => a.id !== id);
+      return u.save('armies');
+    },
     /** Replaces all saved armies of an account. */
     setArmies(account, armies) {
       u.armies[account] = armies;
@@ -168,6 +189,9 @@ export async function loadUserData(ctx, { schema = SCHEMA, steps } = {}) {
     async setPvpResult(account, { id, t }, result) {
       const entry = (u.pvpHistory[account] || []).find((e) => (id == null ? e.t === t : e.id === id));
       if (!manualResult(entry, result)) return false;
+      // (when the player set it; the rest of an entry never changes)
+      if (result) entry.manualAt = new Date().toISOString();
+      else delete entry.manualAt;
       await u.save('pvpHistory');
       return true;
     },
@@ -271,6 +295,9 @@ export async function loadUserData(ctx, { schema = SCHEMA, steps } = {}) {
   }
   for (const prop of report(dropped, kept)) await u.save(prop);
   await upgrade();
+  // (set up after the steps above, which are no change the player made)
+  changes = createChangeLog(await ctx.readUserJson(path.join(dir, CHANGES_FILE), {}, changesShape), u);
+  u.changes = changes.log;
   u.device = await readJson(path.join(dir, DEVICE_FILE), null).then((v) => (isDevice(v) ? v : null), () => null);
   if (!u.device) {
     u.device = { id: newId(), created: new Date().toISOString() };

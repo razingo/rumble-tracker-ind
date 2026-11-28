@@ -93,6 +93,8 @@ export function createRoutes(ctx, deps) {
     'POST /api/plans': json(h.plan),
     'POST /api/draft': json(h.draft),
     'POST /api/armies': json(h.armies),
+    'POST /api/armies/save': json(h.saveArmy),
+    'POST /api/armies/delete': json(h.deleteArmy),
     'POST /api/pvp/result': json(h.pvpResult),
     'POST /api/restore': json(h.restore, 20 * MB),
     // One account's saved armies as a file, and adding the armies of such a file.

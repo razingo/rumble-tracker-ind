@@ -45,6 +45,41 @@ or `i` and a time), which stay valid: an ID is any text of up to 40 characters, 
 at the first start and is not in backups, so restoring a backup on another PC does not make two installs look like
 one. (Copying the whole data folder to another PC does.)
 
+## What changed, and when
+
+`changes.json` notes every change to what the player enters (`server/changes.mjs`):
+
+```json
+{
+  "rev": 3,
+  "records": {
+    "talents": { "<account ID>/<unit ID>": { "rev": 1, "t": "2026-11-28T10:00:00.000Z" } },
+    "armies": { "<account ID>/<army ID>": { "rev": 3, "t": "2026-11-28T10:05:00.000Z", "deleted": true } }
+  }
+}
+```
+
+- `rev` counts the changes made in this data folder and only goes up. Each note has the count its change got, so
+  "everything after revision 40" is a question the file can answer without trusting the PC's clock. `t` is the time
+  for people, and for telling which of two trackers changed an entry last.
+- An entry that was removed keeps its note, with `deleted: true`.
+- An entry without a note has not changed since 0.6.12, the first version that kept notes.
+
+The files it covers, and the key of an entry in each:
+
+| File | Key |
+|---|---|
+| `names.json` | `accounts/<account ID>` and `units/<unit ID>` |
+| `talents.json`, `army.json` | `<account ID>/<unit ID>` |
+| `plans.json` | `<account ID>/<event ID>` |
+| `armies.json` | `<account ID>/<army ID>` (the order of the armies is not noted) |
+
+The history files are left out: the tracker only ever adds to them, and each entry has an `id` and a time of its
+own. The one thing a player changes there, the result of an unexplained PvP reading, gets `manualAt`.
+
+The notes tell of this data folder, so the file is not in backups. Restoring a backup is noted as a change of
+whatever the backup changed. Nothing reads the notes yet.
+
 ## The files
 
 Every file below is in backups except `notified.json`. `server/userdata.mjs` reads and writes them, and nothing else
@@ -95,7 +130,7 @@ matches from it (`server/game/pvp.mjs`).
 - The first reading of a season has `start: true` and no matches.
 - `estimated`: more than one mix of wins and losses fits the change, and honor picked one.
 - `unexplained: true`: no mix fits. The player can then set `manual` to `"win"` or `"loss"`, which sets `wins` and
-  `losses` too.
+  `losses` too, and `manualAt` to when they did.
 
 ### A G.R.I.D.
 
@@ -113,7 +148,7 @@ the latest sample of each day.
 - `state\<accountId>.json`: the last read of an account's save (`snapshot`), the changes seen between reads
   (`events`) and what the shop and PvP looked like. The next read rebuilds it, so it is not in backups.
 - `config.json`: the game's folder, if the player gave one.
-- `schema.json` and `device.json`: see above.
+- `schema.json`, `device.json` and `changes.json`: see above.
 - `backups`, `gamedata`, `gamedata-build`, `update`, the logs: see
   [How the tracker works](HOW-IT-WORKS.md#files-and-folders).
 
