@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parsePvp, inferMatches, vpValues, pvpReading, manualResult } from '../server/game/pvp.mjs';
+import { parsePvp, inferMatches, vpValues, pvpReading, manualResult, matchRecord } from '../server/game/pvp.mjs';
 import { int, embedded, fixed64 } from '../web/scripts/lib/protobuf.js';
 
 const RULES = { base: 80, win: 2, loss: 1, streak: [{ upTo: 3, x: 1 }, { upTo: 5, x: 1.25 }] };
@@ -85,4 +85,22 @@ test('manual results only for unexplained changes, and can be undone', () => {
   assert.equal(manualResult(e, 'draw'), false);
   assert.equal(manualResult({ t: 'y', wins: 1, losses: 0 }, 'loss'), false);
   assert.equal(manualResult(undefined, 'win'), false);
+});
+
+test('a reading with matches gives a record that stands on its own', () => {
+  const acc = 'a'.repeat(32);
+  const e = { id: 'p1', t: '2026-11-20T18:02:11.000Z', season: 's', honor: 5120, vp: 960, dh: 25, dv: 160,
+    wins: 1, losses: 0, estimated: false, honorOnly: false };
+  assert.deepEqual(matchRecord(acc, e), { id: 'p1', account: acc, season: 's', t: e.t, honor: 5120, vp: 960,
+    honorChange: 25, vpChange: 160, wins: 1, losses: 0, basis: 'exact' });
+  assert.equal(matchRecord(acc, { ...e, estimated: true }).basis, 'estimated');
+  // the player's own word counts over the tracker's guess
+  const marked = { id: 'p2', t: 'x', season: 's', honor: 1, vp: 2, dh: -5, dv: 50, unexplained: true };
+  assert.equal(matchRecord(acc, marked), null);
+  manualResult(marked, 'loss');
+  assert.deepEqual([matchRecord(acc, marked).losses, matchRecord(acc, marked).basis], [1, 'manual']);
+  // no matches: a season's first reading, one where only the second honor value moved, one without an ID
+  assert.equal(matchRecord(acc, { id: 'p3', t: 'x', season: 's', honor: 1, vp: 0, start: true }), null);
+  assert.equal(matchRecord(acc, { id: 'p4', t: 'x', season: 's', honor: 1, vp: 0, dh: 0, dv: 0 }), null);
+  assert.equal(matchRecord(acc, { ...e, id: undefined }), null);
 });

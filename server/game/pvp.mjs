@@ -101,3 +101,21 @@ export function manualResult(entry, result) {
   if (result) Object.assign(entry, { manual: result, wins: result === 'win' ? 1 : 0, losses: result === 'loss' ? 1 : 0 });
   return true;
 }
+
+/**
+ * What a logged reading tells of the matches played, as one record that stands on its own (a leaderboard or a match
+ * list elsewhere needs nothing else of the log), or null for a reading without matches: a season's first one, or a
+ * change nothing explains that the player has not marked.
+ *   { id, account, season, t, honor, vp, honorChange, vpChange, wins, losses, basis }
+ * `t` is when the tracker saw the change, which is after the last of its matches. `basis` says how sure the wins and
+ * losses are: 'exact' (one mix of them fits the change), 'estimated' (honor picked one of several, or honor alone
+ * moved) or 'manual' (the player said so). The army played is not part of it: the tracker does not read that from
+ * the save.
+ */
+export function matchRecord(account, e) {
+  if (!e?.id || e.start || !(e.wins > 0 || e.losses > 0)) return null;
+  return {
+    id: e.id, account, season: e.season, t: e.t, honor: e.honor, vp: e.vp, honorChange: e.dh ?? 0, vpChange: e.dv ?? 0,
+    wins: e.wins || 0, losses: e.losses || 0, basis: e.manual ? 'manual' : e.estimated ? 'estimated' : 'exact',
+  };
+}

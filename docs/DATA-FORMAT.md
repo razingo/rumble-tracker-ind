@@ -140,6 +140,18 @@ matches from it (`server/game/pvp.mjs`).
 - `unexplained: true`: no mix fits. The player can then set `manual` to `"win"` or `"loss"`, which sets `wins` and
   `losses` too, and `manualAt` to when they did.
 
+`matchRecord()` in the same file turns a reading with matches into a record that needs nothing else of the log,
+which is the shape meant for showing matches anywhere but in the tracker:
+
+```json
+{ "id": "0b9d6c1e-4f3a-4b7e-8a53-2f1d9f0c7a44", "account": "<account ID>", "season": "…",
+  "t": "2026-11-20T18:02:11.000Z", "honor": 5120, "vp": 960, "honorChange": 25, "vpChange": 160,
+  "wins": 1, "losses": 0, "basis": "exact" }
+```
+
+`basis` is `exact`, `estimated` or `manual`. A record can stand for more than one match, as the tracker sees the
+sum of what happened between two reads. The army played is not in it: the tracker does not read that from the save.
+
 ### A G.R.I.D.
 
 `{ id, seen, refresh, items }`: when the tracker first saw it, the refresh time the game gives it, and its unbought

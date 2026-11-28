@@ -15,7 +15,10 @@ test('the player\'s data: the collections and the player\'s own files, without w
   ctx.accounts.set(OTHER, { snapshot: null, events: [] });
   await ctx.user.setTalents(ACC, UNIT, [1]);
   await ctx.user.setDraft(ACC, { id: null, name: 'Draft' });
+  ctx.user.pvpHistory[ACC] = [{ id: 'p0', t: '1', season: 's', honor: 1, vp: 0, start: true },
+    { id: 'p1', t: '2', season: 's', honor: 6, vp: 160, dh: 5, dv: 160, wins: 1, losses: 0, estimated: false }];
   const data = playerData(ctx);
+  assert.deepEqual(data.matches.map((m) => [m.id, m.account, m.wins, m.basis]), [['p1', ACC, 1, 'exact']]);
   assert.deepEqual(data.collections, { [ACC]: { changed: '2026-11-28T10:00:00.000Z', units, currencies } });
   assert.deepEqual(Object.keys(data.files).sort(),
     ['armies', 'army', 'grid_history', 'names', 'plans', 'progress', 'pvp_history', 'talents']);

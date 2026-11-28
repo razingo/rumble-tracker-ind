@@ -3,6 +3,11 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.6.15
+
+- Groundwork inside the tracker: each PvP result in the history can be read as one complete record (season, honor,
+  Victory Points, wins and losses, and how sure the tracker is of them). Nothing changes on screen.
+
 ## 0.6.14
 
 - Groundwork inside the tracker: everything it asks of Windows (reading the save, whether the game runs,
