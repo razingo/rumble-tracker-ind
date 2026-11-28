@@ -182,8 +182,7 @@ function armySlot(i, s, leader) {
   const typeLabel = i === 0 ? 'Leader' : slot.type || (leader ? 'Type not set' : '–');
   const typeIcon = TAG_ICONS[typeLabel];
   const noSynergy = u && i > 0 && leader && !lv.match;
-  const cls = `army-slot tier-${slot.tier}${i === 0 ? ' army-slot-leader' : ''}${u ? '' : ' empty'}${lv.match
-    ? ' matched' : ''}${noSynergy ? ' no-synergy' : ''}`;
+  const cls = `army-slot tier-${slot.tier}${i === 0 ? ' army-slot-leader' : ''}${u ? '' : ' empty'}${noSynergy ? ' no-synergy' : ''}`;
   const empty = i === 0 ? 'Drop or pick a leader' : leader ? 'Drop or pick a mini' : 'Pick a leader first';
   const level = u && lv.level != null
     ? `<b>${lv.level}</b>${lv.xpMax ? '<span class="max">MAX</span>' : ''}${lv.boosted ? '<span class="max boost">BOOST</span>' : ''}`

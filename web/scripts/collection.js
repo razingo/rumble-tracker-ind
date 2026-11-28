@@ -262,7 +262,7 @@ export function renderFilters() {
   const traitCount = (name) => count('traits', (m) => !!m && m.traits.some((t) => t.name === name));
   const picker = traitPicker({
     scope: 'collection', traits, filter: f, open: view.traitPickerOpen, query: view.traitSearch, count: traitCount,
-    label: f.traits.length ? `${f.traits.length} selected` : 'Choose traits', buttonClass: 'chip picker-btn',
+    label: f.traits.length ? `${f.traits.length} selected` : 'Choose traits',
   });
 
   const filters = $('#filters'), focused = focusKey(filters);

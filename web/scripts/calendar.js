@@ -168,7 +168,7 @@ function renderTickets(now) {
     const name = c?.name || 'Event tickets';
     const idle = !c?.event;
     const next = users.filter((u) => u !== c?.event);
-    return `<div class="currency${idle ? ' idle' : ''}" title="${esc(name)}${idle ? ' · no event is using these tickets now' : ''}">
+    return `<div class="currency" title="${esc(name)}${idle ? ' · no event is using these tickets now' : ''}">
       ${icon ? `<img class="currency-icon" src="${icon}" alt="">` : ''}<span>${esc(name)}</span><b>${idle ? '–' : fmt(c?.balance ?? 0)}</b>
       ${next.length ? `<small class="muted">next: ${esc(next.join(', '))}</small>` : ''}</div>`;
   }).join('');

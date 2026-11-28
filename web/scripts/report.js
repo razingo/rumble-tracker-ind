@@ -75,7 +75,7 @@ function renderReportDialog(msg = '') {
         placeholder="Please don't include account names or other personal details.">${esc(REPORT.what)}</textarea></label>
     <label class="report-field">How can it be repeated? <span class="muted small">(optional)</span>
       <textarea data-report-field="steps" rows="2">${esc(REPORT.steps)}</textarea></label>
-    <label class="report-include"><input type="checkbox" data-report-field="include" ${REPORT.include ? 'checked' : ''}>
+    <label><input type="checkbox" data-report-field="include" ${REPORT.include ? 'checked' : ''}>
       Add the details below (helps a lot)</label>
     <details class="report-details"${d?.errors ? ' open' : ''}><summary>Details that would be added${d
       ? ` · ${d.errors ? `${plural(d.errors, 'recent error')}` : 'no errors noted'}` : ''}</summary>

@@ -48,7 +48,7 @@
         </div>
         <input type="file" id="backupFile" accept="application/json,.json" hidden>
       </div>
-      <button class="chip quit-button" id="quitButton" title="Stop the tracker" hidden>⏻ Quit</button>
+      <button class="chip" id="quitButton" title="Stop the tracker" hidden>⏻ Quit</button>
     </div>
   </header>
 
@@ -62,7 +62,7 @@
   <main id="tab-progress" class="progress-page" hidden></main>
 
   <main id="tab-collection" class="layout">
-    <section class="content">
+    <section>
       <section class="panel recent" aria-label="Recent changes">
         <h2>Recent changes <span class="muted small" id="eventsCount"></span></h2>
         <ol id="events" class="events"></ol>
