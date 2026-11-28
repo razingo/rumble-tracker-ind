@@ -151,7 +151,7 @@ function renderShopOffers(now) {
   return `<section class="panel">
     <div class="section-head"><h2>Shop offers</h2><span class="muted small">From your save · daily offers reset at 18:00 UTC</span></div>
     ${groups.map(([title, list]) => `<h3 class="shop-group">${title}</h3><div
-      class="cal-cards shop-cards">${list.map(card).join('')}</div>`).join('')}
+      class="cal-cards">${list.map(card).join('')}</div>`).join('')}
   </section>`;
 }
 
@@ -203,7 +203,7 @@ function renderChallenges(ev) {
       ${fmt(x.tickets)}</span>`).join('')}</span>`
     : c.steps[0] && c.steps[0].target > 1 ? `<span class="challenge-steps"><span>${fmt(c.steps[0].target)} →
       ${fmt(c.steps[0].tickets)}</span></span>` : '');
-  const item = (c) => `<li><span class="challenge-title">${esc(c.title)}</span>${steps(c)}<b>${fmt(c.total)}</b></li>`;
+  const item = (c) => `<li><span>${esc(c.title)}</span>${steps(c)}<b>${fmt(c.total)}</b></li>`;
   const head = (g) => {
     if (g.kind === 'daily') return `Daily challenges · ${g.active} a day from ${g.poolSize}, about ${fmt(g.perDay)} tickets a day`;
     if (g.kind === 'weekly') return g.challenges.length > 1 ? 'Weekly challenges' : 'Weekly challenge';
@@ -356,7 +356,7 @@ function renderRewardTree(ev) {
     ? { cost: best.cost, targets, claimed: new Set(best.take), picked: new Set(targets.map(rewardKey)),
       path: planner.order.filter((r) => best.take.includes(rewardKey(r))) }
     : null;
-  return `<section class="panel cal-tree" id="calendarTree" style="--event-color:var(--event-${esc(ev.family)}, var(--event-default))">
+  return `<section class="panel" id="calendarTree" style="--event-color:var(--event-${esc(ev.family)}, var(--event-default))">
     <div class="section-head"><img class="tree-head-icon" src="${eventIcon(ev)}" alt=""><h2>${esc(ev.name || ev.id)} rewards</h2>
       <button class="chip" data-calendar-tree="">Close</button></div>
     ${treeTotals(ev, rewards)}

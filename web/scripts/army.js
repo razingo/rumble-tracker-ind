@@ -53,14 +53,14 @@ export const descriptionField = (attrs, description) =>
  * Tag chips with remove buttons (`removeAttr` is the buttons' data attribute) and an input for new tags. With
  * `suggestions` it brings its own suggestion list; without, `listId` names one already on the page.
  */
-export function tagEditor(tags, { attrs, removeAttr, listId, suggestions, cls = '' }) {
+export function tagEditor(tags, { attrs, removeAttr, listId, suggestions }) {
   const chips = tags.map((t) => `<span class="tag-chip">${esc(t)}<button ${removeAttr}="${esc(t)}"
     aria-label="Remove tag ${esc(t)}">×</button></span>`).join('');
   const list = suggestions
     ? `<datalist id="${listId}">${suggestions.filter((t) => !tags.some((x) =>
       x.toLowerCase() === t.toLowerCase())).map((t) => `<option value="${esc(t)}">`).join('')}</datalist>`
     : '';
-  return `<div class="tag-editor${cls ? ` ${cls}` : ''}" aria-label="Tags">${chips}
+  return `<div class="tag-editor" aria-label="Tags">${chips}
     <input ${attributes(attrs)} list="${listId}" maxlength="${LIMITS.tag}"
       placeholder="${tags.length ? 'Add a tag' : 'Tags (optional). Press Enter after each.'}">
     ${list}

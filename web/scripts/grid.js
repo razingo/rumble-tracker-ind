@@ -110,7 +110,7 @@ function cooldownPanel(cooldowns, history) {
     title: `Last offered ${dateTime(c.lastSeen)} · back after ${c.limit - c.place} more ${c.leader ? 'leaders' : 'minis'}`,
     extra: `<b>${c.limit - c.place}</b>`,
   });
-  return `<section class="panel grid-cd">
+  return `<section class="panel">
     <h2>On cooldown <span class="muted small">${plural(cooling.length, 'mini')}</span></h2>
     <p class="muted small">A mini comes back only after ${limits.mini} other minis have been offered (leaders ${limits.leader},
       ${specials.length ? esc(specials.join(', ')) : 'special leaders'} ${limits.special}). The number is how many are still

@@ -243,7 +243,7 @@ function endRewardsPanel({ season, mine, stale }) {
   const rowFor = (r) => season.endRewards.find((e) => e.rank === r.id && !e.top);
   const lowest = PVP.ranks.find((r) => rowFor(r));
   const target = PVP.ranks.slice(PVP.ranks.indexOf(rank) + 1).find((r) => rowFor(r));
-  const line = (label, row) => `<div class="pvp-end"><div class="pvp-end-label">${label}</div><div
+  const line = (label, row) => `<div class="pvp-end"><div>${label}</div><div
     class="pvp-rewards">${row.rewards.map(pvpReward).join('')}</div></div>`;
   const current = rowFor(rank)
     ? line(`At your rank, <b>${esc(rank.name)}</b>`, rowFor(rank))

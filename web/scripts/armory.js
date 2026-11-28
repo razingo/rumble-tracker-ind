@@ -35,8 +35,7 @@ function armoryCard(a) {
     <div class="armory-minis">${s.slots.map(portrait).join('')}</div>
     ${s.missing.length ? `<div class="small text-warn">Not owned on this account: ${s.missing.map(esc).join(', ')}</div>` : ''}
     ${descriptionField({ cls: 'armory-desc', 'data-armory-field': 'description' }, a.description)}
-    ${tagEditor(a.tags || [], { attrs: { cls: 'armory-tag-input' }, removeAttr: 'data-armory-tag-remove',
-      listId: 'armoryTagList', cls: 'armory-tags' })}
+    ${tagEditor(a.tags || [], { attrs: { cls: 'armory-tag-input' }, removeAttr: 'data-armory-tag-remove', listId: 'armoryTagList' })}
     <div class="armory-actions">
       <button class="button" data-armory-action="edit">Edit</button>
       <button class="chip" data-armory-action="copy">Copy code</button>

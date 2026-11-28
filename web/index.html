@@ -62,37 +62,35 @@
   <main id="tab-progress" class="progress-page" hidden></main>
 
   <main id="tab-collection" class="layout">
-    <section>
-      <section class="panel recent" aria-label="Recent changes">
-        <h2>Recent changes <span class="muted small" id="eventsCount"></span></h2>
-        <ol id="events" class="events"></ol>
-      </section>
-      <div id="currencies" class="currencies"></div>
-      <div id="summary" class="summary"></div>
-      <section id="needs" class="panel needs"></section>
-      <section id="filters" class="panel filters" aria-label="Filters for the planner and the collection"></section>
-      <section id="planner" class="panel planner"></section>
-      <div class="toolbar">
-        <div id="gridCount" class="muted"></div>
-        <div class="toolbar-right">
-          <label>Show
-            <select id="show">
-              <option value="owned">Owned</option>
-              <option value="all">Owned + not owned</option>
-            </select>
-          </label>
-          <label>Sort
-            <select id="sort">
-              <option value="level">Level</option>
-              <option value="name">Name</option>
-              <option value="rarity">Rarity</option>
-              <option value="ready">Upgrade ready first</option>
-            </select>
-          </label>
-        </div>
-      </div>
-      <div id="grid" class="grid"></div>
+    <section class="panel recent" aria-label="Recent changes">
+      <h2>Recent changes <span class="muted small" id="eventsCount"></span></h2>
+      <ol id="events" class="events"></ol>
     </section>
+    <div id="currencies" class="currencies"></div>
+    <div id="summary" class="summary"></div>
+    <section id="needs" class="panel needs"></section>
+    <section id="filters" class="panel filters" aria-label="Filters for the planner and the collection"></section>
+    <section id="planner" class="panel planner"></section>
+    <div class="toolbar">
+      <div id="gridCount" class="muted"></div>
+      <div class="toolbar-right">
+        <label>Show
+          <select id="show">
+            <option value="owned">Owned</option>
+            <option value="all">Owned + not owned</option>
+          </select>
+        </label>
+        <label>Sort
+          <select id="sort">
+            <option value="level">Level</option>
+            <option value="name">Name</option>
+            <option value="rarity">Rarity</option>
+            <option value="ready">Upgrade ready first</option>
+          </select>
+        </label>
+      </div>
+    </div>
+    <div id="grid" class="grid"></div>
   </main>
 
   <div id="drawer" class="drawer" hidden>
@@ -103,7 +101,7 @@
   <dialog id="settingsDialog" class="dialog" aria-label="Settings"></dialog>
   <dialog id="messageDialog" class="dialog message-dialog" aria-label="Message"></dialog>
   <dialog id="updateDialog" class="dialog update-dialog" aria-label="Tracker update"></dialog>
-  <dialog id="reportDialog" class="dialog report-dialog" aria-label="Report a problem"></dialog>
+  <dialog id="reportDialog" class="dialog" aria-label="Report a problem"></dialog>
 
   <footer class="site-foot">
     Unofficial fan tool, not affiliated with or endorsed by Blizzard Entertainment. Warcraft Rumble and its game art

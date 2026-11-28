@@ -54,7 +54,7 @@ function barChart(data, color, unit) {
     const h = Math.max(1, (d.value / max) * (H - 24));
     const x = pad + i * ((W - pad) / data.length);
     return `<g class="progress-bar"><rect x="${x}" y="${H - h}" width="${bw}" height="${h}" rx="3" fill="${color}"/>
-      <rect class="hit" x="${x - 1}" y="0" width="${bw + 2}" height="${H}" fill="transparent"><title>${esc(d.day)}:
+      <rect x="${x - 1}" y="0" width="${bw + 2}" height="${H}" fill="transparent"><title>${esc(d.day)}:
         ${fmt(Math.round(d.value))} ${unit}</title></rect></g>`;
   }).join('');
   return chartFrame(dayFrame(data, size, `${unit} per day`),
