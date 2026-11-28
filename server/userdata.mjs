@@ -29,6 +29,11 @@ const FILES = {
   sentLog: 'notified.json',         // { sent: { key: time }, log, pending }; pending ones wait for quiet hours to end
 };
 
+// The files that tell of the player and their game accounts, which are the same wherever the tracker runs. The others
+// (drafts, the settings, the notifications sent) belong to this install: they tell of this PC and this window.
+// Backups hold both. docs/DATA-FORMAT.md has the list with the reasons.
+export const PLAYER_FILES = ['names', 'talents', 'army', 'armies', 'plans', 'pvpHistory', 'gridHistory', 'progress'];
+
 // Backup key to property. Backups hold everything the player entered and the history the save can't give back; the
 // scan snapshots in state/ are left out, as the next scan rebuilds them.
 export const BACKUP_KEYS = {
@@ -234,6 +239,9 @@ export async function loadUserData(ctx, { schema = SCHEMA, steps } = {}) {
       for (const prop of new Set([...restored.map((key) => BACKUP_KEYS[key]), ...migrated])) await u.save(prop);
       return { restored, leftOut, incomplete: restored.filter((key) => dropped.includes(BACKUP_KEYS[key])) };
     },
+    /** The player's files (PLAYER_FILES), by backup key. */
+    playerFiles: () => Object.fromEntries(Object.entries(BACKUP_KEYS).filter(([, prop]) => PLAYER_FILES.includes(prop))
+      .map(([k, prop]) => [k, u[prop]])),
     /** The files a backup holds, by backup key. */
     backupFiles: () => Object.fromEntries(Object.entries(BACKUP_KEYS).map(([k, prop]) => [k, u[prop]])),
     /**

@@ -69,10 +69,10 @@ The files it covers, and the key of an entry in each:
 
 | File | Key |
 |---|---|
-| `names.json` | `accounts/<account ID>` and `units/<unit ID>` |
+| `names.json` | player | `accounts/<account ID>` and `units/<unit ID>` |
 | `talents.json`, `army.json` | `<account ID>/<unit ID>` |
-| `plans.json` | `<account ID>/<event ID>` |
-| `armies.json` | `<account ID>/<army ID>` (the order of the armies is not noted) |
+| `plans.json` | player | `<account ID>/<event ID>` |
+| `armies.json` | player | `<account ID>/<army ID>` (the order of the armies is not noted) |
 
 The history files are left out: the tracker only ever adds to them, and each entry has an `id` and a time of its
 own. The one thing a player changes there, the result of an unexplained PvP reading, gets `manualAt`.
@@ -85,20 +85,28 @@ whatever the backup changed. Nothing reads the notes yet.
 Every file below is in backups except `notified.json`. `server/userdata.mjs` reads and writes them, and nothing else
 in the tracker changes what they hold.
 
-| File | What it holds |
-|---|---|
+The files are of two kinds (`PLAYER_FILES` in `server/userdata.mjs`):
+
+- **The player's**: what tells of the player and their game accounts. It would be the same on any PC the player
+  uses, so it is what a copy of the player's data elsewhere would hold. `playerData()` in `server/playerdata.mjs`
+  puts it together with the collections read from the save.
+- **This install's**: what tells of this PC and this window, such as what closing the window does or which
+  notifications were already shown here. It has no meaning on another device.
+
+| File | Kind | What it holds |
+|---|---|---|
 | `names.json` | `{ accounts: { accountId: name }, units: { unitId: slug } }`. The names the player gave their accounts, and the mini a unit ID stands for where the game data does not say |
-| `talents.json` | `{ accountId: { unitId: [talent index] } }`. The talents the player ticked as owned, each 0 to 2, sorted |
-| `army.json` | `{ accountId: { unitId: [slot x7] } }`, a slot being `{ type, tier, boost? }`. A leader's army slots |
+| `talents.json` | player | `{ accountId: { unitId: [talent index] } }`. The talents the player ticked as owned, each 0 to 2, sorted |
+| `army.json` | player | `{ accountId: { unitId: [slot x7] } }`, a slot being `{ type, tier, boost? }`. A leader's army slots |
 | `armies.json` | `{ accountId: [army] }`. The saved armies (the Armory), in the order the player sees them |
 | `plans.json` | `{ accountId: { eventId: { cost, label, set } } }`. Reward goals; `set` is when the goal was set |
-| `pvp_history.json` | `{ accountId: [reading] }`, oldest first, at most 2000 per account |
-| `grid_history.json` | `{ accountId: [grid] }`, oldest first, at most 400 per account |
-| `progress.json` | `{ accountId: { first: sample, days: [sample] } }`, at most 400 days per account |
-| `drafts.json` | `{ accountId: army }`. The army being edited on the Army tab, with `updated` |
-| `settings.json` | `{ closeWindow: "ask" \| "tray" \| "quit", checkUpdates: boolean }` |
-| `notifications.json` | `{ enabled, account, types: { typeId: { on, whenPlaying, hoursBefore? } }, quiet: { on, from, to } }` |
-| `notified.json` | `{ sent: { key: time }, log: [...], pending: [...] }`. Which notifications were already sent |
+| `pvp_history.json` | player | `{ accountId: [reading] }`, oldest first, at most 2000 per account |
+| `grid_history.json` | player | `{ accountId: [grid] }`, oldest first, at most 400 per account |
+| `progress.json` | player | `{ accountId: { first: sample, days: [sample] } }`, at most 400 days per account |
+| `drafts.json` | install | `{ accountId: army }`. The army being edited on the Army tab, with `updated` |
+| `settings.json` | install | `{ closeWindow: "ask" \| "tray" \| "quit", checkUpdates: boolean }` |
+| `notifications.json` | install | `{ enabled, account, types: { typeId: { on, whenPlaying, hoursBefore? } }, quiet: { on, from, to } }` |
+| `notified.json` | install | `{ sent: { key: time }, log: [...], pending: [...] }`. Which notifications were already sent |
 
 ### A saved army
 
@@ -143,10 +151,12 @@ offers, each `{ mini: unitId, rarity }` or `{ xpBoost }`.
 player's local day (`2026-11-20`) and `t` a time in milliseconds. `first` is the first sample ever taken; `days` has
 the latest sample of each day.
 
-## What is not player data
+## What is not in these files
 
 - `state\<accountId>.json`: the last read of an account's save (`snapshot`), the changes seen between reads
   (`events`) and what the shop and PvP looked like. The next read rebuilds it, so it is not in backups.
+  Its `snapshot` (the units and currencies) is the player's collection, which is the player's data too: the save
+  is where it comes from, so no file of its own keeps it.
 - `config.json`: the game's folder, if the player gave one.
 - `schema.json`, `device.json` and `changes.json`: see above.
 - `backups`, `gamedata`, `gamedata-build`, `update`, the logs: see

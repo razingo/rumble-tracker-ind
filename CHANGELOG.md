@@ -3,6 +3,11 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.6.13
+
+- Groundwork inside the tracker: it now tells apart the data that is about you and your game accounts from the
+  data that belongs to this PC (window and notification settings, the army being edited). Nothing changes on screen.
+
 ## 0.6.12
 
 - Groundwork inside the tracker: it now notes which of your entries changed and when (names, talents, army slots,
