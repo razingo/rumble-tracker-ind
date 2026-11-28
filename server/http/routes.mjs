@@ -10,8 +10,7 @@ import { host } from '../host.mjs';
 import { givenGameFolder, setGameFolder } from '../game/folder.mjs';
 import { noteMove } from '../storage.mjs';
 import { isRecord } from '../store.mjs';
-import { EXPLORER } from '../system.mjs';
-import { execFile } from 'node:child_process';
+import { platform } from '../platform/index.mjs';
 import { MINUTE, MB, CLOSE_CHOICES } from '../../web/scripts/lib/constants.js';
 import { localDay } from '../../web/scripts/lib/format.js';
 
@@ -159,7 +158,7 @@ export function createRoutes(ctx, deps) {
       const { which } = await readBody(req);
       const folder = which === 'storage' ? host.options.storage?.folder : which === 'game' ? await deps.gameData?.gameFolder() : null;
       if (!folder) return [400, { error: 'There is no such folder to open.' }];
-      execFile(EXPLORER, [folder], () => {});
+      platform.openFolder(folder);
       return [200, { ok: true }];
     },
     // Script errors reported by the page, for "Report a problem".

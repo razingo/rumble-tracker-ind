@@ -15,7 +15,7 @@ import { deflateRawSync, deflateSync, crc32 } from 'node:zlib';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sha256 } from '../server/update/appupdate.mjs';
-import { POWERSHELL } from '../server/system.mjs';
+import { POWERSHELL } from '../server/platform/windows/system.mjs';
 import { APP_NAME, EXE_NAME, REPO } from '../web/scripts/lib/constants.js';
 import { megabytes } from '../web/scripts/lib/format.js';
 

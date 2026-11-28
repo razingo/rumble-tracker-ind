@@ -1,9 +1,9 @@
 // Whether Warcraft Rumble is running, without starting a process per check. One PowerShell process looks every
 // 2 seconds and writes "1" or "0" when it changes. It exits with the tracker.
 import { spawn, execFile } from 'node:child_process';
-import { POWERSHELL, TASKLIST, powershellArgs } from '../system.mjs';
-import { host } from '../host.mjs';
-import { SECOND } from '../../web/scripts/lib/constants.js';
+import { POWERSHELL, TASKLIST, powershellArgs } from './system.mjs';
+import { host } from '../../host.mjs';
+import { SECOND } from '../../../web/scripts/lib/constants.js';
 
 const GAME = 'WarcraftRumble';
 

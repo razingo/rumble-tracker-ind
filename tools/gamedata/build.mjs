@@ -28,7 +28,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { Worker } from 'node:worker_threads';
 import { createHash } from 'node:crypto';
 import { availableParallelism, setPriority, constants as osConstants } from 'node:os';
-import { REG } from '../../server/system.mjs';
+import { REG } from '../../server/platform/windows/system.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SEED = join(HERE, 'seed');

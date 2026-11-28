@@ -2,7 +2,7 @@
 // Running from source has no exe, so the option isn't offered there.
 import { execFile } from 'node:child_process';
 import { REG } from './system.mjs';
-import { SECOND } from '../web/scripts/lib/constants.js';
+import { SECOND } from '../../../web/scripts/lib/constants.js';
 
 const KEY = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
 const NAME = 'RumbleCollectionTracker';

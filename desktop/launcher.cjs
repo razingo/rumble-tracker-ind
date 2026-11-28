@@ -238,7 +238,7 @@ function startWindowHost(onQuit, show = !NO_WINDOW) {
       if (line === 'closed') host.windowClosed();
       else if (line === 'quit') onQuit('Quit from the tray');
       else if (line === 'shutdown') onQuit('Windows is signing out or shutting down');
-      // Whether the game runs, for the server (server/game/watch.mjs).
+      // Whether the game runs, for the server (server/platform/windows/watch.mjs).
       else if (line === 'game 1' || line === 'game 0') host.reportGame(line === 'game 1');
       // Without WebView2 the window program shows how to install it, and closing that stops the tracker.
       else if (line === 'no-webview-closed') onQuit('Closed the pop-up about installing WebView2');

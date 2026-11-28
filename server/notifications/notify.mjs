@@ -1,5 +1,5 @@
 // Determines which notifications are due, from the scanned save and the event schedules. Each has a unique key so
-// it is sent once; the server tracks sent keys, applies quiet hours and delivers them (toast.mjs).
+// it is sent once; the server tracks sent keys, applies quiet hours and delivers them (runner.mjs).
 import { occurrences, rotationAt, rotationName } from '../../web/scripts/lib/schedule.js';
 import { APP_NAME, DAY, HOUR } from '../../web/scripts/lib/constants.js';
 import { fmt, when, spanWords } from '../../web/scripts/lib/format.js';

@@ -1,13 +1,13 @@
-// Sends due notifications every 30 seconds. notify.mjs decides what is due and toast.mjs shows it. Each notification
+// Sends due notifications every 30 seconds. notify.mjs decides what is due and the platform shows it. Each notification
 // is sent once. Quiet hours hold them until the quiet hours end; types the player doesn't want while playing are
 // skipped while the game runs.
 import { combined, dueNotifications, inQuietHours } from './notify.mjs';
-import { showToast } from './toast.mjs';
+import { platform } from '../platform/index.mjs';
 import { accountLabel, unitSlug } from '../userdata.mjs';
 import { DAY } from '../../web/scripts/lib/constants.js';
 
 /** gameRunning(): Promise<boolean>. Returns { tick, test }. */
-export function createNotifier(ctx, { gameRunning, toast = showToast }) {
+export function createNotifier(ctx, { gameRunning, toast = platform.showNotification }) {
   const u = () => ctx.user;
 
   async function save() {

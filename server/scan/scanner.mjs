@@ -13,7 +13,7 @@ export const FAILS_BEFORE_ERROR = 3;
 const stateShape = (v) => isRecord(v) && Array.isArray(v.events)
   && (v.snapshot == null || (isRecord(v.snapshot) && Array.isArray(v.snapshot.units) && Array.isArray(v.snapshot.currencies)));
 
-/** readPrefs(): { [account]: { units, currencies, store, profile, commerce, pvp: Buffer } } (game/prefs.mjs). */
+/** readPrefs(): { [account]: { units, currencies, store, profile, commerce, pvp: Buffer } } (platform/index.mjs). */
 export function createScanner(ctx, { readPrefs }) {
   const failures = new Map(); // 'read', 'save', an account id or 'update <id>' -> consecutive failures
   const unsaved = new Set(); // user-data files changed in memory that are still to be written

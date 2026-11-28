@@ -8,7 +8,7 @@ import { readFileSync, existsSync, mkdtempSync, rmSync, mkdirSync, writeFileSync
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { POWERSHELL } from '../server/system.mjs';
+import { POWERSHELL } from '../server/platform/windows/system.mjs';
 
 const DESKTOP = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'desktop');
 const encoded = (script) => Buffer.from(script, 'utf16le').toString('base64');

@@ -3,6 +3,11 @@
 What changed in each release of Rumble Collection Tracker. The release workflow copies a version's section into its
 GitHub release notes.
 
+## 0.6.14
+
+- Groundwork inside the tracker: everything it asks of Windows (reading the save, whether the game runs,
+  notifications, Start with Windows, opening a folder) now goes through one place. Nothing changes on screen.
+
 ## 0.6.13
 
 - Groundwork inside the tracker: it now tells apart the data that is about you and your game accounts from the

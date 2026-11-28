@@ -3,8 +3,8 @@
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import net from 'node:net';
-import { REG } from '../system.mjs';
-import { SECOND } from '../../web/scripts/lib/constants.js';
+import { REG } from './system.mjs';
+import { SECOND } from '../../../web/scripts/lib/constants.js';
 
 const KEY = 'HKCU\\Software\\Blizzard Entertainment, Inc.\\Warcraft Rumble';
 const WANTED = {

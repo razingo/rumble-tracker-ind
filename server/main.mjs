@@ -9,8 +9,7 @@ import { host } from './host.mjs';
 import { createTables } from './tables.mjs';
 import { loadUserData } from './userdata.mjs';
 import { readJson, flushWrites } from './store.mjs';
-import { readRumblePrefs } from './game/prefs.mjs';
-import { watchGame, watchGameFromTray, gameRunningOnce } from './game/watch.mjs';
+import { platform } from './platform/index.mjs';
 import { createScanner } from './scan/scanner.mjs';
 import { createGameData } from './gamedata.mjs';
 import { createUpdateChecker } from './update/checker.mjs';
@@ -18,7 +17,6 @@ import { createUpdater } from './update/updater.mjs';
 import { cleanUpdates } from './update/appupdate.mjs';
 import { createNotifier } from './notifications/runner.mjs';
 import { writeDailyBackup } from './backup.mjs';
-import { readAutostart, setAutostart, refreshAutostart, autostartCommand } from './autostart.mjs';
 import { createHttpServer } from './http/server.mjs';
 import { DEFAULT_PORT, SECOND, MINUTE, DAY, SCAN_MS } from '../web/scripts/lib/constants.js';
 
@@ -73,7 +71,7 @@ ctx.user = await loadUserData(ctx);
 // Reading the save
 // The save only changes while Warcraft Rumble runs, so it is read every SCAN_MS then, a few more times after the
 // game closes, and not at all otherwise. While it isn't known whether the game runs, it is read all the time.
-const { scan } = createScanner(ctx, { readPrefs: readRumblePrefs });
+const { scan } = createScanner(ctx, { readPrefs: platform.readSave });
 let scansLeft = 0;
 let stopping = false;
 const onGame = (running) => {
@@ -90,8 +88,8 @@ const onGameWatchFailed = (message) => {
   ctx.errorLog.add('game check', message);
 };
 // In the exe the tray icon's process reports whether the game runs.
-ctx.game = STANDALONE ? watchGameFromTray(onGame, onGameWatchFailed) : watchGame(onGame, onGameWatchFailed);
-const gameRunning = async () => ctx.game.running() ?? gameRunningOnce();
+ctx.game = STANDALONE ? platform.watchGameFromTray(onGame, onGameWatchFailed) : platform.watchGame(onGame, onGameWatchFailed);
+const gameRunning = async () => ctx.game.running() ?? platform.gameRunningOnce();
 
 // Automatic backups, at start, every 24 hours and when the tracker stops. They pause when a data file was damaged at
 // start, so the damage can't replace the last good backup of the day.
@@ -137,12 +135,12 @@ const startUpdate = createUpdater(ctx, { shutdown });
 cleanUpdates(ctx.paths.UPDATE); // a download the launcher already copied into place
 
 // Start with Windows, in the exe only. The Run key always names the exe that is running.
-const autostart = STANDALONE ? {
-  get: async () => (await readAutostart()) === autostartCommand(process.execPath),
-  set: (on) => setAutostart(on, process.execPath),
+const autostart = STANDALONE && platform.autostart ? {
+  get: async () => (await platform.autostart.read()) === platform.autostart.command(process.execPath),
+  set: (on) => platform.autostart.set(on, process.execPath),
 } : null;
-if (STANDALONE) {
-  refreshAutostart(process.execPath).catch((e) => {
+if (autostart) {
+  platform.autostart.refresh(process.execPath).catch((e) => {
     console.log(`Start with Windows: ${e.message}`);
     ctx.errorLog.add('start with Windows', e.message);
   });

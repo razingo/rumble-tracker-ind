@@ -2,9 +2,9 @@
 // variables (never interpolated into the script) and XML-escaped.
 // In the exe they are sent under the tracker's own app ID, and clicking one opens the tracker (host.mjs).
 import { execFile } from 'node:child_process';
-import { POWERSHELL, powershellArgs } from '../system.mjs';
-import { host } from '../host.mjs';
-import { APP_NAME, SECOND } from '../../web/scripts/lib/constants.js';
+import { POWERSHELL, powershellArgs } from './system.mjs';
+import { host } from '../../host.mjs';
+import { APP_NAME, SECOND } from '../../../web/scripts/lib/constants.js';
 
 // Toasts need a registered app identity; PowerShell's is there on Windows 10 and 11 when the tracker's isn't.
 const POWERSHELL_APP_ID = '{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\\WindowsPowerShell\\v1.0\\powershell.exe';
