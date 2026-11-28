@@ -59,23 +59,18 @@ body {
 .card {
   --frame: url("/static/ui/frame-neutral.webp");
   border: 26px solid transparent;   /* reserves space; ::after draws the frame */
-  border-radius: 0;
   padding: 0 0 2px;
-  margin-top: 0;
   background: none;
   position: relative;
   isolation: isolate;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  box-shadow: none;
   filter: drop-shadow(0 3px 0 rgb(0 0 0 / 45%)) drop-shadow(0 8px 12px rgb(0 0 0 / 35%));
   transition: transform .12s ease, filter .12s ease;
 }
 .card:hover {
   transform: translateY(-3px);
-  box-shadow: none;
-  outline: none;
   filter: drop-shadow(0 0 6px rgb(255 214 120 / 70%)) drop-shadow(0 8px 12px rgb(0 0 0 / 35%));
 }
 /* The layers are the fill (::before, masked to the frame's inner shape), the content, then the frame (::after). */
